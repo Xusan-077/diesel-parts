@@ -82,9 +82,15 @@ In `package.json`, inside `"scripts"`, add:
 
 Create `vitest.config.ts`:
 ```ts
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "."),
+    },
+  },
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
@@ -92,6 +98,8 @@ export default defineConfig({
   },
 });
 ```
+
+Note: the `@` alias mirrors `tsconfig.json`'s path mapping. It isn't exercised by this task's own test (`lib/utils.test.ts` uses a relative import), but Task 2 onward imports across `lib/`, `dictionaries/`, and `app/` via `@/*`, so it must be in place before those tests can resolve.
 
 - [ ] **Step 4: Run the test and verify it fails**
 
@@ -174,7 +182,7 @@ git commit -m "chore: add project dependencies, theme tokens, and Vitest setup"
 - Create: `dictionaries/uz.json`, `dictionaries/ru.json`, `dictionaries/en.json`
 - Create: `lib/i18n/dictionaries.ts`
 - Test: `lib/i18n/dictionaries.test.ts`
-- Create: `app/proxy.ts`
+- Create: `proxy.ts` (project root, not under `app/` — Next.js 16 only recognizes `proxy.ts` at the repo root or `src/`; confirmed against `node_modules/next/dist/build/utils.js`'s `isProxyFile`)
 - Delete: `app/layout.tsx`, `app/page.tsx`
 - Create: `app/[lang]/layout.tsx`, `app/[lang]/page.tsx`
 
@@ -874,7 +882,7 @@ Expected: PASS.
 
 - [ ] **Step 10: Create the locale redirect proxy**
 
-Create `app/proxy.ts`:
+Create `proxy.ts` at the project root (NOT `app/proxy.ts` — Next.js 16 only loads `proxy.ts` from the repo root or `src/`; a copy under `app/` is silently ignored and every route would 404):
 ```ts
 import { NextResponse, type NextRequest } from "next/server";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
@@ -1002,7 +1010,7 @@ Stop the dev server afterward.
 - [ ] **Step 15: Commit**
 
 ```bash
-git add lib/i18n dictionaries app/proxy.ts app/[lang] app/layout.tsx app/page.tsx
+git add lib/i18n dictionaries proxy.ts "app/[lang]" app/layout.tsx app/page.tsx
 git commit -m "feat: add uz/ru/en locale routing and full site dictionaries"
 ```
 
