@@ -4,6 +4,7 @@ import "../globals.css";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,6 +52,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Header lang={lang} siteName={dict.meta.siteName} nav={dict.nav} closeLabel={dict.common.close} />
         {children}
+        <Footer lang={lang} siteName={dict.meta.siteName} footer={dict.footer} nav={dict.nav} phone={dict.contact.phone} />
       </body>
     </html>
   );
