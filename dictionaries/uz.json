@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "siteName": "DieselParts",
+    "tagline": "Og'ir texnika uchun ishonchli ehtiyot qismlar"
+  },
+  "common": {
+    "requestQuote": "Narx so'rash",
+    "sendInquiry": "So'rov yuborish",
+    "readMore": "Batafsil",
+    "viewAll": "Barchasini ko'rish",
+    "loading": "Yuklanmoqda...",
+    "close": "Yopish",
+    "submit": "Yuborish",
+    "back": "Orqaga",
+    "requestPrice": "Narxni so'rang",
+    "stock": {
+      "available": "Mavjud",
+      "limited": "Cheklangan",
+      "outOfStock": "Tugagan"
+    }
+  },
+  "nav": {
+    "products": "Mahsulotlar",
+    "categories": "Kategoriyalar",
+    "brands": "Brendlar",
+    "about": "Biz haqimizda",
+    "blog": "Blog",
+    "contact": "Aloqa",
+    "requestQuote": "Narx so'rash",
+    "menu": "Menyu"
+  },
+  "footer": {
+    "description": "15 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
+    "linksTitle": "Havolalar",
+    "contactTitle": "Aloqa",
+    "addressLabel": "Manzil",
+    "address": "Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko'chasi 12",
+    "phoneLabel": "Telefon",
+    "email": "info@dieselparts.uz",
+    "rights": "Barcha huquqlar himoyalangan."
+  },
+  "home": {
+    "heroTitle": "Og'ir texnika uchun ishonchli ehtiyot qismlar",
+    "heroSubtitle": "10,000 dan ortiq mahsulot, jahon bo'ylab yetkazib berish va OEM sifatiga kafolat",
+    "heroCtaCatalog": "Katalogni ko'rish",
+    "heroCtaQuote": "Narx so'rash",
+    "trustBadges": [
+      { "title": "15+ yil tajriba", "description": "Sohada uzoq yillik tajriba va ishonch" },
+      { "title": "10,000+ mahsulot", "description": "Keng assortimentdagi ehtiyot qismlar" },
+      { "title": "Jahon bo'ylab yetkazib berish", "description": "Xalqaro mijozlarga tez va ishonchli logistika" },
+      { "title": "OEM sifat", "description": "Barcha mahsulotlar OEM standartlariga mos" }
+    ],
+    "aboutTitle": "Biz haqimizda",
+    "aboutText": "DieselParts — mining va construction texnikasi uchun ehtiyot qismlar yetkazib beruvchi kompaniya. Biz dilerlar va yakuniy foydalanuvchilarga sifatli, ishonchli va tez yetkazib beriladigan mahsulotlarni taqdim etamiz.",
+    "categoriesTitle": "Kategoriyalar bo'yicha ko'rish",
+    "categoriesSubtitle": "Kerakli ehtiyot qismni toifasi bo'yicha toping",
+    "brandsTitle": "Ishlaydigan brendlarimiz",
+    "featuredTitle": "Tavsiya etilgan mahsulotlar",
+    "ctaBannerTitle": "Ehtiyot qism kerakmi?",
+    "ctaBannerText": "Bepul konsultatsiya oling — mutaxassislarimiz sizga mos qismni topishga yordam beradi.",
+    "ctaBannerButton": "Bog'lanish"
+  },
+  "catalog": {
+    "title": "Mahsulotlar katalogi",
+    "subtitle": "Nom, SKU yoki OEM raqami bo'yicha qidiring",
+    "searchPlaceholder": "Nom, SKU yoki OEM raqami...",
+    "filterBrandLabel": "Brend",
+    "filterCategoryLabel": "Kategoriya",
+    "filterAvailabilityLabel": "Mavjudlik",
+    "allBrands": "Barcha brendlar",
+    "allCategories": "Barcha kategoriyalar",
+    "allAvailability": "Barchasi",
+    "sortLabel": "Saralash",
+    "sortNewest": "Eng yangi",
+    "sortNameAsc": "Nomi: A-Z",
+    "sortNameDesc": "Nomi: Z-A",
+    "gridView": "Katak ko'rinish",
+    "listView": "Ro'yxat ko'rinishi",
+    "noResults": "Hech narsa topilmadi",
+    "resultsCount": "{count} ta mahsulot topildi",
+    "prevPage": "Oldingi",
+    "nextPage": "Keyingi",
+    "pageIndicator": "{current} / {total}"
+  },
+  "product": {
+    "skuLabel": "SKU",
+    "oemLabel": "OEM raqami",
+    "brandLabel": "Brend",
+    "categoryLabel": "Kategoriya",
+    "compatibleModelsTitle": "Mos keladigan modellar",
+    "specificationsTitle": "Texnik xususiyatlari",
+    "relatedProductsTitle": "O'xshash mahsulotlar",
+    "galleryAlt": "Mahsulot rasmi"
+  },
+  "categories": {
+    "title": "Kategoriya",
+    "subtitle": "Ushbu kategoriyadagi mahsulotlar",
+    "productsInCategory": "ta mahsulot"
+  },
+  "brands": {
+    "title": "Brend",
+    "subtitle": "Ushbu brenddagi mahsulotlar",
+    "productsFromBrand": "ta mahsulot"
+  },
+  "about": {
+    "title": "Biz haqimizda",
+    "storyTitle": "Bizning tariximiz",
+    "storyParagraphs": [
+      "DieselParts 2010 yilda tashkil etilgan bo'lib, o'shandan beri mining va construction texnikasi uchun ehtiyot qismlar sohasida yetakchi yetkazib beruvchilardan biriga aylandi.",
+      "Bugungi kunda biz o'nlab mamlakatlardagi dilerlar va kompaniyalarga CAT, Komatsu, Volvo, Hitachi, JCB, Hyundai va Doosan texnikasi uchun OEM sifatidagi qismlarni yetkazib beramiz."
+    ],
+    "statsTitle": "Raqamlarda biz",
+    "stats": [
+      { "value": "15+", "label": "yillik tajriba" },
+      { "value": "10,000+", "label": "mahsulot" },
+      { "value": "30+", "label": "mamlakat" },
+      { "value": "500+", "label": "hamkor" }
+    ]
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Ehtiyot qismlar va texnika parvarishi haqida maqolalar",
+    "readMore": "Maqolani o'qish",
+    "publishedOn": "Nashr etilgan sana"
+  },
+  "contact": {
+    "title": "Aloqa",
+    "subtitle": "Biz bilan bog'laning — savollaringizga javob beramiz",
+    "addressTitle": "Manzil",
+    "address": "Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko'chasi 12",
+    "phoneTitle": "Telefon",
+    "phone": "+998 71 200 00 00",
+    "emailTitle": "Email",
+    "email": "info@dieselparts.uz",
+    "hoursTitle": "Ish vaqti",
+    "hours": "Dushanba - Shanba, 09:00 - 18:00"
+  },
+  "requestQuote": {
+    "title": "Narx so'rash",
+    "subtitle": "Formani to'ldiring — menejerlarimiz tez orada siz bilan bog'lanadi",
+    "fieldName": "Ism",
+    "fieldCompany": "Kompaniya",
+    "fieldPhone": "Telefon",
+    "fieldEmail": "Email",
+    "fieldCountry": "Mamlakat",
+    "fieldProducts": "Kerakli mahsulot(lar)",
+    "fieldProductsPlaceholder": "Mahsulot nomi, SKU yoki OEM raqamini kiriting",
+    "fieldQuantity": "Miqdor",
+    "fieldMessage": "Xabar",
+    "fieldMessagePlaceholder": "Qo'shimcha ma'lumot...",
+    "submit": "Yuborish",
+    "submitting": "Yuborilmoqda...",
+    "successTitle": "So'rovingiz qabul qilindi",
+    "successText": "Rahmat! Menejerlarimiz tez orada siz bilan bog'lanadi.",
+    "errorGeneric": "Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.",
+    "errorRequired": "Bu maydon to'ldirilishi shart",
+    "errorEmail": "To'g'ri email manzilini kiriting"
+  },
+  "inquiry": {
+    "title": "So'rov yuborish",
+    "subtitle": "Ushbu mahsulot haqida menejerimizga savol yuboring",
+    "fieldName": "Ism",
+    "fieldEmail": "Email",
+    "fieldPhone": "Telefon",
+    "fieldMessage": "Xabar",
+    "fieldMessagePlaceholder": "Savolingizni yozing...",
+    "submit": "Yuborish",
+    "submitting": "Yuborilmoqda...",
+    "successTitle": "So'rovingiz qabul qilindi",
+    "successText": "Rahmat! Menejerlarimiz tez orada siz bilan bog'lanadi.",
+    "errorGeneric": "Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.",
+    "errorRequired": "Bu maydon to'ldirilishi shart",
+    "errorEmail": "To'g'ri email manzilini kiriting",
+    "openButton": "So'rov yuborish"
+  }
+}

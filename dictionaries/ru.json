@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "siteName": "DieselParts",
+    "tagline": "Надёжные запчасти для тяжёлой техники"
+  },
+  "common": {
+    "requestQuote": "Запросить цену",
+    "sendInquiry": "Отправить запрос",
+    "readMore": "Подробнее",
+    "viewAll": "Смотреть все",
+    "loading": "Загрузка...",
+    "close": "Закрыть",
+    "submit": "Отправить",
+    "back": "Назад",
+    "requestPrice": "Запросить цену",
+    "stock": {
+      "available": "В наличии",
+      "limited": "Ограничено",
+      "outOfStock": "Нет в наличии"
+    }
+  },
+  "nav": {
+    "products": "Продукция",
+    "categories": "Категории",
+    "brands": "Бренды",
+    "about": "О нас",
+    "blog": "Блог",
+    "contact": "Контакты",
+    "requestQuote": "Запросить цену",
+    "menu": "Меню"
+  },
+  "footer": {
+    "description": "Более 15 лет поставляем запчасти OEM-качества для тяжёлой техники по всему миру.",
+    "linksTitle": "Ссылки",
+    "contactTitle": "Контакты",
+    "addressLabel": "Адрес",
+    "address": "г. Ташкент, Чиланзарский район, проспект Бунёдкор 12",
+    "phoneLabel": "Телефон",
+    "email": "info@dieselparts.uz",
+    "rights": "Все права защищены."
+  },
+  "home": {
+    "heroTitle": "Надёжные запчасти для тяжёлой техники",
+    "heroSubtitle": "Более 10 000 товаров, доставка по всему миру и гарантия OEM-качества",
+    "heroCtaCatalog": "Смотреть каталог",
+    "heroCtaQuote": "Запросить цену",
+    "trustBadges": [
+      { "title": "15+ лет опыта", "description": "Многолетний опыт и доверие в отрасли" },
+      { "title": "10 000+ товаров", "description": "Широкий ассортимент запчастей" },
+      { "title": "Доставка по всему миру", "description": "Быстрая и надёжная логистика для клиентов" },
+      { "title": "OEM-качество", "description": "Все товары соответствуют стандартам OEM" }
+    ],
+    "aboutTitle": "О нас",
+    "aboutText": "DieselParts — поставщик запчастей для горнодобывающей и строительной техники. Мы предлагаем дилерам и конечным заказчикам качественную, надёжную и быструю поставку продукции.",
+    "categoriesTitle": "Просмотр по категориям",
+    "categoriesSubtitle": "Найдите нужную запчасть по категории",
+    "brandsTitle": "Бренды, с которыми мы работаем",
+    "featuredTitle": "Рекомендуемые товары",
+    "ctaBannerTitle": "Нужна запчасть?",
+    "ctaBannerText": "Получите бесплатную консультацию — наши специалисты помогут подобрать нужную деталь.",
+    "ctaBannerButton": "Связаться"
+  },
+  "catalog": {
+    "title": "Каталог продукции",
+    "subtitle": "Ищите по названию, SKU или номеру OEM",
+    "searchPlaceholder": "Название, SKU или номер OEM...",
+    "filterBrandLabel": "Бренд",
+    "filterCategoryLabel": "Категория",
+    "filterAvailabilityLabel": "Наличие",
+    "allBrands": "Все бренды",
+    "allCategories": "Все категории",
+    "allAvailability": "Все",
+    "sortLabel": "Сортировка",
+    "sortNewest": "Сначала новые",
+    "sortNameAsc": "По названию: А-Я",
+    "sortNameDesc": "По названию: Я-А",
+    "gridView": "Сетка",
+    "listView": "Список",
+    "noResults": "Ничего не найдено",
+    "resultsCount": "Найдено товаров: {count}",
+    "prevPage": "Назад",
+    "nextPage": "Далее",
+    "pageIndicator": "{current} / {total}"
+  },
+  "product": {
+    "skuLabel": "SKU",
+    "oemLabel": "Номер OEM",
+    "brandLabel": "Бренд",
+    "categoryLabel": "Категория",
+    "compatibleModelsTitle": "Совместимые модели",
+    "specificationsTitle": "Технические характеристики",
+    "relatedProductsTitle": "Похожие товары",
+    "galleryAlt": "Изображение товара"
+  },
+  "categories": {
+    "title": "Категория",
+    "subtitle": "Товары в этой категории",
+    "productsInCategory": "товаров"
+  },
+  "brands": {
+    "title": "Бренд",
+    "subtitle": "Товары этого бренда",
+    "productsFromBrand": "товаров"
+  },
+  "about": {
+    "title": "О нас",
+    "storyTitle": "Наша история",
+    "storyParagraphs": [
+      "DieselParts была основана в 2010 году и с тех пор стала одним из ведущих поставщиков запчастей для горнодобывающей и строительной техники.",
+      "Сегодня мы поставляем запчасти OEM-качества для техники CAT, Komatsu, Volvo, Hitachi, JCB, Hyundai и Doosan дилерам и компаниям в десятках стран."
+    ],
+    "statsTitle": "Мы в цифрах",
+    "stats": [
+      { "value": "15+", "label": "лет опыта" },
+      { "value": "10 000+", "label": "товаров" },
+      { "value": "30+", "label": "стран" },
+      { "value": "500+", "label": "партнёров" }
+    ]
+  },
+  "blog": {
+    "title": "Блог",
+    "subtitle": "Статьи о запчастях и обслуживании техники",
+    "readMore": "Читать статью",
+    "publishedOn": "Дата публикации"
+  },
+  "contact": {
+    "title": "Контакты",
+    "subtitle": "Свяжитесь с нами — мы ответим на любые вопросы",
+    "addressTitle": "Адрес",
+    "address": "г. Ташкент, Чиланзарский район, проспект Бунёдкор 12",
+    "phoneTitle": "Телефон",
+    "phone": "+998 71 200 00 00",
+    "emailTitle": "Email",
+    "email": "info@dieselparts.uz",
+    "hoursTitle": "Часы работы",
+    "hours": "Понедельник - Суббота, 09:00 - 18:00"
+  },
+  "requestQuote": {
+    "title": "Запросить цену",
+    "subtitle": "Заполните форму — наши менеджеры свяжутся с вами в ближайшее время",
+    "fieldName": "Имя",
+    "fieldCompany": "Компания",
+    "fieldPhone": "Телефон",
+    "fieldEmail": "Email",
+    "fieldCountry": "Страна",
+    "fieldProducts": "Нужные товары",
+    "fieldProductsPlaceholder": "Введите название, SKU или номер OEM",
+    "fieldQuantity": "Количество",
+    "fieldMessage": "Сообщение",
+    "fieldMessagePlaceholder": "Дополнительная информация...",
+    "submit": "Отправить",
+    "submitting": "Отправка...",
+    "successTitle": "Ваш запрос принят",
+    "successText": "Спасибо! Наши менеджеры скоро свяжутся с вами.",
+    "errorGeneric": "Произошла ошибка. Попробуйте ещё раз.",
+    "errorRequired": "Это поле обязательно",
+    "errorEmail": "Введите корректный email"
+  },
+  "inquiry": {
+    "title": "Отправить запрос",
+    "subtitle": "Задайте вопрос менеджеру об этом товаре",
+    "fieldName": "Имя",
+    "fieldEmail": "Email",
+    "fieldPhone": "Телефон",
+    "fieldMessage": "Сообщение",
+    "fieldMessagePlaceholder": "Напишите ваш вопрос...",
+    "submit": "Отправить",
+    "submitting": "Отправка...",
+    "successTitle": "Ваш запрос принят",
+    "successText": "Спасибо! Наши менеджеры скоро свяжутся с вами.",
+    "errorGeneric": "Произошла ошибка. Попробуйте ещё раз.",
+    "errorRequired": "Это поле обязательно",
+    "errorEmail": "Введите корректный email",
+    "openButton": "Отправить запрос"
+  }
+}

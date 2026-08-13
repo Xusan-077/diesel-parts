@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "siteName": "DieselParts",
+    "tagline": "Reliable spare parts for heavy machinery"
+  },
+  "common": {
+    "requestQuote": "Request Quote",
+    "sendInquiry": "Send Inquiry",
+    "readMore": "Read More",
+    "viewAll": "View All",
+    "loading": "Loading...",
+    "close": "Close",
+    "submit": "Submit",
+    "back": "Back",
+    "requestPrice": "Request Price",
+    "stock": {
+      "available": "Available",
+      "limited": "Limited",
+      "outOfStock": "Out of Stock"
+    }
+  },
+  "nav": {
+    "products": "Products",
+    "categories": "Categories",
+    "brands": "Brands",
+    "about": "About",
+    "blog": "Blog",
+    "contact": "Contact",
+    "requestQuote": "Request Quote",
+    "menu": "Menu"
+  },
+  "footer": {
+    "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 15 years.",
+    "linksTitle": "Links",
+    "contactTitle": "Contact",
+    "addressLabel": "Address",
+    "address": "12 Bunyodkor Ave, Chilonzor District, Tashkent",
+    "phoneLabel": "Phone",
+    "email": "info@dieselparts.uz",
+    "rights": "All rights reserved."
+  },
+  "home": {
+    "heroTitle": "Reliable Spare Parts for Heavy Machinery",
+    "heroSubtitle": "10,000+ products, worldwide delivery, and guaranteed OEM quality",
+    "heroCtaCatalog": "Browse Catalog",
+    "heroCtaQuote": "Request Quote",
+    "trustBadges": [
+      { "title": "15+ Years Experience", "description": "Long-standing experience and trust in the industry" },
+      { "title": "10,000+ Products", "description": "A wide assortment of spare parts" },
+      { "title": "Worldwide Delivery", "description": "Fast, reliable logistics for international customers" },
+      { "title": "OEM Quality", "description": "Every product meets OEM standards" }
+    ],
+    "aboutTitle": "About Us",
+    "aboutText": "DieselParts supplies spare parts for mining and construction machinery. We provide dealers and end users with quality, reliable, and fast-delivered products.",
+    "categoriesTitle": "Browse by Category",
+    "categoriesSubtitle": "Find the part you need by category",
+    "brandsTitle": "Brands We Work With",
+    "featuredTitle": "Featured Products",
+    "ctaBannerTitle": "Need a Spare Part?",
+    "ctaBannerText": "Get a free consultation — our specialists will help you find the right part.",
+    "ctaBannerButton": "Get in Touch"
+  },
+  "catalog": {
+    "title": "Product Catalog",
+    "subtitle": "Search by name, SKU, or OEM number",
+    "searchPlaceholder": "Name, SKU, or OEM number...",
+    "filterBrandLabel": "Brand",
+    "filterCategoryLabel": "Category",
+    "filterAvailabilityLabel": "Availability",
+    "allBrands": "All Brands",
+    "allCategories": "All Categories",
+    "allAvailability": "All",
+    "sortLabel": "Sort",
+    "sortNewest": "Newest",
+    "sortNameAsc": "Name: A-Z",
+    "sortNameDesc": "Name: Z-A",
+    "gridView": "Grid View",
+    "listView": "List View",
+    "noResults": "No products found",
+    "resultsCount": "{count} products found",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageIndicator": "{current} / {total}"
+  },
+  "product": {
+    "skuLabel": "SKU",
+    "oemLabel": "OEM Number",
+    "brandLabel": "Brand",
+    "categoryLabel": "Category",
+    "compatibleModelsTitle": "Compatible Models",
+    "specificationsTitle": "Specifications",
+    "relatedProductsTitle": "Related Products",
+    "galleryAlt": "Product image"
+  },
+  "categories": {
+    "title": "Category",
+    "subtitle": "Products in this category",
+    "productsInCategory": "products"
+  },
+  "brands": {
+    "title": "Brand",
+    "subtitle": "Products from this brand",
+    "productsFromBrand": "products"
+  },
+  "about": {
+    "title": "About Us",
+    "storyTitle": "Our Story",
+    "storyParagraphs": [
+      "DieselParts was founded in 2010 and has since become one of the leading suppliers of spare parts for mining and construction machinery.",
+      "Today we supply OEM-quality parts for CAT, Komatsu, Volvo, Hitachi, JCB, Hyundai, and Doosan machinery to dealers and companies across dozens of countries."
+    ],
+    "statsTitle": "By the Numbers",
+    "stats": [
+      { "value": "15+", "label": "years of experience" },
+      { "value": "10,000+", "label": "products" },
+      { "value": "30+", "label": "countries" },
+      { "value": "500+", "label": "partners" }
+    ]
+  },
+  "blog": {
+    "title": "Blog",
+    "subtitle": "Articles on spare parts and equipment maintenance",
+    "readMore": "Read Article",
+    "publishedOn": "Published on"
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "Get in touch — we'll answer any questions",
+    "addressTitle": "Address",
+    "address": "12 Bunyodkor Ave, Chilonzor District, Tashkent",
+    "phoneTitle": "Phone",
+    "phone": "+998 71 200 00 00",
+    "emailTitle": "Email",
+    "email": "info@dieselparts.uz",
+    "hoursTitle": "Business Hours",
+    "hours": "Monday - Saturday, 9:00 AM - 6:00 PM"
+  },
+  "requestQuote": {
+    "title": "Request a Quote",
+    "subtitle": "Fill out the form and our managers will contact you shortly",
+    "fieldName": "Name",
+    "fieldCompany": "Company",
+    "fieldPhone": "Phone",
+    "fieldEmail": "Email",
+    "fieldCountry": "Country",
+    "fieldProducts": "Product(s) Needed",
+    "fieldProductsPlaceholder": "Enter product name, SKU, or OEM number",
+    "fieldQuantity": "Quantity",
+    "fieldMessage": "Message",
+    "fieldMessagePlaceholder": "Additional details...",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "successTitle": "Your Request Has Been Received",
+    "successText": "Thank you! Our managers will contact you shortly.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "errorRequired": "This field is required",
+    "errorEmail": "Enter a valid email address"
+  },
+  "inquiry": {
+    "title": "Send Inquiry",
+    "subtitle": "Ask our manager a question about this product",
+    "fieldName": "Name",
+    "fieldEmail": "Email",
+    "fieldPhone": "Phone",
+    "fieldMessage": "Message",
+    "fieldMessagePlaceholder": "Write your question...",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "successTitle": "Your Request Has Been Received",
+    "successText": "Thank you! Our managers will contact you shortly.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "errorRequired": "This field is required",
+    "errorEmail": "Enter a valid email address",
+    "openButton": "Send Inquiry"
+  }
+}
