@@ -10,6 +10,7 @@ import { SpecsTable } from "@/components/product/specs-table";
 import { StockBadge } from "@/components/product/stock-badge";
 import { RelatedProducts } from "@/components/product/related-products";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
+import { InquiryDialog } from "@/components/forms/inquiry-dialog";
 
 export function generateStaticParams() {
   return SUPPORTED_LOCALES.flatMap((lang) => products.map((product) => ({ lang, slug: product.slug })));
@@ -86,7 +87,10 @@ export default async function ProductDetailPage({
             </ul>
           </div>
 
-          <p className="mt-8 text-2xl font-semibold text-accent">{dict.common.requestPrice}</p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <p className="text-2xl font-semibold text-accent">{dict.common.requestPrice}</p>
+            <InquiryDialog productId={product.id} productSlug={product.slug} dict={dict.inquiry} />
+          </div>
         </div>
       </div>
 
