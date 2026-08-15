@@ -1,6 +1,7 @@
 import { products } from "@/lib/data/products";
 import { categories } from "@/lib/data/categories";
 import { brands } from "@/lib/data/brands";
+import { getRelatedProducts } from "@/lib/filters";
 import type { Product } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -21,9 +22,7 @@ export function RelatedProducts({
   stock: Dictionary["common"]["stock"];
   requestPriceLabel: string;
 }) {
-  const related = products
-    .filter((p) => p.id !== product.id && p.categoryId === product.categoryId)
-    .slice(0, RELATED_COUNT);
+  const related = getRelatedProducts(product, products, RELATED_COUNT);
 
   if (related.length === 0) {
     return null;

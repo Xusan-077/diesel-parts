@@ -47,3 +47,13 @@ export function sortProducts(products: Product[], sortKey: SortKey, lang: Locale
   }
   return sorted;
 }
+
+export function getRelatedProducts(
+  product: Product,
+  products: Product[],
+  count: number = 4
+): Product[] {
+  return products
+    .filter((p) => p.id !== product.id && p.categoryId === product.categoryId)
+    .slice(0, count);
+}
