@@ -39,4 +39,17 @@ describe("POST /api/quote-request", () => {
     const response = await POST(makeRequest({ ...validPayload, email: "not-an-email" }));
     expect(response.status).toBe(400);
   });
+
+  it("returns 400 for a malformed JSON body", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/quote-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not valid json",
+      })
+    );
+    expect(response.status).toBe(400);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+  });
 });

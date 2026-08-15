@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { quoteRequestSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, errors: { _root: ["Invalid JSON body"] } },
+      { status: 400 }
+    );
+  }
+
   const result = quoteRequestSchema.safeParse(body);
 
   if (!result.success) {
