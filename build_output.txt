@@ -1,0 +1,51 @@
+
+> diesel-parts@0.1.0 build
+> next build
+
+▲ Next.js 16.3.0 (Turbopack)
+✓ Running next.config.ts took 25ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 672ms
+  Running TypeScript ...
+  Finished TypeScript in 2.1s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/105) ...
+  Generating static pages using 9 workers (26/105) 
+  Generating static pages using 9 workers (52/105) 
+  Generating static pages using 9 workers (78/105) 
+✓ Generating static pages using 9 workers (105/105) in 820ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+├   /[lang]
+│ ├ ● /uz
+│ ├ ● /ru
+│ └ ● /en
+├   /[lang]/brands/[slug]
+│ ├ ● /uz/brands/cat
+│ ├ ● /uz/brands/komatsu
+│ ├ ● /uz/brands/volvo
+│ └ ● [+18 more paths]
+├   /[lang]/categories/[slug]
+│ ├ ● /uz/categories/engine-parts
+│ ├ ● /uz/categories/turbocharger
+│ ├ ● /uz/categories/injector
+│ └ ● [+27 more paths]
+├   /[lang]/products
+│ ├ ● /uz/products
+│ ├ ● /ru/products
+│ └ ● /en/products
+└   /[lang]/products/[slug]
+  ├ ● /uz/products/cat-fuel-injector-3126
+  ├ ● /uz/products/komatsu-turbocharger-pc200-8
+  ├ ● /uz/products/volvo-hydraulic-pump-ec210
+  └ ● [+42 more paths]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+
