@@ -8,6 +8,11 @@ export interface ProductFiltersInput {
   search?: string;
   brandId?: string;
   categoryId?: string;
+  /**
+   * Restricts the pool to these category ids, used by the catalog menu scope.
+   * An empty array matches nothing — a menu entry with no products yet.
+   */
+  categoryIds?: string[];
   availability?: AvailabilityFilter;
 }
 
@@ -23,6 +28,9 @@ export function filterProducts(
       return false;
     }
     if (filters.categoryId && filters.categoryId !== "all" && product.categoryId !== filters.categoryId) {
+      return false;
+    }
+    if (filters.categoryIds && !filters.categoryIds.includes(product.categoryId)) {
       return false;
     }
     if (filters.availability && filters.availability !== "all" && product.stockStatus !== filters.availability) {

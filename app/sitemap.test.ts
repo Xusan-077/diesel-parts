@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import sitemap from "./sitemap";
+import sitemap, { STATIC_PATHS } from "./sitemap";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { products } from "@/lib/data/products";
 import { categories } from "@/lib/data/categories";
 import { brands } from "@/lib/data/brands";
 import { blogPosts } from "@/lib/data/blog";
 
-const STATIC_PATH_COUNT = 6;
+const STATIC_PATH_COUNT = STATIC_PATHS.length;
 
 describe("sitemap", () => {
   it("includes one entry per locale for every static path, product, category, brand, and blog post", () => {

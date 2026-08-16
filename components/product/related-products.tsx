@@ -15,12 +15,14 @@ export function RelatedProducts({
   title,
   stock,
   requestPriceLabel,
+  actions,
 }: {
   product: Product;
   lang: Locale;
   title: string;
   stock: Dictionary["common"]["stock"];
   requestPriceLabel: string;
+  actions: Dictionary["productActions"];
 }) {
   const related = getRelatedProducts(product, products, RELATED_COUNT);
 
@@ -44,6 +46,7 @@ export function RelatedProducts({
               brandName={brand.name}
               stock={stock}
               requestPriceLabel={requestPriceLabel}
+              actions={actions}
             />
           );
         })}

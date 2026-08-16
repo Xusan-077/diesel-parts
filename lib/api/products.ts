@@ -1,0 +1,53 @@
+import type { Product } from "@/lib/types";
+import { apiClient } from "./client";
+import type { Page, ProductQuery } from "./product-query";
+
+export type ProductListParams = Partial<ProductQuery>;
+
+/** Stable, serialisable key for React Query caching. */
+export function productsQueryKey(params: ProductListParams) {
+  return ["products", params] as const;
+}
+
+export function toSearchParams(params: ProductListParams): URLSearchParams {
+  const search = new URLSearchParams();
+
+  if (params.q) search.set("q", params.q);
+  if (params.brandId && params.brandId !== "all") search.set("brand", params.brandId);
+  if (params.categoryId && params.categoryId !== "all") {
+    search.set("category", params.categoryId);
+  }
+  if (params.availability && params.availability !== "all") {
+    search.set("availability", params.availability);
+  }
+  if (params.sort) search.set("sort", params.sort);
+  if (params.page) search.set("page", String(params.page));
+  if (params.pageSize) search.set("pageSize", String(params.pageSize));
+  if (params.lang) search.set("lang", params.lang);
+
+  // An empty array is a real scope ("no products yet"), so it must still be
+  // sent — hence appending an empty value rather than skipping the key.
+  if (params.categoryIds) {
+    if (params.categoryIds.length === 0) {
+      search.append("categoryIds", "");
+    } else {
+      for (const id of params.categoryIds) {
+        search.append("categoryIds", id);
+      }
+    }
+  }
+
+  return search;
+}
+
+export async function fetchProducts(params: ProductListParams): Promise<Page<Product>> {
+  const response = await apiClient.get<Page<Product>>("/products", {
+    params: toSearchParams(params),
+  });
+  return response.data;
+}
+
+export async function fetchProduct(slug: string): Promise<Product> {
+  const response = await apiClient.get<Product>(`/products/${slug}`);
+  return response.data;
+}

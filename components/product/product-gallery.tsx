@@ -17,7 +17,7 @@ export function ProductGallery({
       <div
         role="img"
         aria-label={`${galleryAlt} — ${imageLabels[active]}`}
-        className="flex aspect-4/3 items-center justify-center rounded-lg border border-border bg-linear-to-br from-white/6 to-transparent text-lg text-muted"
+        className="flex aspect-4/3 items-center justify-center rounded-lg border border-border bg-linear-to-br from-surface-hover to-transparent text-lg text-muted"
       >
         {imageLabels[active]}
       </div>
@@ -29,7 +29,7 @@ export function ProductGallery({
             onClick={() => setActive(index)}
             className={cn(
               "flex h-16 w-16 items-center justify-center rounded-md border text-xs text-muted",
-              index === active ? "border-accent text-accent" : "border-border"
+              index === active ? "border-accent text-accent-strong" : "border-border"
             )}
           >
             {label}

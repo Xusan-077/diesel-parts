@@ -25,6 +25,20 @@ describe("filterProducts", () => {
     expect(result[0].oemNumber).toBe("127-8213");
   });
 
+  it("filters by a list of category ids", () => {
+    const result = filterProducts(products, { categoryIds: ["injector", "piston"] }, "en");
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.every((p) => ["injector", "piston"].includes(p.categoryId))).toBe(true);
+  });
+
+  it("matches nothing for an empty category id list", () => {
+    expect(filterProducts(products, { categoryIds: [] }, "en")).toHaveLength(0);
+  });
+
+  it("ignores an undefined category id list", () => {
+    expect(filterProducts(products, { categoryIds: undefined }, "en")).toHaveLength(products.length);
+  });
+
   it("filters by brand", () => {
     const result = filterProducts(products, { brandId: "cat" }, "en");
     expect(result.length).toBeGreaterThan(0);

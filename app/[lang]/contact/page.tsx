@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
+import { localeAlternates } from "@/lib/seo";
+import { Container } from "@/components/ui/container";
 
 export async function generateMetadata({
   params,
@@ -12,6 +14,7 @@ export async function generateMetadata({
   return {
     title: `${dict.contact.title} — ${dict.meta.siteName}`,
     description: dict.contact.subtitle,
+    alternates: localeAlternates(lang, "/contact"),
   };
 }
 
@@ -32,18 +35,18 @@ export default async function ContactPage({
   ];
 
   return (
-    <main className="mx-auto max-w-4xl px-6 pb-24 pt-24">
+    <Container as="main" size="narrow" className="pb-24 pt-12">
       <h1 className="text-3xl font-semibold text-foreground">{dict.contact.title}</h1>
       <p className="mt-2 text-muted">{dict.contact.subtitle}</p>
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
         {info.map((item) => (
-          <div key={item.title} className="rounded-lg border border-border bg-white/2 p-6">
+          <div key={item.title} className="rounded-lg border border-border bg-surface-muted p-6">
             <p className="text-sm text-muted">{item.title}</p>
             <p className="mt-1 text-foreground">{item.value}</p>
           </div>
         ))}
       </div>
-    </main>
+    </Container>
   );
 }

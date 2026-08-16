@@ -8,9 +8,13 @@ import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales"
 import { ProductGallery } from "@/components/product/product-gallery";
 import { SpecsTable } from "@/components/product/specs-table";
 import { StockBadge } from "@/components/product/stock-badge";
+import { ProductActions } from "@/components/product/product-actions";
+import { formatPrice } from "@/lib/format-price";
+import { localeAlternates } from "@/lib/seo";
 import { RelatedProducts } from "@/components/product/related-products";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
 import { InquiryDialog } from "@/components/forms/inquiry-dialog";
+import { Container } from "@/components/ui/container";
 
 export function generateStaticParams() {
   return SUPPORTED_LOCALES.flatMap((lang) => products.map((product) => ({ lang, slug: product.slug })));
@@ -31,6 +35,7 @@ export async function generateMetadata({
   return {
     title: `${product.name[lang]} — ${dict.meta.siteName}`,
     description: product.description[lang],
+    alternates: localeAlternates(lang, `/products/${product.slug}`),
   };
 }
 
@@ -52,7 +57,7 @@ export default async function ProductDetailPage({
   const brand = brands.find((b) => b.id === product.brandId)!;
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pb-24 pt-24">
+    <Container as="main" className="pb-24 pt-12">
       <ProductJsonLd product={product} category={category} brand={brand} lang={lang} />
 
       <div className="grid gap-12 lg:grid-cols-2">
@@ -88,8 +93,31 @@ export default async function ProductDetailPage({
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <p className="text-2xl font-semibold text-accent">{dict.common.requestPrice}</p>
-            <InquiryDialog productId={product.id} productSlug={product.slug} dict={dict.inquiry} />
+            {formatPrice(product.price, lang) ? (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted">
+                  {dict.product.priceLabel}
+                </p>
+                <p className="mt-1 text-3xl font-semibold text-foreground">
+                  {formatPrice(product.price, lang)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-2xl font-semibold text-accent-strong">{dict.common.requestPrice}</p>
+            )}
+
+            <ProductActions
+              productId={product.id}
+              price={product.price}
+              lang={lang}
+              dict={dict.productActions}
+            />
+            <InquiryDialog
+              productId={product.id}
+              productSlug={product.slug}
+              dict={dict.inquiry}
+              closeLabel={dict.common.close}
+            />
           </div>
         </div>
       </div>
@@ -105,8 +133,9 @@ export default async function ProductDetailPage({
           title={dict.product.relatedProductsTitle}
           stock={dict.common.stock}
           requestPriceLabel={dict.common.requestPrice}
+          actions={dict.productActions}
         />
       </div>
-    </main>
+    </Container>
   );
 }

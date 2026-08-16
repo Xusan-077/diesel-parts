@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const SELECT_CLASS =
-  "h-10 rounded-md border border-border bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent";
+  "h-10 rounded-md border border-border bg-transparent px-3 text-sm text-foreground focus:border-accent-strong";
 
 interface ProductFiltersProps {
   dict: Dictionary["catalog"];
@@ -106,7 +106,7 @@ export function ProductFilters({
             type="button"
             aria-label={dict.gridView}
             onClick={() => onViewChange("grid")}
-            className={cn("rounded px-3 py-1 text-xs", view === "grid" ? "bg-accent text-black" : "text-muted")}
+            className={cn("rounded px-3 py-1 text-xs", view === "grid" ? "bg-accent text-accent-foreground" : "text-muted")}
           >
             {dict.gridView}
           </button>
@@ -114,7 +114,7 @@ export function ProductFilters({
             type="button"
             aria-label={dict.listView}
             onClick={() => onViewChange("list")}
-            className={cn("rounded px-3 py-1 text-xs", view === "list" ? "bg-accent text-black" : "text-muted")}
+            className={cn("rounded px-3 py-1 text-xs", view === "list" ? "bg-accent text-accent-foreground" : "text-muted")}
           >
             {dict.listView}
           </button>

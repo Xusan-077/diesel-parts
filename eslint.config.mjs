@@ -12,7 +12,21 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent worktrees carry their own node_modules; never lint them.
+    ".claude/**",
+    "**/node_modules/**",
   ]),
+  {
+    rules: {
+      // `const { message, ...rest } = input` is how the schema tests build a
+      // payload with one field removed; the pulled-out binding is meant to go
+      // unused. Everything else still reports.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { ignoreRestSiblings: true, argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

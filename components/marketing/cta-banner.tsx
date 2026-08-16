@@ -9,7 +9,7 @@ export function CtaBanner({ lang, home }: { lang: Locale; home: Dictionary["home
       <p className="mx-auto mt-3 max-w-xl text-sm text-muted">{home.ctaBannerText}</p>
       <Link
         href={`/${lang}/contact`}
-        className="mt-8 inline-block rounded-md bg-accent px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-accent/90"
+        className="mt-8 inline-block rounded-md bg-accent px-6 py-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
       >
         {home.ctaBannerButton}
       </Link>

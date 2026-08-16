@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { blogPosts } from "@/lib/data/blog";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+import { localeAlternates } from "@/lib/seo";
+import { Container } from "@/components/ui/container";
 
 export function generateStaticParams() {
   return SUPPORTED_LOCALES.flatMap((lang) =>
@@ -27,6 +29,7 @@ export async function generateMetadata({
   return {
     title: `${post.title[lang]} — ${dict.meta.siteName}`,
     description: post.excerpt[lang],
+    alternates: localeAlternates(lang, `/blog/${post.slug}`),
   };
 }
 
@@ -47,7 +50,7 @@ export default async function BlogPostPage({
   const paragraphs = post.body[lang].split("\n\n");
 
   return (
-    <main className="mx-auto max-w-3xl px-6 pb-24 pt-24">
+    <Container as="main" size="prose" className="pb-24 pt-12">
       <p className="text-sm text-muted">
         {dict.blog.publishedOn}: {post.publishedAt}
       </p>
@@ -57,6 +60,6 @@ export default async function BlogPostPage({
           <p key={paragraph}>{paragraph}</p>
         ))}
       </div>
-    </main>
+    </Container>
   );
 }

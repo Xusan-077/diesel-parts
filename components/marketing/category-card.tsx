@@ -6,7 +6,7 @@ export function CategoryCard({ category, lang }: { category: Category; lang: Loc
   return (
     <Link
       href={`/${lang}/categories/${category.slug}`}
-      className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-white/2 px-4 py-8 text-center transition-colors hover:border-accent/60"
+      className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-muted px-4 py-8 text-center transition-colors hover:border-accent/60"
     >
       <span className="text-sm font-medium text-foreground">{category.name[lang]}</span>
     </Link>

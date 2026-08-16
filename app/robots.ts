@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site-config";
 
-const BASE_URL = "https://dieselparts.uz";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/" },
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    // Account pages are per-user and behind a session; keep crawlers out.
+    rules: { userAgent: "*", allow: "/", disallow: ["/*/account", "/api/"] },
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

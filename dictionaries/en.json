@@ -10,6 +10,7 @@
     "viewAll": "View All",
     "loading": "Loading...",
     "close": "Close",
+    "skipToContent": "Skip to content",
     "submit": "Submit",
     "back": "Back",
     "requestPrice": "Request Price",
@@ -17,17 +18,42 @@
       "available": "Available",
       "limited": "Limited",
       "outOfStock": "Out of Stock"
-    }
+    },
+    "carouselPrev": "Previous products",
+    "carouselNext": "Next products",
+    "carouselPause": "Stop automatic scrolling",
+    "carouselPlay": "Start automatic scrolling"
   },
   "nav": {
     "products": "Products",
+    "allProducts": "All products",
     "categories": "Categories",
     "brands": "Brands",
+    "partnership": "Partnership",
+    "services": "Services",
+    "delivery": "Delivery",
+    "payment": "Payment",
     "about": "About",
     "blog": "Blog",
     "contact": "Contact",
+    "contacts": "Contacts",
     "requestQuote": "Request Quote",
     "menu": "Menu"
+  },
+  "header": {
+    "catalog": "Catalog",
+    "searchPlaceholder": "Product, code or brand...",
+    "searchLabel": "Search",
+    "compare": "Compare",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "account": "Account",
+    "regionLabel": "Select region",
+    "phoneLabel": "Phone",
+    "languageLabel": "Select language",
+    "themeLabel": "Theme",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode"
   },
   "footer": {
     "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 15 years.",
@@ -37,6 +63,11 @@
     "address": "12 Bunyodkor Ave, Chilonzor District, Tashkent",
     "phoneLabel": "Phone",
     "email": "info@dieselparts.uz",
+    "hoursTitle": "Business hours",
+    "hours": "Monday–Saturday: 9:00–18:00, Sunday: closed",
+    "paymentTitle": "Payment methods",
+    "mapTitle": "Find us on the map",
+    "mapAlt": "Map showing our office location",
     "rights": "All rights reserved."
   },
   "home": {
@@ -45,10 +76,22 @@
     "heroCtaCatalog": "Browse Catalog",
     "heroCtaQuote": "Request Quote",
     "trustBadges": [
-      { "title": "15+ Years Experience", "description": "Long-standing experience and trust in the industry" },
-      { "title": "10,000+ Products", "description": "A wide assortment of spare parts" },
-      { "title": "Worldwide Delivery", "description": "Fast, reliable logistics for international customers" },
-      { "title": "OEM Quality", "description": "Every product meets OEM standards" }
+      {
+        "title": "15+ Years Experience",
+        "description": "Long-standing experience and trust in the industry"
+      },
+      {
+        "title": "10,000+ Products",
+        "description": "A wide assortment of spare parts"
+      },
+      {
+        "title": "Worldwide Delivery",
+        "description": "Fast, reliable logistics for international customers"
+      },
+      {
+        "title": "OEM Quality",
+        "description": "Every product meets OEM standards"
+      }
     ],
     "aboutTitle": "About Us",
     "aboutText": "DieselParts supplies spare parts for mining and construction machinery. We provide dealers and end users with quality, reliable, and fast-delivered products.",
@@ -56,9 +99,48 @@
     "categoriesSubtitle": "Find the part you need by category",
     "brandsTitle": "Brands We Work With",
     "featuredTitle": "Featured Products",
+    "popularTitle": "Popular",
+    "newTitle": "New products",
+    "newBadge": "New",
+    "bestSellersTitle": "Best sellers",
+    "whyUsTitle": "Why choose us",
+    "whyUsSubtitle": "The reasons our customers keep coming back",
+    "whyUs": [
+      {
+        "icon": "quality",
+        "title": "Genuine spare parts",
+        "description": "Every part meets OEM standards and ships with certification."
+      },
+      {
+        "icon": "courier",
+        "title": "Fast delivery",
+        "description": "Parts held in stock reach you within 1-3 days."
+      },
+      {
+        "icon": "consultation",
+        "title": "Expert consultation",
+        "description": "Our specialists help you pick the right part, free of charge."
+      },
+      {
+        "icon": "warranty",
+        "title": "Warranty",
+        "description": "Every part is covered; we replace defects free of charge."
+      },
+      {
+        "icon": "discount",
+        "title": "Competitive pricing",
+        "description": "We work without middlemen, so our prices stay below market."
+      },
+      {
+        "icon": "warehouse",
+        "title": "Straight from our warehouse",
+        "description": "The most-requested parts are always kept in stock."
+      }
+    ],
     "ctaBannerTitle": "Need a Spare Part?",
     "ctaBannerText": "Get a free consultation — our specialists will help you find the right part.",
-    "ctaBannerButton": "Get in Touch"
+    "ctaBannerButton": "Get in Touch",
+    "heroEyebrow": "10,000+ SKU · OEM quality"
   },
   "catalog": {
     "title": "Product Catalog",
@@ -76,15 +158,22 @@
     "sortNameDesc": "Name: Z-A",
     "gridView": "Grid View",
     "listView": "List View",
+    "clearScope": "Clear section filter",
     "noResults": "No products found",
+    "loading": "Loading...",
+    "loadError": "Products could not be loaded.",
+    "retry": "Try again",
     "resultsCount": "{count} products found",
     "prevPage": "Previous",
     "nextPage": "Next",
-    "pageIndicator": "{current} / {total}"
+    "pageIndicator": "{current} / {total}",
+    "paginationLabel": "Catalog pages",
+    "pageLabel": "Page {page}"
   },
   "product": {
     "skuLabel": "SKU",
     "oemLabel": "OEM Number",
+    "priceLabel": "Price",
     "brandLabel": "Brand",
     "categoryLabel": "Category",
     "compatibleModelsTitle": "Compatible Models",
@@ -111,10 +200,22 @@
     ],
     "statsTitle": "By the Numbers",
     "stats": [
-      { "value": "15+", "label": "years of experience" },
-      { "value": "10,000+", "label": "products" },
-      { "value": "30+", "label": "countries" },
-      { "value": "500+", "label": "partners" }
+      {
+        "value": "15+",
+        "label": "years of experience"
+      },
+      {
+        "value": "10,000+",
+        "label": "products"
+      },
+      {
+        "value": "30+",
+        "label": "countries"
+      },
+      {
+        "value": "500+",
+        "label": "partners"
+      }
     ]
   },
   "blog": {
@@ -135,9 +236,283 @@
     "hoursTitle": "Business Hours",
     "hours": "Monday - Saturday, 9:00 AM - 6:00 PM"
   },
+  "productActions": {
+    "addToWishlist": "Add to favorites",
+    "removeFromWishlist": "Remove from favorites",
+    "addToCompare": "Add to compare",
+    "removeFromCompare": "Remove from compare",
+    "compareFull": "The compare list is full",
+    "addToCart": "Add to cart",
+    "inCart": "In cart",
+    "contact": "Contact us"
+  },
+  "wishlist": {
+    "title": "Favorites",
+    "subtitle": "Products you saved to look at later",
+    "empty": "Your favorites list is empty.",
+    "emptyCta": "Browse the catalog",
+    "addToCart": "Add to cart",
+    "contact": "Contact us",
+    "priceOnRequest": "On request",
+    "remove": "Remove",
+    "clear": "Clear the list",
+    "count": "{count} products"
+  },
+  "cart": {
+    "title": "Cart",
+    "subtitle": "The products you want to order",
+    "empty": "Your cart is empty.",
+    "emptyCta": "Browse the catalog",
+    "remove": "Remove",
+    "clear": "Clear the cart",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "quantity": "Quantity",
+    "summaryTitle": "Order summary",
+    "summaryLines": "Line items",
+    "summaryUnits": "Total units",
+    "summaryPrice": "Total price",
+    "unpricedNote": "{count} line items are priced on request.",
+    "priceOnRequest": "On request",
+    "priceNote": "Pricing depends on order volume and delivery terms. Send a request and our manager will confirm the exact amount.",
+    "checkout": "Place an order"
+  },
+  "compare": {
+    "title": "Compare",
+    "subtitle": "Put product specifications side by side",
+    "empty": "No products selected for comparison yet.",
+    "emptyCta": "Browse the catalog",
+    "remove": "Remove",
+    "clear": "Clear the list",
+    "limitNote": "You can compare up to {max} products at a time.",
+    "rowBrand": "Brand",
+    "rowCategory": "Category",
+    "rowSku": "SKU",
+    "rowOem": "OEM number",
+    "rowPrice": "Price",
+    "priceOnRequest": "On request",
+    "rowStock": "Availability",
+    "rowModels": "Compatible models"
+  },
+  "account": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Enter your phone number and we will send a confirmation code by SMS.",
+    "dialogTitle": "Sign in or register",
+    "dialogSubtitle": "Enter your phone number and we will send a confirmation code by SMS. No password to remember.",
+    "phonePlaceholder": "XX XXX XX XX",
+    "signIn": "Sign in",
+    "consentPrefix": "By continuing, you agree to the",
+    "privacyPolicy": "Privacy Policy",
+    "consentSuffix": ".",
+    "phoneLabel": "Phone number",
+    "continue": "Continue",
+    "sending": "Sending...",
+    "verifyTitle": "Confirm the code",
+    "verifySubtitle": "Enter the 6-digit code sent to {phone}.",
+    "codeLabel": "Confirmation code",
+    "confirm": "Confirm",
+    "verifying": "Checking...",
+    "resend": "Send the code again",
+    "resendIn": "Resend in {seconds}s",
+    "resent": "A new code has been sent",
+    "changePhone": "Change number",
+    "errorInvalidPhone": "Enter the complete phone number",
+    "errorCodeFormat": "Enter the 6-digit code",
+    "errorInvalidCode": "Wrong code. Attempts left: {attempts}",
+    "errorExpired": "The code has expired. Request a new one.",
+    "errorTooManyAttempts": "Too many attempts. Request a new code.",
+    "errorCooldown": "Please try again in {seconds} seconds.",
+    "errorRateLimited": "Too many requests. Try again in an hour.",
+    "errorDelivery": "The SMS could not be sent. Please try again later.",
+    "errorNoPending": "Your session expired. Enter the number again.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "profileTitle": "My account",
+    "profileSubtitle": "Your profile details and order history",
+    "profileInfoTitle": "Profile details",
+    "profilePhoneLabel": "Phone number",
+    "ordersTitle": "Order history",
+    "ordersEmpty": "You have no orders yet.",
+    "ordersEmptyCta": "Browse the catalog",
+    "logout": "Sign out"
+  },
+  "brandsIndex": {
+    "title": "Brands",
+    "subtitle": "The leading manufacturers we work with. Pick a brand to see the spare parts that fit that machinery.",
+    "gridTitle": "Partner brands"
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "We do more than sell parts — we provide the technical support that keeps your machinery running.",
+    "items": [
+      {
+        "icon": "selection",
+        "title": "Part selection",
+        "description": "We identify the right part from your machine model, OEM number, or serial number."
+      },
+      {
+        "icon": "diagnostics",
+        "title": "Diagnostics",
+        "description": "We test engine, hydraulic, and transmission assemblies on modern equipment."
+      },
+      {
+        "icon": "installation",
+        "title": "Installation",
+        "description": "Our experienced technicians fit and calibrate the parts you buy."
+      },
+      {
+        "icon": "warranty",
+        "title": "Warranty service",
+        "description": "Every part is covered. If a defect appears within the warranty period, we replace it free of charge."
+      },
+      {
+        "icon": "consultation",
+        "title": "Consultation",
+        "description": "Our specialists answer technical questions by phone or on Telegram."
+      },
+      {
+        "icon": "delivery",
+        "title": "Delivery",
+        "description": "We ship parts across Uzbekistan and to international destinations."
+      }
+    ]
+  },
+  "payment": {
+    "title": "Payment",
+    "subtitle": "Pay the way that suits you — every option is available for both individuals and companies.",
+    "methodsTitle": "Accepted payment methods",
+    "methods": [
+      {
+        "icon": "cash",
+        "title": "Cash",
+        "description": "Pay in cash at our sales point or on delivery of the part."
+      },
+      {
+        "icon": "card",
+        "title": "Bank card",
+        "description": "UzCard, Humo, and Visa cards are accepted through our terminal."
+      },
+      {
+        "icon": "mobile",
+        "title": "Click",
+        "description": "Online payment via the Click app — confirmed within seconds."
+      },
+      {
+        "icon": "mobile",
+        "title": "Payme",
+        "description": "Payment through Payme, with the receipt saved automatically in the app."
+      },
+      {
+        "icon": "bank",
+        "title": "Bank transfer",
+        "description": "Contract-based transfer for companies. We work with VAT."
+      },
+      {
+        "icon": "invoice",
+        "title": "Invoice",
+        "description": "We supply all accounting paperwork — invoice and delivery note included."
+      }
+    ],
+    "note": "Payments from companies are handled through a contract and an invoice. For large orders we are happy to discuss payment in instalments.",
+    "faqTitle": "Frequently asked questions",
+    "faq": [
+      {
+        "question": "Is prepayment required?",
+        "answer": "Parts in stock can be paid for on delivery. Parts brought in to order require a 50% prepayment."
+      },
+      {
+        "question": "How do I pay as a company?",
+        "answer": "Send us your company details — we prepare the contract and invoice, and you pay by bank transfer."
+      },
+      {
+        "question": "Do I get a refund if the part does not fit?",
+        "answer": "Yes. An uninstalled part in resalable condition can be returned within 14 days for a full refund."
+      },
+      {
+        "question": "Do you accept payments from abroad?",
+        "answer": "Yes, international customers can pay in foreign currency by bank transfer. Contact us for details."
+      }
+    ]
+  },
+  "delivery": {
+    "title": "Delivery",
+    "subtitle": "Getting the part to you fast matters — every day of downtime is a loss. That is why we take logistics seriously.",
+    "items": [
+      {
+        "icon": "courier",
+        "title": "Within Tashkent",
+        "description": "Courier delivery across the city within one working day."
+      },
+      {
+        "icon": "delivery",
+        "title": "To the regions",
+        "description": "To every region of Uzbekistan by freight partners in 2-4 days."
+      },
+      {
+        "icon": "air",
+        "title": "Air freight",
+        "description": "For urgent cases a part can be flown in on the fastest available route."
+      },
+      {
+        "icon": "worldwide",
+        "title": "International routes",
+        "description": "Export to CIS countries and beyond, customs paperwork included."
+      },
+      {
+        "icon": "pickup",
+        "title": "Warehouse pickup",
+        "description": "If you prefer to collect the order yourself, we will send you the warehouse address."
+      },
+      {
+        "icon": "terms",
+        "title": "Lead times",
+        "description": "Parts in stock ship the same day. Parts brought in to order take 7-21 days."
+      }
+    ],
+    "note": "Delivery cost depends on weight, volume, and destination. Your manager confirms the exact amount when the order is placed."
+  },
+  "partnership": {
+    "title": "Partnership",
+    "subtitle": "We offer dedicated terms for dealers, service centres, and large equipment fleets.",
+    "items": [
+      {
+        "icon": "handshake",
+        "title": "Dealership",
+        "description": "Become an official dealer in your region, with marketing support and exclusive terms."
+      },
+      {
+        "icon": "discount",
+        "title": "Wholesale pricing",
+        "description": "Tiered discounts for partners who order regularly."
+      },
+      {
+        "icon": "dealer",
+        "title": "Service centres",
+        "description": "Priority delivery and deferred payment options for repair workshops."
+      },
+      {
+        "icon": "stock",
+        "title": "Reserved stock",
+        "description": "For long-term partners we keep the most-used parts reserved in our warehouse."
+      },
+      {
+        "icon": "quality",
+        "title": "Quality guarantee",
+        "description": "Every part meets OEM standards and comes with certification."
+      },
+      {
+        "icon": "growth",
+        "title": "Growing together",
+        "description": "We advise on market analysis and on widening your product range."
+      }
+    ],
+    "note": "To discuss partnership terms, get in touch with a short introduction to your company and our manager will prepare an offer."
+  },
   "requestQuote": {
     "title": "Request a Quote",
     "subtitle": "Fill out the form and our managers will contact you shortly",
+    "fromCartTitle": "Products from your cart",
+    "fromCartNote": "The list below was copied into the form automatically — edit it if you need to.",
+    "fromCartEdit": "Edit the cart",
     "fieldName": "Name",
     "fieldCompany": "Company",
     "fieldPhone": "Phone",

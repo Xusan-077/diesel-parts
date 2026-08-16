@@ -21,7 +21,16 @@ export async function POST(request: Request) {
     );
   }
 
-  console.log("[quote-request]", result.data);
+  const { cartItems, ...contact } = result.data;
+
+  // TODO(Xusan): forward to a CRM or mailbox once one exists.
+  console.log("[quote-request]", contact);
+  if (cartItems?.length) {
+    console.log(
+      "[quote-request] cart:",
+      cartItems.map((item) => `${item.sku} × ${item.quantity}`).join(", ")
+    );
+  }
 
   return NextResponse.json({ success: true });
 }

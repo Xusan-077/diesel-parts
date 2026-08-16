@@ -1,5 +1,9 @@
 import type { Product } from "@/lib/types";
 
+/**
+ * TODO(Xusan): the `price` values are placeholders in UZS. Three products are
+ * intentionally left at `null` to exercise the "price not set" path.
+ */
 export const products: Product[] = [
   {
     id: "cat-injector-3126",
@@ -7,6 +11,7 @@ export const products: Product[] = [
     name: { uz: "CAT 3126 yonilg'i forsunkasi", ru: "Топливная форсунка CAT 3126", en: "CAT 3126 Fuel Injector" },
     sku: "DP-INJ-3126",
     oemNumber: "127-8213",
+    price: 3450000,
     categoryId: "injector",
     brandId: "cat",
     description: {
@@ -28,6 +33,7 @@ export const products: Product[] = [
     name: { uz: "Komatsu PC200-8 turbokompressori", ru: "Турбокомпрессор Komatsu PC200-8", en: "Komatsu PC200-8 Turbocharger" },
     sku: "DP-TRB-PC200",
     oemNumber: "6754-81-8097",
+    price: 18900000,
     categoryId: "turbocharger",
     brandId: "komatsu",
     description: {
@@ -49,6 +55,7 @@ export const products: Product[] = [
     name: { uz: "Volvo EC210 gidravlik nasosi", ru: "Гидравлический насос Volvo EC210", en: "Volvo EC210 Hydraulic Pump" },
     sku: "DP-HYP-EC210",
     oemNumber: "VOE14514151",
+    price: 27500000,
     categoryId: "hydraulic-pump",
     brandId: "volvo",
     description: {
@@ -70,6 +77,7 @@ export const products: Product[] = [
     name: { uz: "Hitachi ZX330 porshen to'plami", ru: "Комплект поршней Hitachi ZX330", en: "Hitachi ZX330 Piston Kit" },
     sku: "DP-PST-ZX330",
     oemNumber: "4306413",
+    price: 6200000,
     categoryId: "piston",
     brandId: "hitachi",
     description: {
@@ -91,6 +99,7 @@ export const products: Product[] = [
     name: { uz: "JCB 3CX dvigatel prokladkalari to'plami", ru: "Комплект прокладок двигателя JCB 3CX", en: "JCB 3CX Engine Gasket Set" },
     sku: "DP-ENG-3CX",
     oemNumber: "320/09501",
+    price: null,
     categoryId: "engine-parts",
     brandId: "jcb",
     description: {
@@ -112,6 +121,7 @@ export const products: Product[] = [
     name: { uz: "Hyundai R210 gusenitsa zanjiri", ru: "Гусеничная цепь Hyundai R210", en: "Hyundai R210 Track Chain" },
     sku: "DP-TRC-R210",
     oemNumber: "81N6-15030",
+    price: 14300000,
     categoryId: "track-chain",
     brandId: "hyundai",
     description: {
@@ -133,6 +143,7 @@ export const products: Product[] = [
     name: { uz: "Doosan DX225 zichlagich to'plami", ru: "Комплект уплотнений Doosan DX225", en: "Doosan DX225 Seal Kit" },
     sku: "DP-SEL-DX225",
     oemNumber: "2454-1030A",
+    price: 890000,
     categoryId: "seal-kit",
     brandId: "doosan",
     description: {
@@ -154,6 +165,7 @@ export const products: Product[] = [
     name: { uz: "CAT C15 turbokompressori", ru: "Турбокомпрессор CAT C15", en: "CAT C15 Turbocharger" },
     sku: "DP-TRB-C15",
     oemNumber: "179-9210",
+    price: 22100000,
     categoryId: "turbocharger",
     brandId: "cat",
     description: {
@@ -175,6 +187,7 @@ export const products: Product[] = [
     name: { uz: "Komatsu PC300 yonilg'i forsunkasi", ru: "Топливная форсунка Komatsu PC300", en: "Komatsu PC300 Fuel Injector" },
     sku: "DP-INJ-PC300",
     oemNumber: "6156-11-3300",
+    price: 4150000,
     categoryId: "injector",
     brandId: "komatsu",
     description: {
@@ -196,6 +209,7 @@ export const products: Product[] = [
     name: { uz: "Volvo L120 transmissiya klapani", ru: "Клапан трансмиссии Volvo L120", en: "Volvo L120 Transmission Valve" },
     sku: "DP-VLV-L120",
     oemNumber: "VOE11192370",
+    price: 1750000,
     categoryId: "valve",
     brandId: "volvo",
     description: {
@@ -217,6 +231,7 @@ export const products: Product[] = [
     name: { uz: "Hitachi EX200 gidravlik nasosi", ru: "Гидравлический насос Hitachi EX200", en: "Hitachi EX200 Hydraulic Pump" },
     sku: "DP-HYP-EX200",
     oemNumber: "9148983",
+    price: null,
     categoryId: "hydraulic-pump",
     brandId: "hitachi",
     description: {
@@ -238,6 +253,7 @@ export const products: Product[] = [
     name: { uz: "JCB JS220 yurish g'ildiragi", ru: "Ходовой каток JCB JS220", en: "JCB JS220 Undercarriage Roller" },
     sku: "DP-UNC-JS220",
     oemNumber: "333/G6154",
+    price: 31800000,
     categoryId: "undercarriage",
     brandId: "jcb",
     description: {
@@ -259,6 +275,7 @@ export const products: Product[] = [
     name: { uz: "Hyundai R220 porshen halqasi", ru: "Поршневое кольцо Hyundai R220", en: "Hyundai R220 Piston Ring" },
     sku: "DP-PSR-R220",
     oemNumber: "21N6-32020",
+    price: 5600000,
     categoryId: "piston",
     brandId: "hyundai",
     description: {
@@ -280,6 +297,7 @@ export const products: Product[] = [
     name: { uz: "Doosan DX140 dvigatel klapani", ru: "Клапан двигателя Doosan DX140", en: "Doosan DX140 Engine Valve" },
     sku: "DP-ENV-DX140",
     oemNumber: "65.02601-6019A",
+    price: 1320000,
     categoryId: "valve",
     brandId: "doosan",
     description: {
@@ -301,6 +319,7 @@ export const products: Product[] = [
     name: { uz: "CAT 950 transmissiya filtri", ru: "Фильтр трансмиссии CAT 950", en: "CAT 950 Transmission Filter" },
     sku: "DP-TRF-950",
     oemNumber: "132-9863",
+    price: null,
     categoryId: "transmission",
     brandId: "cat",
     description: {

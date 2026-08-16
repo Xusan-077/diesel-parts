@@ -6,11 +6,17 @@ const badgeVariants = cva(
   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
   {
     variants: {
+      /*
+       * These were emerald-400 / red-400 on a 15%-alpha tint — values picked
+       * for a dark surface, which left them at ~1.9:1 in light mode. The
+       * tokens below carry a separate light and dark cast so both themes
+       * clear 4.5:1.
+       */
       variant: {
-        default: "bg-white/10 text-foreground",
-        success: "bg-emerald-500/15 text-emerald-400",
-        warning: "bg-accent/15 text-accent",
-        danger: "bg-red-500/15 text-red-400",
+        default: "bg-surface-hover text-foreground",
+        success: "bg-success-surface text-success",
+        warning: "bg-warning-surface text-warning",
+        danger: "bg-danger-surface text-danger",
       },
     },
     defaultVariants: {

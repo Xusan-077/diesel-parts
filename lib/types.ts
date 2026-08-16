@@ -29,6 +29,11 @@ export interface Product {
   name: LocalizedText;
   sku: string;
   oemNumber: string;
+  /**
+   * Price in UZS, or `null` when it has not been set yet — those products show
+   * a "contact us" action instead of an add-to-cart button.
+   */
+  price: number | null;
   categoryId: string;
   brandId: string;
   description: LocalizedText;

@@ -1,21 +1,217 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #0d0e11;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f4f5f7;
+  --surface-hover: #eef0f3;
+  --foreground: #17181c;
+  /*
+   * #6b7280 measured 4.43:1 against --surface-muted, just under the 4.5:1
+   * WCAG AA floor. This value clears 5.5:1 on every surface token.
+   */
+  --muted: #5c6370;
+  --border-color: #e5e7eb;
+  /* Brand orange. Only ever a fill — see --accent-strong for text. */
+  --accent: #f5841f;
+  /*
+   * White on brand orange is 2.56:1. Near-black on the same orange is 6.93:1,
+   * so the fill keeps its brand value and the label becomes readable.
+   */
+  --accent-foreground: #17181c;
+  /*
+   * Text-weight orange. The brand orange as a foreground colour is 2.56:1 on
+   * white, so links, prices and active states use this darker cast instead.
+   */
+  --accent-strong: #b45309;
+  --danger: #b91c1c;
+  --danger-surface: #fee2e2;
+  --success: #15803d;
+  --success-surface: #dcfce7;
+  --warning: #b45309;
+  --warning-surface: #fef3c7;
+}
+
+.dark {
+  --background: #1a1a1a;
+  --surface: #242424;
+  --surface-muted: #202020;
+  --surface-hover: #2c2c2c;
   --foreground: #f5f5f5;
   --muted: #9ca3af;
-  --border-color: #1f2126;
-  --accent: #f77d2a;
+  --border-color: #2e2f34;
+  --accent: #f5841f;
+  --accent-foreground: #17181c;
+  /* On dark surfaces the brand orange itself already clears 6:1. */
+  --accent-strong: #f5a04f;
+  --danger: #fca5a5;
+  --danger-surface: #3f1d1d;
+  --success: #86efac;
+  --success-surface: #14321f;
+  --warning: #fcd34d;
+  --warning-surface: #3a2c10;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border-color);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-strong: var(--accent-strong);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/*
+ * Keyboard focus. The UA default here resolved to a 0.67px outline that
+ * inherited the text colour, which made it invisible on the orange CTAs.
+ * One ring for every focusable element, drawn in the foreground colour so it
+ * holds up on both themes and on top of the accent fill.
+ */
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* On an accent fill the foreground ring is the near-black label colour, which
+   reads as a thickened border. White separates it from the orange. */
+.bg-accent:focus-visible,
+.bg-accent *:focus-visible {
+  outline-color: #ffffff;
+  box-shadow: 0 0 0 4px var(--accent);
+}
+
+/*
+ * Smooth <details> expansion. `::details-content` and `interpolate-size` are
+ * progressive enhancements: browsers without them simply snap open as before.
+ */
+@supports selector(::details-content) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 200ms ease,
+      content-visibility 200ms allow-discrete,
+      opacity 160ms ease;
+  }
+
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+/*
+ * Hero: the inspection lamp on a blueprint.
+ *
+ * Three stacked layers on one element — the ruled grid, the tile the lamp is
+ * over, and the lamp itself. All three read from `--lamp-x`/`--lamp-y`, which a
+ * pointer handler writes once per frame; no layout or paint work is triggered
+ * on move. Before the pointer arrives (and on touch, where it never does) the
+ * defaults park the lamp off to one side so the grid still has a lit corner.
+ */
+.hero-lamp {
+  /* Percentages so the resting position is sensible at any width. The pointer
+     handler overwrites these with px; both are valid gradient positions. */
+  --lamp-x: 24%;
+  --lamp-y: 32%;
+  --lamp-on: 0.55;
+  /* Snapped tile origin. px only — JS does the rounding, since CSS `mod()`
+     cannot take a percentage and a length. */
+  --tile-x: 0px;
+  --tile-y: 0px;
+  --tile-on: 0;
+  --lamp-module: 64px;
+
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  /* Layer 1: the ruled grid. */
+  background-image:
+    linear-gradient(to right, var(--border-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-color) 1px, transparent 1px);
+  background-size: var(--lamp-module) var(--lamp-module);
+
+  /* The grid fades out toward the edges so it never hits a hard seam. */
+  mask-image: radial-gradient(120% 100% at 50% 0%, #000 30%, transparent 100%);
+}
+
+/* Layer 2: the module the lamp is over, snapped to the grid. */
+.hero-lamp::before {
+  content: "";
+  position: absolute;
+  left: var(--tile-x);
+  top: var(--tile-y);
+  width: var(--lamp-module);
+  height: var(--lamp-module);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  opacity: var(--tile-on);
+  transition: opacity 200ms ease;
+}
+
+/* Layer 3: the lamp pool. */
+.hero-lamp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    280px circle at var(--lamp-x) var(--lamp-y),
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    transparent 70%
+  );
+  opacity: var(--lamp-on);
+  transition: opacity 300ms ease;
+}
+
+/*
+ * Hero entrance. Kept in CSS rather than a motion component so the copy is in
+ * the server HTML and the LCP text never waits on JavaScript. `both` matters:
+ * the reduced-motion rule below collapses the duration to nothing, and the fill
+ * leaves every element at its final, visible state.
+ */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-rise {
+  animation: hero-rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {

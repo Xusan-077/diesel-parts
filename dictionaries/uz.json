@@ -10,6 +10,7 @@
     "viewAll": "Barchasini ko'rish",
     "loading": "Yuklanmoqda...",
     "close": "Yopish",
+    "skipToContent": "Asosiy qismga o'tish",
     "submit": "Yuborish",
     "back": "Orqaga",
     "requestPrice": "Narxni so'rang",
@@ -17,17 +18,42 @@
       "available": "Mavjud",
       "limited": "Cheklangan",
       "outOfStock": "Tugagan"
-    }
+    },
+    "carouselPrev": "Oldingi mahsulotlar",
+    "carouselNext": "Keyingi mahsulotlar",
+    "carouselPause": "Avtomatik aylanishni to'xtatish",
+    "carouselPlay": "Avtomatik aylanishni yoqish"
   },
   "nav": {
     "products": "Mahsulotlar",
+    "allProducts": "Barcha mahsulotlar",
     "categories": "Kategoriyalar",
     "brands": "Brendlar",
+    "partnership": "Hamkorlik",
+    "services": "Xizmatlar",
+    "delivery": "Yetkazib berish",
+    "payment": "To'lov",
     "about": "Biz haqimizda",
     "blog": "Blog",
     "contact": "Aloqa",
+    "contacts": "Kontaktlar",
     "requestQuote": "Narx so'rash",
     "menu": "Menyu"
+  },
+  "header": {
+    "catalog": "Katalog",
+    "searchPlaceholder": "Mahsulot, kod yoki brend...",
+    "searchLabel": "Qidirish",
+    "compare": "Taqqoslash",
+    "favorites": "Saralanganlar",
+    "cart": "Savat",
+    "account": "Kabinet",
+    "regionLabel": "Viloyatni tanlang",
+    "phoneLabel": "Telefon",
+    "languageLabel": "Tilni tanlang",
+    "themeLabel": "Mavzu",
+    "themeLight": "Yorug' rejim",
+    "themeDark": "Qorong'i rejim"
   },
   "footer": {
     "description": "15 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
@@ -37,6 +63,11 @@
     "address": "Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko'chasi 12",
     "phoneLabel": "Telefon",
     "email": "info@dieselparts.uz",
+    "hoursTitle": "Ish vaqti",
+    "hours": "Dushanba–Shanba: 9:00–18:00, Yakshanba: dam olish kuni",
+    "paymentTitle": "To'lov usullari",
+    "mapTitle": "Bizni xaritada toping",
+    "mapAlt": "Ofisimiz joylashgan yerning xaritasi",
     "rights": "Barcha huquqlar himoyalangan."
   },
   "home": {
@@ -45,10 +76,22 @@
     "heroCtaCatalog": "Katalogni ko'rish",
     "heroCtaQuote": "Narx so'rash",
     "trustBadges": [
-      { "title": "15+ yil tajriba", "description": "Sohada uzoq yillik tajriba va ishonch" },
-      { "title": "10,000+ mahsulot", "description": "Keng assortimentdagi ehtiyot qismlar" },
-      { "title": "Jahon bo'ylab yetkazib berish", "description": "Xalqaro mijozlarga tez va ishonchli logistika" },
-      { "title": "OEM sifat", "description": "Barcha mahsulotlar OEM standartlariga mos" }
+      {
+        "title": "15+ yil tajriba",
+        "description": "Sohada uzoq yillik tajriba va ishonch"
+      },
+      {
+        "title": "10,000+ mahsulot",
+        "description": "Keng assortimentdagi ehtiyot qismlar"
+      },
+      {
+        "title": "Jahon bo'ylab yetkazib berish",
+        "description": "Xalqaro mijozlarga tez va ishonchli logistika"
+      },
+      {
+        "title": "OEM sifat",
+        "description": "Barcha mahsulotlar OEM standartlariga mos"
+      }
     ],
     "aboutTitle": "Biz haqimizda",
     "aboutText": "DieselParts — mining va construction texnikasi uchun ehtiyot qismlar yetkazib beruvchi kompaniya. Biz dilerlar va yakuniy foydalanuvchilarga sifatli, ishonchli va tez yetkazib beriladigan mahsulotlarni taqdim etamiz.",
@@ -56,9 +99,48 @@
     "categoriesSubtitle": "Kerakli ehtiyot qismni toifasi bo'yicha toping",
     "brandsTitle": "Ishlaydigan brendlarimiz",
     "featuredTitle": "Tavsiya etilgan mahsulotlar",
+    "popularTitle": "Ommabop",
+    "newTitle": "Yangi mahsulotlar",
+    "newBadge": "Yangi",
+    "bestSellersTitle": "Eng ko'p sotiladiganlar",
+    "whyUsTitle": "Nega aynan biz",
+    "whyUsSubtitle": "Mijozlarimiz bizni tanlashining sabablari",
+    "whyUs": [
+      {
+        "icon": "quality",
+        "title": "Original ehtiyot qismlar",
+        "description": "Barcha qismlar OEM standartlariga mos va sertifikat bilan ta'minlanadi."
+      },
+      {
+        "icon": "courier",
+        "title": "Tez yetkazib berish",
+        "description": "Omborda mavjud qismlar 1-3 kun ichida manzilingizga yetib boradi."
+      },
+      {
+        "icon": "consultation",
+        "title": "Professional konsultatsiya",
+        "description": "Mutaxassislarimiz kerakli qismni tanlashda bepul yordam beradi."
+      },
+      {
+        "icon": "warranty",
+        "title": "Kafolat",
+        "description": "Har bir qismga kafolat beriladi, nuqson chiqsa bepul almashtiramiz."
+      },
+      {
+        "icon": "discount",
+        "title": "Qulay narxlar",
+        "description": "Vositachilarsiz ishlaganimiz uchun narxlarimiz bozordan past."
+      },
+      {
+        "icon": "warehouse",
+        "title": "To'g'ridan-to'g'ri omborimizdan",
+        "description": "Eng ko'p ishlatiladigan qismlar doimo zaxirada turadi."
+      }
+    ],
     "ctaBannerTitle": "Ehtiyot qism kerakmi?",
     "ctaBannerText": "Bepul konsultatsiya oling — mutaxassislarimiz sizga mos qismni topishga yordam beradi.",
-    "ctaBannerButton": "Bog'lanish"
+    "ctaBannerButton": "Bog'lanish",
+    "heroEyebrow": "10 000+ artikul · OEM sifat"
   },
   "catalog": {
     "title": "Mahsulotlar katalogi",
@@ -76,15 +158,22 @@
     "sortNameDesc": "Nomi: Z-A",
     "gridView": "Katak ko'rinish",
     "listView": "Ro'yxat ko'rinishi",
+    "clearScope": "Bo'lim filtrini olib tashlash",
     "noResults": "Hech narsa topilmadi",
+    "loading": "Yuklanmoqda...",
+    "loadError": "Mahsulotlarni yuklab bo'lmadi.",
+    "retry": "Qayta urinish",
     "resultsCount": "{count} ta mahsulot topildi",
     "prevPage": "Oldingi",
     "nextPage": "Keyingi",
-    "pageIndicator": "{current} / {total}"
+    "pageIndicator": "{current} / {total}",
+    "paginationLabel": "Katalog sahifalari",
+    "pageLabel": "{page}-sahifa"
   },
   "product": {
     "skuLabel": "SKU",
     "oemLabel": "OEM raqami",
+    "priceLabel": "Narx",
     "brandLabel": "Brend",
     "categoryLabel": "Kategoriya",
     "compatibleModelsTitle": "Mos keladigan modellar",
@@ -111,10 +200,22 @@
     ],
     "statsTitle": "Raqamlarda biz",
     "stats": [
-      { "value": "15+", "label": "yillik tajriba" },
-      { "value": "10,000+", "label": "mahsulot" },
-      { "value": "30+", "label": "mamlakat" },
-      { "value": "500+", "label": "hamkor" }
+      {
+        "value": "15+",
+        "label": "yillik tajriba"
+      },
+      {
+        "value": "10,000+",
+        "label": "mahsulot"
+      },
+      {
+        "value": "30+",
+        "label": "mamlakat"
+      },
+      {
+        "value": "500+",
+        "label": "hamkor"
+      }
     ]
   },
   "blog": {
@@ -135,9 +236,283 @@
     "hoursTitle": "Ish vaqti",
     "hours": "Dushanba - Shanba, 09:00 - 18:00"
   },
+  "productActions": {
+    "addToWishlist": "Saralanganlarga qo'shish",
+    "removeFromWishlist": "Saralanganlardan olib tashlash",
+    "addToCompare": "Taqqoslashga qo'shish",
+    "removeFromCompare": "Taqqoslashdan olib tashlash",
+    "compareFull": "Taqqoslash ro'yxati to'lgan",
+    "addToCart": "Savatga qo'shish",
+    "inCart": "Savatda",
+    "contact": "Aloqa"
+  },
+  "wishlist": {
+    "title": "Saralanganlar",
+    "subtitle": "Keyinroq ko'rib chiqish uchun saqlab qo'ygan mahsulotlaringiz",
+    "empty": "Saralanganlar ro'yxati hozircha bo'sh.",
+    "emptyCta": "Katalogga o'tish",
+    "addToCart": "Savatga qo'shish",
+    "contact": "Aloqa",
+    "priceOnRequest": "So'rov bo'yicha",
+    "remove": "O'chirish",
+    "clear": "Ro'yxatni tozalash",
+    "count": "{count} ta mahsulot"
+  },
+  "cart": {
+    "title": "Savat",
+    "subtitle": "Buyurtma bermoqchi bo'lgan mahsulotlaringiz",
+    "empty": "Savatingiz hozircha bo'sh.",
+    "emptyCta": "Katalogga o'tish",
+    "remove": "O'chirish",
+    "clear": "Savatni tozalash",
+    "increase": "Ko'paytirish",
+    "decrease": "Kamaytirish",
+    "quantity": "Miqdor",
+    "summaryTitle": "Buyurtma xulosasi",
+    "summaryLines": "Pozitsiyalar",
+    "summaryUnits": "Jami dona",
+    "summaryPrice": "Jami narx",
+    "unpricedNote": "{count} ta pozitsiya narxi so'rov bo'yicha aniqlanadi.",
+    "priceOnRequest": "So'rov bo'yicha",
+    "priceNote": "Narx buyurtma hajmi va yetkazib berish shartlariga qarab hisoblanadi. So'rov qoldiring — menejerimiz aniq narxni aytadi.",
+    "checkout": "Buyurtma berish"
+  },
+  "compare": {
+    "title": "Taqqoslash",
+    "subtitle": "Mahsulotlarning texnik xususiyatlarini yonma-yon solishtiring",
+    "empty": "Taqqoslash uchun hali mahsulot tanlanmagan.",
+    "emptyCta": "Katalogga o'tish",
+    "remove": "O'chirish",
+    "clear": "Ro'yxatni tozalash",
+    "limitNote": "Bir vaqtda {max} tagacha mahsulotni taqqoslash mumkin.",
+    "rowBrand": "Brend",
+    "rowCategory": "Kategoriya",
+    "rowSku": "SKU",
+    "rowOem": "OEM raqami",
+    "rowPrice": "Narx",
+    "priceOnRequest": "So'rov bo'yicha",
+    "rowStock": "Mavjudlik",
+    "rowModels": "Mos keladigan modellar"
+  },
+  "account": {
+    "loginTitle": "Kirish",
+    "loginSubtitle": "Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz.",
+    "dialogTitle": "Kirish yoki ro'yxatdan o'tish",
+    "dialogSubtitle": "Telefon raqamingizni kiriting — SMS orqali tasdiqlash kodi yuboramiz. Alohida parol o'ylab topish shart emas.",
+    "phonePlaceholder": "XX XXX XX XX",
+    "signIn": "Kirish",
+    "consentPrefix": "Davom etganda siz",
+    "privacyPolicy": "Maxfiylik siyosati",
+    "consentSuffix": "ga rozilik bildirasiz.",
+    "phoneLabel": "Telefon raqam",
+    "continue": "Davom etish",
+    "sending": "Yuborilmoqda...",
+    "verifyTitle": "Kodni tasdiqlang",
+    "verifySubtitle": "{phone} raqamiga yuborilgan 6 xonali kodni kiriting.",
+    "codeLabel": "Tasdiqlash kodi",
+    "confirm": "Tasdiqlash",
+    "verifying": "Tekshirilmoqda...",
+    "resend": "Kodni qayta yuborish",
+    "resendIn": "Qayta yuborish — {seconds} s",
+    "resent": "Yangi kod yuborildi",
+    "changePhone": "Raqamni o'zgartirish",
+    "errorInvalidPhone": "Telefon raqamni to'liq kiriting",
+    "errorCodeFormat": "6 xonali kodni kiriting",
+    "errorInvalidCode": "Kod noto'g'ri. Qolgan urinishlar: {attempts}",
+    "errorExpired": "Kod muddati tugagan. Yangi kod so'rang.",
+    "errorTooManyAttempts": "Juda ko'p urinish qilindi. Yangi kod so'rang.",
+    "errorCooldown": "Iltimos, {seconds} soniyadan keyin qayta urinib ko'ring.",
+    "errorRateLimited": "Juda ko'p so'rov yuborildi. Bir soatdan keyin urinib ko'ring.",
+    "errorDelivery": "SMS yuborilmadi. Keyinroq urinib ko'ring.",
+    "errorNoPending": "Sessiya muddati tugagan. Raqamni qaytadan kiriting.",
+    "errorGeneric": "Xatolik yuz berdi. Qaytadan urinib ko'ring.",
+    "profileTitle": "Shaxsiy kabinet",
+    "profileSubtitle": "Profil ma'lumotlaringiz va buyurtmalar tarixi",
+    "profileInfoTitle": "Profil ma'lumotlari",
+    "profilePhoneLabel": "Telefon raqam",
+    "ordersTitle": "Buyurtmalar tarixi",
+    "ordersEmpty": "Hozircha buyurtmalaringiz yo'q.",
+    "ordersEmptyCta": "Katalogga o'tish",
+    "logout": "Chiqish"
+  },
+  "brandsIndex": {
+    "title": "Brendlar",
+    "subtitle": "Biz ishlaydigan yetakchi ishlab chiqaruvchilar. Brendni tanlab, o'sha texnikaga mos ehtiyot qismlarni ko'rishingiz mumkin.",
+    "gridTitle": "Hamkor brendlar"
+  },
+  "services": {
+    "title": "Xizmatlar",
+    "subtitle": "Ehtiyot qism sotish bilan cheklanmaymiz — texnikangiz ishdan to'xtamasligi uchun to'liq texnik yordam ko'rsatamiz.",
+    "items": [
+      {
+        "icon": "selection",
+        "title": "Qism tanlash",
+        "description": "Texnika modeli, OEM raqami yoki seriya raqami bo'yicha kerakli qismni aniqlab beramiz."
+      },
+      {
+        "icon": "diagnostics",
+        "title": "Diagnostika",
+        "description": "Dvigatel, gidravlika va transmissiya tugunlarini zamonaviy uskunalarda tekshiramiz."
+      },
+      {
+        "icon": "installation",
+        "title": "O'rnatish",
+        "description": "Sotib olingan qismlarni tajribali ustalarimiz o'rnatib beradi va sozlaydi."
+      },
+      {
+        "icon": "warranty",
+        "title": "Kafolat xizmati",
+        "description": "Barcha qismlarga kafolat beriladi. Kafolat muddatida nuqson chiqsa, bepul almashtiramiz."
+      },
+      {
+        "icon": "consultation",
+        "title": "Konsultatsiya",
+        "description": "Mutaxassislarimiz texnik savollaringizga telefon yoki Telegram orqali javob beradi."
+      },
+      {
+        "icon": "delivery",
+        "title": "Yetkazib berish",
+        "description": "O'zbekiston bo'ylab va xalqaro yo'nalishlarda qismlarni yetkazib beramiz."
+      }
+    ]
+  },
+  "payment": {
+    "title": "To'lov",
+    "subtitle": "Sizga qulay usulda to'lang — jismoniy va yuridik shaxslar uchun barcha variantlar mavjud.",
+    "methodsTitle": "Qabul qilinadigan to'lov usullari",
+    "methods": [
+      {
+        "icon": "cash",
+        "title": "Naqd pul",
+        "description": "Savdo nuqtamizda yoki qism yetkazib berilganda naqd to'lash mumkin."
+      },
+      {
+        "icon": "card",
+        "title": "Plastik karta",
+        "description": "UzCard, Humo va Visa kartalari terminal orqali qabul qilinadi."
+      },
+      {
+        "icon": "mobile",
+        "title": "Click",
+        "description": "Click ilovasi orqali onlayn to'lov — tasdiqlash bir necha soniyada."
+      },
+      {
+        "icon": "mobile",
+        "title": "Payme",
+        "description": "Payme orqali to'lov, chek ilovada avtomatik saqlanadi."
+      },
+      {
+        "icon": "bank",
+        "title": "Bank o'tkazmasi",
+        "description": "Yuridik shaxslar uchun shartnoma asosida pul o'tkazmasi. NDS bilan ishlaymiz."
+      },
+      {
+        "icon": "invoice",
+        "title": "Hisob-faktura",
+        "description": "Buxgalteriya uchun barcha hujjatlar — hisob-faktura va yuk xati taqdim etiladi."
+      }
+    ],
+    "note": "Yuridik shaxslar bilan ishlashda to'lov shartnoma va hisob-faktura asosida amalga oshiriladi. Katta hajmdagi buyurtmalar uchun bo'lib to'lash imkoniyatini muhokama qilamiz.",
+    "faqTitle": "Ko'p so'raladigan savollar",
+    "faq": [
+      {
+        "question": "Oldindan to'lov shartmi?",
+        "answer": "Omborda mavjud qismlar uchun yetkazib berilganda to'lash mumkin. Buyurtma asosida keltiriladigan qismlar uchun 50% oldindan to'lov so'raladi."
+      },
+      {
+        "question": "Yuridik shaxs sifatida qanday to'layman?",
+        "answer": "Rekvizitlaringizni yuboring — biz shartnoma va hisob-fakturani tayyorlaymiz, so'ng bank o'tkazmasi orqali to'laysiz."
+      },
+      {
+        "question": "Qism to'g'ri kelmasa, pul qaytariladimi?",
+        "answer": "Ha. O'rnatilmagan va tovar ko'rinishi saqlangan qism 14 kun ichida qaytarib olinadi va pul to'liq qaytariladi."
+      },
+      {
+        "question": "Chet eldan to'lov qabul qilasizmi?",
+        "answer": "Ha, xalqaro mijozlar uchun bank o'tkazmasi orqali valyutada to'lov qabul qilinadi. Tafsilotlar uchun bog'laning."
+      }
+    ]
+  },
+  "delivery": {
+    "title": "Yetkazib berish",
+    "subtitle": "Qismni tez yetkazib berish — texnika to'xtab turgan har bir kun zarar degani. Shuning uchun logistikani jiddiy olamiz.",
+    "items": [
+      {
+        "icon": "courier",
+        "title": "Toshkent bo'ylab",
+        "description": "Shahar ichida kuryer orqali 1 ish kuni ichida yetkazib beramiz."
+      },
+      {
+        "icon": "delivery",
+        "title": "Viloyatlarga",
+        "description": "O'zbekistonning barcha viloyatlariga transport kompaniyalari orqali 2-4 kun ichida."
+      },
+      {
+        "icon": "air",
+        "title": "Aviayetkazib berish",
+        "description": "Shoshilinch holatlarda qismni aviatransport bilan tezkor yetkazib berish mumkin."
+      },
+      {
+        "icon": "worldwide",
+        "title": "Xalqaro yo'nalishlar",
+        "description": "MDH va boshqa mamlakatlarga eksport — bojxona hujjatlari bilan birga."
+      },
+      {
+        "icon": "pickup",
+        "title": "Omborimizdan olib ketish",
+        "description": "Buyurtmani o'zingiz olib ketmoqchi bo'lsangiz, ombor manzilini yuboramiz."
+      },
+      {
+        "icon": "terms",
+        "title": "Yetkazib berish muddati",
+        "description": "Omborda bor qismlar — o'sha kuni. Buyurtma asosidagilari — 7-21 kun."
+      }
+    ],
+    "note": "Yetkazib berish narxi og'irlik, hajm va manzilga qarab hisoblanadi. Aniq narxni menejerimiz buyurtmani rasmiylashtirishda aytadi."
+  },
+  "partnership": {
+    "title": "Hamkorlik",
+    "subtitle": "Dilerlar, servis markazlar va yirik parklar uchun alohida shartlar taklif qilamiz.",
+    "items": [
+      {
+        "icon": "handshake",
+        "title": "Dilerlik",
+        "description": "O'z hududingizda rasmiy diler bo'ling — marketing yordami va eksklyuziv shartlar bilan."
+      },
+      {
+        "icon": "discount",
+        "title": "Ulgurji narxlar",
+        "description": "Muntazam buyurtma beruvchi hamkorlar uchun bosqichli chegirmalar tizimi."
+      },
+      {
+        "icon": "dealer",
+        "title": "Servis markazlar",
+        "description": "Ta'mirlash ustaxonalari uchun tezkor yetkazib berish va to'lov muddati imkoniyati."
+      },
+      {
+        "icon": "stock",
+        "title": "Ombor zaxirasi",
+        "description": "Doimiy hamkorlar uchun eng ko'p ishlatiladigan qismlarni zaxirada saqlaymiz."
+      },
+      {
+        "icon": "quality",
+        "title": "Sifat kafolati",
+        "description": "Barcha qismlar OEM standartlariga mos, sertifikatlar bilan ta'minlanadi."
+      },
+      {
+        "icon": "growth",
+        "title": "Birgalikda o'sish",
+        "description": "Bozor tahlili va assortimentni kengaytirish bo'yicha maslahat beramiz."
+      }
+    ],
+    "note": "Hamkorlik shartlarini muhokama qilish uchun kompaniyangiz haqida qisqacha ma'lumot bilan bog'laning — menejerimiz taklif tayyorlaydi."
+  },
   "requestQuote": {
     "title": "Narx so'rash",
     "subtitle": "Formani to'ldiring — menejerlarimiz tez orada siz bilan bog'lanadi",
+    "fromCartTitle": "Savatingizdagi mahsulotlar",
+    "fromCartNote": "Quyidagi ro'yxat pastdagi formaga avtomatik ko'chirildi — kerak bo'lsa tahrirlashingiz mumkin.",
+    "fromCartEdit": "Savatni tahrirlash",
     "fieldName": "Ism",
     "fieldCompany": "Kompaniya",
     "fieldPhone": "Telefon",

@@ -5,7 +5,9 @@ import { products } from "@/lib/data/products";
 import { brands } from "@/lib/data/brands";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+import { localeAlternates } from "@/lib/seo";
 import { ProductCard } from "@/components/marketing/product-card";
+import { Container } from "@/components/ui/container";
 
 export function generateStaticParams() {
   return SUPPORTED_LOCALES.flatMap((lang) => categories.map((category) => ({ lang, slug: category.slug })));
@@ -26,6 +28,7 @@ export async function generateMetadata({
   return {
     title: `${category.name[lang]} — ${dict.meta.siteName}`,
     description: dict.categories.subtitle,
+    alternates: localeAlternates(lang, `/categories/${category.slug}`),
   };
 }
 
@@ -46,7 +49,7 @@ export default async function CategoryDetailPage({
   const categoryProducts = products.filter((p) => p.categoryId === category.id);
 
   return (
-    <main className="mx-auto max-w-7xl px-6 pb-24 pt-24">
+    <Container as="main" className="pb-24 pt-12">
       <p className="text-sm text-muted">{dict.categories.title}</p>
       <h1 className="mt-1 text-3xl font-semibold text-foreground">{category.name[lang]}</h1>
       <p className="mt-2 text-muted">
@@ -65,10 +68,11 @@ export default async function CategoryDetailPage({
               brandName={brand.name}
               stock={dict.common.stock}
               requestPriceLabel={dict.common.requestPrice}
+              actions={dict.productActions}
             />
           );
         })}
       </div>
-    </main>
+    </Container>
   );
 }

@@ -24,6 +24,15 @@ export function ProductJsonLd({
   };
 
   return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+    // A native <script> is what the Next.js JSON-LD guide prescribes here —
+    // next/script is for executable code, and this is data.
+    //
+    // `JSON.stringify` does not escape `<`, so a product name containing
+    // `</script>` would close the tag early and inject markup. Escaping it to
+    // its unicode form keeps the payload inert.
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+    />
   );
 }
