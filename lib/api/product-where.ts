@@ -66,7 +66,11 @@ export function buildProductWhere(query: ProductQuery): {
     where.OR = [
       nameContains(query.lang, query.q),
       { sku: { contains: query.q, mode: "insensitive" } },
-      { oemNumbers: { has: query.q } },
+      // Prisma's array `has` takes no `mode`, so it is always case-sensitive.
+      // Part numbers are stored upper-cased (the seed normalises them), so the
+      // term is upper-cased to match. Without this, searching "voe14514151"
+      // would miss the product stored as "VOE14514151".
+      { oemNumbers: { has: query.q.toUpperCase() } },
     ];
   }
 

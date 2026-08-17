@@ -57,8 +57,13 @@ describe("buildProductWhere", () => {
     expect(where.OR).toEqual([
       { nameUz: { contains: "forsunka", mode: "insensitive" } },
       { sku: { contains: "forsunka", mode: "insensitive" } },
-      { oemNumbers: { has: "forsunka" } },
+      { oemNumbers: { has: "FORSUNKA" } },
     ]);
+  });
+
+  it("upper-cases the OEM term, because Prisma's array `has` cannot be case-insensitive", () => {
+    const { where } = buildProductWhere(query({ q: "voe14514151" }));
+    expect(where.OR?.[2]).toEqual({ oemNumbers: { has: "VOE14514151" } });
   });
 
   it("searches the Russian name column when the locale is ru", () => {
