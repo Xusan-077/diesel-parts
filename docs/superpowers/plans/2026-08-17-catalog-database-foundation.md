@@ -460,7 +460,7 @@ An atomic type change plus every site it breaks. Mock data is still the source h
 
 **Files:**
 - Modify: `lib/types.ts:31`
-- Modify: `lib/data/products.ts` (all 14 entries)
+- Modify: `lib/data/products.ts` (all 15 entries)
 - Modify: `app/[lang]/products/[slug]/page.tsx:75`
 - Modify: `components/product/product-json-ld.tsx:20`
 - Modify: `components/store/compare-client.tsx:39`
@@ -573,7 +573,7 @@ Moves the mock arrays to `prisma/seed-data/`, writes the seed, and enforces the 
 
 **Interfaces:**
 - Consumes: `prisma` from `lib/db.ts`, `deriveStockStatus` from `lib/api/stock-status.ts`.
-- Produces: seeded rows — 7 brands, 10 categories, 14 products, 1 DIRECTOR user. Modules `@/prisma/seed-data/{products,categories,brands}` exporting `products`, `categories`, `brands`.
+- Produces: seeded rows — 7 brands, 10 categories, 15 products, 1 DIRECTOR user. Modules `@/prisma/seed-data/{products,categories,brands}` exporting `products`, `categories`, `brands`.
 
 - [ ] **Step 1: Install the password hasher**
 
@@ -816,7 +816,7 @@ npm run db:seed
 npm run db:seed
 ```
 
-Expected: both runs succeed (idempotency), the price warning prints both times, and the final line reports `{ brands: 7, categories: 10, products: 14, users: 1 }` **both** times — unchanged counts prove the upserts did not duplicate.
+Expected: both runs succeed (idempotency), the price warning prints both times, and the final line reports `{ brands: 7, categories: 10, products: 15, users: 1 }` **both** times — unchanged counts prove the upserts did not duplicate.
 
 Set `SEED_DIRECTOR_PASSWORD` in `.env.local` first. To prove the guard works, temporarily unset it and confirm the seed exits non-zero with the explanatory message.
 
@@ -1497,7 +1497,7 @@ npx tsc --noEmit && npx eslint && npx vitest run
 npm run dev
 ```
 
-Load `http://localhost:3000/uz/products` and confirm: 14 products across 2 pages, the brand filter narrows results, the availability filter returns the 3 `out_of_stock` items when set, search finds `DP-INJ-3126` by SKU, and sort by name reorders. Then check the API directly:
+Load `http://localhost:3000/uz/products` and confirm: 15 products across 2 pages, the brand filter narrows results, the availability filter returns the 2 `out_of_stock` items when set, search finds `DP-INJ-3126` by SKU, and sort by name reorders. Then check the API directly:
 
 ```bash
 curl "http://localhost:3000/api/products?q=DP-INJ-3126&lang=uz"
@@ -1719,7 +1719,7 @@ npx tsc --noEmit && npx eslint && npx vitest run
 npm run dev
 ```
 
-Walk every converted route and confirm it renders real data: `/uz`, `/uz/products`, `/uz/products/cat-fuel-injector-3126`, `/uz/categories/injector`, `/uz/brands/cat`, `/sitemap.xml`. Confirm the home page shows three populated rows and `/sitemap.xml` lists 14 product URLs per locale.
+Walk every converted route and confirm it renders real data: `/uz`, `/uz/products`, `/uz/products/cat-fuel-injector-3126`, `/uz/categories/injector`, `/uz/brands/cat`, `/sitemap.xml`. Confirm the home page shows three populated rows and `/sitemap.xml` lists 15 product URLs per locale.
 
 - [ ] **Step 8: Commit**
 
@@ -2342,7 +2342,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 - [ ] Every catalog page and API route reads from Postgres; no application file imports `prisma/seed-data`, enforced by ESLint rather than convention.
 - [ ] `npx tsc --noEmit`, `npx eslint`, `npx vitest run` and `npm run build` all pass.
-- [ ] The seed is idempotent: running it twice leaves 7 brands, 10 categories, 14 products, 1 user.
+- [ ] The seed is idempotent: running it twice leaves 7 brands, 10 categories, 15 products, 1 user.
 - [ ] The seed refuses to run without `SEED_DIRECTOR_PASSWORD` and never hardcodes a password.
 - [ ] No public payload contains `stock`, `minStock`, or a raw per-locale column.
 - [ ] A submitted inquiry and a submitted quote request both appear as `Inquiry` rows.

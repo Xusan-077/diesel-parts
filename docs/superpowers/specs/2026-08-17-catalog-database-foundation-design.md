@@ -44,7 +44,7 @@ The brief was written without the repo in hand and three of its assumptions are 
 - Filtering, sorting, and pagination executed in SQL.
 - `POST /api/inquiry` and `POST /api/quote-request` persist an `Inquiry` row
   instead of calling `console.log`.
-- Seed script: the existing 14 products, 10 categories, 7 brands, and one
+- Seed script: the existing 15 products, 10 categories, 7 brands, and one
   DIRECTOR user.
 - Railway project + Postgres provisioned via the CLI; migration and seed
   commands documented in the README.
@@ -411,7 +411,7 @@ Steps, to be scripted and documented in the README:
 existing auth variables.
 
 The seed is idempotent (`upsert` by id) so it can be re-run safely. It creates the
-10 categories, 7 brands, 14 products, and one DIRECTOR user whose password comes
+10 categories, 7 brands, 15 products, and one DIRECTOR user whose password comes
 from `SEED_DIRECTOR_PASSWORD` — never a hardcoded literal, and the script fails
 loudly if the variable is missing.
 
