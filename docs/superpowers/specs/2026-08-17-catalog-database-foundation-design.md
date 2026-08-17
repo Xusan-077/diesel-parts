@@ -51,12 +51,25 @@ The brief was written without the repo in hand and three of its assumptions are 
 
 ## 3. Data model
 
-Provider `postgresql`. Prisma **7.9.1** — a recent major release; its own
-generator/output conventions are to be read from the installed package's docs at
-implementation start rather than assumed from the 5.x layout.
+Provider `postgresql`, Prisma **7.9.1**. Its conventions were checked against the
+Prisma 7 upgrade guide rather than assumed, and four of them change this plan:
 
-`@prisma/client` and `prisma` are already in Next's default `serverExternalPackages`
-opt-out list, so no `next.config.ts` bundling change is required.
+1. The generator provider is `prisma-client` (not `prisma-client-js`) and **`output`
+   is mandatory** — the client is no longer generated into `node_modules`. It goes
+   to `prisma/generated/prisma`, is gitignored as build output, and is regenerated
+   by a `postinstall` script so `next build` never runs against a stale client.
+2. The client is imported from that output path, not from `@prisma/client`.
+3. **A driver adapter is required.** PostgreSQL uses `@prisma/adapter-pg`:
+   `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`.
+4. Seeding is no longer automatic during `migrate dev`/`migrate reset`; it runs only
+   on an explicit `prisma db seed`, configured as `migrations.seed` in
+   **`prisma.config.ts`** (not `package.json`).
+
+This supersedes an earlier note in this spec that no `next.config.ts` change would
+be needed because `@prisma/client` and `prisma` sit in Next's default
+`serverExternalPackages` opt-out list. That list does not cover a client generated
+to a custom path, nor `@prisma/adapter-pg`, so `serverExternalPackages` is set
+explicitly rather than relied on by default.
 
 ### 3.1 Design decisions
 
@@ -83,7 +96,7 @@ cuid.
 
 **Stock is numeric in the database and derived for the public API.** `stock` and
 `minStock` are the source of truth, which the future director dashboard needs for
-low-stock alerts and total inventory value. The public API exposes only a computed
+low-stock alerts and total inventory value. The public API exposes only a derived
 `stockStatus`:
 
 ```
@@ -91,6 +104,23 @@ stock <= 0            → "out_of_stock"
 stock <= minStock     → "limited"
 otherwise             → "available"
 ```
+
+**The derivation is persisted at write time, not evaluated at query time.** A
+`stockStatus` enum column is written by every path that changes `stock` or
+`minStock`, using one shared pure helper `deriveStockStatus(stock, minStock)`.
+
+The reason is that the alternative — computing it in the `where` clause — requires
+comparing `stock` against `minStock`, two columns of the same row. Whether Prisma
+supports column-to-column comparison could not be confirmed from its documentation,
+and a core catalog filter must not rest on an unconfirmed capability. Persisting the
+derived value removes the question entirely, and is also strictly faster: the
+availability filter becomes an indexed equality test instead of an arithmetic
+predicate that no index can serve.
+
+The cost of denormalization is drift, and it is contained by funnelling every write
+through the repository, which recomputes the column rather than accepting it from a
+caller. In this sub-project the only writer is the seed script. When the director
+panel gains product editing, it uses the same helper.
 
 Two consequences, both wanted: exact inventory counts are never published to
 competitors, and every *presentational* consumer of `stockStatus` — `StockBadge`,
@@ -113,6 +143,10 @@ string.
 enum Role          { DIRECTOR SELLER }
 enum InquiryStatus { NEW IN_PROGRESS WON LOST }
 enum InquirySource { PRODUCT_DIALOG QUOTE_FORM CONTACT_FORM }
+
+// Values match the existing StockStatus union in lib/types.ts exactly, so the
+// column maps to the domain type with no translation table.
+enum StockStatus   { available limited out_of_stock }
 
 model Brand {
   id       String    @id
@@ -149,6 +183,9 @@ model Product {
   currency         String    @default("UZS")
   stock            Int       @default(0)
   minStock         Int       @default(0)
+  // Derived from stock/minStock by deriveStockStatus() on every write. Never
+  // accepted from a caller — the repository recomputes it. See section 3.1.
+  stockStatus      StockStatus
   categoryId       String
   brandId          String
   category         Category  @relation(fields: [categoryId], references: [id])
@@ -163,7 +200,8 @@ model Product {
 
   @@index([categoryId])
   @@index([brandId])
-  @@index([stock])
+  @@index([stockStatus])
+  @@index([stock])            // director low-stock reports, later sub-project
   @@index([isActive, createdAt])
 }
 
@@ -256,9 +294,9 @@ than evaporate.
 (currently in `paginate`) moves to a small `buildPage` helper that keeps the
 existing `Page<T>` shape and the "clamp the page number to what exists" behaviour.
 
-Availability filtering translates to stock predicates:
-`available` → `stock > minStock`; `limited` → `stock > 0 AND stock <= minStock`;
-`out_of_stock` → `stock <= 0`.
+Availability filtering becomes an indexed equality test on the persisted
+`stockStatus` column — `{ stockStatus: "available" }` — for the reason given in
+section 3.1. `all` omits the clause entirely.
 
 ### 4.2 What happens to the modules being displaced
 
