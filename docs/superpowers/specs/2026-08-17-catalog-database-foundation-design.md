@@ -424,11 +424,43 @@ Deliberately excluded, each to be specified separately:
 
 ## 10. Carried-forward obligations
 
-- **Before the app is first deployed to a real domain**, three previously accepted
-  limitations must be raised unprompted: the in-memory OTP store
-  (`lib/auth/otp-store.ts`), the absence of a user database behind the customer
-  session, and the mandatory production `AUTH_SECRET`. Provisioning Postgres here
-  is not that deploy, so the reminder is still owed.
+### 10.1 The three deferred auth limitations
+
+Accepted during the phase-4 auth work (2026-08-16) on the explicit condition of
+being raised again before the first production deploy to a real domain. Written out
+in full here rather than left as a pointer, because the deploy step is exactly when
+a pointer gets skipped.
+
+1. **The OTP store is in-memory.** `lib/auth/otp-store.ts` holds pending login codes
+   in a module-level `Map`. Every pending code is lost on restart, and on any
+   multi-instance or serverless host a user can receive a code from one instance and
+   have it verified by another, which fails. Railway makes this acute rather than
+   theoretical: restarts on redeploy are routine and replicas are a configuration
+   toggle. The originally planned fix was Redis; now that Postgres is in the stack,
+   a table with a hashed code and an expiry column is simpler and needs no new
+   service. Either way the exported function signatures can stay identical, so this
+   is a contained change.
+
+2. **There is no user database behind the customer session.** The session JWT
+   carries only a phone number. There is no `users` table for customers, so the
+   account page's order history is a permanent empty state and nothing links a
+   returning customer to their earlier inquiries. Note that the `User` table added
+   in this spec is for **staff** (DIRECTOR / SELLER), not customers — it does not
+   close this gap.
+
+3. **`AUTH_SECRET` must be set in the production environment**, at least 32
+   characters. `lib/auth/session-token.ts` deliberately throws when it is missing in
+   production rather than silently falling back to the development secret, so a
+   deploy without it fails at runtime rather than shipping forgeable sessions.
+   `ESKIZ_EMAIL` and `ESKIZ_PASSWORD` are additionally required for real SMS
+   delivery; without them the login code is printed to the server console, which is
+   correct for development and unacceptable in production.
+
+Still open alongside these: the contact phone numbers in `lib/site-config.ts` are
+deliberately fake placeholders and must be replaced with real numbers before launch.
+
+Provisioning Postgres and running migrations, as this spec does, is **not** that
+production deploy. The reminder remains owed.
 - Introducing Postgres opens a simpler fix for the first of those than the Redis
   move originally planned: the OTP store can become a table with an expiry column.
   The exported function signatures in `lib/auth/otp-store.ts` can stay identical.
