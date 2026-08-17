@@ -917,6 +917,18 @@ describe("buildProductWhere", () => {
     expect(where.categoryId).toEqual({ in: [] });
   });
 
+  it("an explicit category set wins over a single category id", () => {
+    const { where } = buildProductWhere(
+      query({ categoryId: "turbocharger", categoryIds: ["injector"] })
+    );
+    expect(where.categoryId).toEqual({ in: ["injector"] });
+  });
+
+  it("an empty category set still wins, rather than being treated as absent", () => {
+    const { where } = buildProductWhere(query({ categoryId: "turbocharger", categoryIds: [] }));
+    expect(where.categoryId).toEqual({ in: [] });
+  });
+
   it("filters availability by the persisted status column", () => {
     expect(buildProductWhere(query({ availability: "limited" })).where.stockStatus).toBe("limited");
   });
@@ -1147,10 +1159,38 @@ export function buildPage<T>(items: T[], total: number, page: number, pageSize: 
   };
 }
 
-/** The `skip` for a page, clamped so a bad page number cannot go negative. */
+/**
+ * The `skip` for a page, clamped so a bad page number cannot go negative.
+ *
+ * Callers MUST pass the page number already clamped by `buildPage`, not the raw
+ * request value. This function cannot clamp the upper bound itself — it never
+ * sees `total` — so a raw out-of-range page skips past the end and returns no
+ * rows while the response still claims to be a valid page.
+ */
 export function pageSkip(page: number, pageSize: number): number {
   return Math.max(0, (Math.max(1, page) - 1) * pageSize);
 }
+```
+
+The contract in that docstring is load-bearing, so it gets its own tests:
+
+```ts
+describe("buildPage and pageSkip composed", () => {
+  it("clamping the page before computing skip keeps the page and its rows in agreement", () => {
+    const total = 15;
+    const pageSize = 9;
+
+    const clamped = buildPage([], total, 99, pageSize).page;
+    expect(clamped).toBe(2);
+    expect(pageSkip(clamped, pageSize)).toBe(9);
+  });
+
+  it("computing skip from the raw page instead lands past the end of the results", () => {
+    // Documents the trap the contract exists to prevent: this skip returns no
+    // rows for a 15-row catalog, yet buildPage would still report page 2 of 2.
+    expect(pageSkip(99, 9)).toBe(882);
+  });
+});
 ```
 
 - [ ] **Step 8: Run the tests to verify they pass**
