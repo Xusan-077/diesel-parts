@@ -67,6 +67,8 @@ npm install pg && npm install -D @types/pg
 
 Create `prisma/schema.prisma`. Note `provider = "prisma-client"` and the mandatory `output`.
 
+**The `datasource` block has NO `url`.** Prisma 7 removed it from schema files; keeping it fails validation with `P1012: The datasource property 'url' is no longer supported in schema files`. The connection URL lives only in `prisma.config.ts` (for Migrate) and reaches the client through the adapter passed to the `PrismaClient` constructor in `lib/db.ts`. This was verified by running `prisma generate` against the rejected form.
+
 ```prisma
 generator client {
   provider = "prisma-client"
@@ -75,7 +77,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
