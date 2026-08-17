@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Agent worktrees carry their own node_modules; never lint them.
     ".claude/**",
     "**/node_modules/**",
+    // Generated Prisma client is build output, not authored code.
+    "prisma/generated/**",
   ]),
   {
     rules: {
