@@ -36,7 +36,7 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
     { label: dict.rowBrand, render: (item) => item.brandName },
     { label: dict.rowCategory, render: (item) => item.categoryName },
     { label: dict.rowSku, render: (item) => item.product.sku },
-    { label: dict.rowOem, render: (item) => item.product.oemNumber },
+    { label: dict.rowOem, render: (item) => item.product.oemNumbers.join(", ") },
     {
       label: dict.rowPrice,
       render: (item) => {

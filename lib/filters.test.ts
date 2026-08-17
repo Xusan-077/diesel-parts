@@ -22,7 +22,7 @@ describe("filterProducts", () => {
   it("filters by search matching OEM number", () => {
     const result = filterProducts(products, { search: "127-8213" }, "en");
     expect(result).toHaveLength(1);
-    expect(result[0].oemNumber).toBe("127-8213");
+    expect(result[0].oemNumbers).toEqual(["127-8213"]);
   });
 
   it("filters by a list of category ids", () => {
@@ -66,6 +66,16 @@ describe("filterProducts", () => {
     const result = filterProducts(products, { brandId: "cat", categoryId: "turbocharger" }, "en");
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("cat-turbo-c15");
+  });
+
+  it("matches a product by any of its OEM numbers, not just the first", () => {
+    const product = products.find((candidate) => candidate.sku === "DP-INJ-3126");
+    expect(product).toBeDefined();
+    const extra = { ...product!, oemNumbers: ["127-8213", "OEM-ALT-999"] };
+
+    const result = filterProducts([extra], { search: "OEM-ALT-999" }, "uz");
+
+    expect(result).toHaveLength(1);
   });
 });
 

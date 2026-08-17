@@ -72,7 +72,7 @@ export default async function ProductDetailPage({
               {dict.product.skuLabel}: {product.sku}
             </span>
             <span>
-              {dict.product.oemLabel}: {product.oemNumber}
+              {dict.product.oemLabel}: {product.oemNumbers.join(", ")}
             </span>
             <StockBadge status={product.stockStatus} stock={dict.common.stock} />
           </div>

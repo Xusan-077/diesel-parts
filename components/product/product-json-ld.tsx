@@ -17,7 +17,7 @@ export function ProductJsonLd({
     "@type": "Product",
     name: product.name[lang],
     sku: product.sku,
-    mpn: product.oemNumber,
+    mpn: product.oemNumbers[0],
     brand: { "@type": "Brand", name: brand.name },
     category: category.name[lang],
     description: product.description[lang],

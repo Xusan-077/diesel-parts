@@ -37,7 +37,9 @@ export function filterProducts(
       return false;
     }
     if (search) {
-      const haystack = [product.name[lang], product.sku, product.oemNumber].join(" ").toLowerCase();
+      const haystack = [product.name[lang], product.sku, ...product.oemNumbers]
+        .join(" ")
+        .toLowerCase();
       if (!haystack.includes(search)) {
         return false;
       }
