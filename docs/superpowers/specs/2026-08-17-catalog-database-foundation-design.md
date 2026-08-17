@@ -480,6 +480,28 @@ Deliberately excluded, each to be specified separately:
 
 ## 10. Carried-forward obligations
 
+### 10.0 A known npm audit finding that must NOT be "fixed"
+
+`npm audit` reports three high-severity findings after Prisma is installed:
+`prisma`, `@prisma/config`, and `deepmerge-ts`. All three are one root cause —
+`deepmerge-ts` can exhaust the stack when merging recursive object graphs — reached
+through `@prisma/config`, which the `prisma` CLI depends on.
+
+**Do not apply the remediation npm suggests.** It proposes downgrading `prisma` to
+6.12.0, a major downgrade that would invalidate every Prisma 7 decision this spec
+rests on: the `prisma-client` generator, the mandatory driver adapter, and
+`prisma.config.ts` itself. The cure is far more damaging than the disease.
+
+The finding is accepted for three reasons. `prisma` is a devDependency, used for
+generate/migrate/seed and never shipped to the production runtime. The only object
+graph `@prisma/config` merges is this repo's own committed `prisma.config.ts`, so
+the input is not attacker-controlled. And the impact is stack exhaustion — a crash
+of a local CLI invocation, not a data or credential exposure.
+
+If CI is configured to fail on `npm audit`, exempt these three advisories
+explicitly rather than downgrading, and revisit when Prisma ships a `@prisma/config`
+that no longer depends on the affected version.
+
 ### 10.1 The three deferred auth limitations
 
 Accepted during the phase-4 auth work (2026-08-16) on the explicit condition of
