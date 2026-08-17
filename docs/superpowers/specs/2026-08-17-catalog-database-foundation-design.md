@@ -137,6 +137,18 @@ detail page, `product-json-ld.tsx` (`mpn`), and the compare table row — plus t
 search predicate, which now matches any element of the array rather than one
 string.
 
+**OEM numbers are stored upper-cased, and the search term is upper-cased to match.**
+Prisma's array filter (`StringNullableListFilter`) exposes `has` but accepts no
+`mode`, so array matching is unavoidably case-sensitive — verified against the
+generated client, which rejects `mode` on that filter. Since the old in-memory
+search lower-cased both sides and was therefore case-insensitive, matching `has`
+against a raw term would have been a silent search regression: a customer typing
+`voe14514151` would not find the product stored as `VOE14514151`. Normalising both
+sides keeps the old behaviour for the values that matter. Every existing value is
+already upper-case, so the write-side normalisation is a no-op today and an
+invariant for data added later. Part numbers are conventionally upper-case, so this
+costs nothing in display fidelity.
+
 ### 3.2 Schema
 
 ```prisma

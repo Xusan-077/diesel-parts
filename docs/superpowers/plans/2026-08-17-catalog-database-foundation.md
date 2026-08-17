@@ -707,7 +707,10 @@ async function main(): Promise<void> {
     const fields = {
       slug: product.slug,
       sku: product.sku,
-      oemNumbers: product.oemNumbers,
+      // Stored upper-cased so search can match them: Prisma's array `has` takes
+      // no case-insensitivity mode. Every current value is already upper-case,
+      // so this is a no-op today and an invariant for whatever is added later.
+      oemNumbers: product.oemNumbers.map((oem) => oem.trim().toUpperCase()),
       nameUz: product.name.uz,
       nameRu: product.name.ru,
       nameEn: product.name.en,
@@ -923,8 +926,13 @@ describe("buildProductWhere", () => {
     expect(where.OR).toEqual([
       { nameUz: { contains: "forsunka", mode: "insensitive" } },
       { sku: { contains: "forsunka", mode: "insensitive" } },
-      { oemNumbers: { has: "forsunka" } },
+      { oemNumbers: { has: "FORSUNKA" } },
     ]);
+  });
+
+  it("upper-cases the OEM term, because Prisma's array `has` cannot be case-insensitive", () => {
+    const { where } = buildProductWhere(query({ q: "voe14514151" }));
+    expect(where.OR?.[2]).toEqual({ oemNumbers: { has: "VOE14514151" } });
   });
 
   it("searches the Russian name column when the locale is ru", () => {
@@ -1033,7 +1041,11 @@ export function buildProductWhere(query: ProductQuery): {
     where.OR = [
       nameContains(query.lang, query.q),
       { sku: { contains: query.q, mode: "insensitive" } },
-      { oemNumbers: { has: query.q } },
+      // Prisma's array `has` takes no `mode`, so it is always case-sensitive.
+      // Part numbers are stored upper-cased (the seed normalises them), so the
+      // term is upper-cased to match. Without this, searching "voe14514151"
+      // would miss the product stored as "VOE14514151".
+      { oemNumbers: { has: query.q.toUpperCase() } },
     ];
   }
 
@@ -1355,17 +1367,24 @@ import { buildProductWhere } from "./product-where";
 export async function queryProducts(query: ProductQuery): Promise<Page<Product>> {
   const { where, orderBy } = buildProductWhere(query);
 
-  const [rows, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy,
-      skip: pageSkip(query.page, query.pageSize),
-      take: query.pageSize,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  /*
+   * The count runs first, and the page number is clamped against it before the
+   * rows are fetched. Issuing both in parallel would be one round trip faster,
+   * but `?page=99` would then skip past the end and render an empty catalog that
+   * claims to be "page 2 of 2" — the in-memory `paginate` this replaces
+   * deliberately clamped first, and that behaviour is preserved here.
+   */
+  const total = await prisma.product.count({ where });
+  const clampedPage = buildPage([], total, query.page, query.pageSize).page;
 
-  return buildPage(rows.map(toProduct), total, query.page, query.pageSize);
+  const rows = await prisma.product.findMany({
+    where,
+    orderBy,
+    skip: pageSkip(clampedPage, query.pageSize),
+    take: query.pageSize,
+  });
+
+  return buildPage(rows.map(toProduct), total, clampedPage, query.pageSize);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -1505,6 +1524,15 @@ curl "http://localhost:3000/api/products?q=DP-INJ-3126&lang=uz"
 ```
 
 Confirm the JSON contains `stockStatus` and does **not** contain `stock`, `minStock`, `nameUz`, or a `{"s":1,"e":6,"d":[...]}`-shaped price.
+
+Then check the two regressions this task's code exists to avoid:
+
+```bash
+curl -s "http://localhost:3000/api/products?page=99&lang=uz"
+curl -s "http://localhost:3000/api/products?q=voe14514151&lang=uz"
+```
+
+The first must return the **last** page's products with `page: 2`, not an empty `items` array — an out-of-range page clamps to what exists. The second must find the Volvo product whose OEM number is stored as `VOE14514151`, proving the lower-case search term still matches.
 
 - [ ] **Step 10: Commit**
 
