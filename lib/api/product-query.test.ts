@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
+  buildPage,
+  pageSkip,
   paginate,
   parseProductQuery,
 } from "./product-query";
@@ -101,5 +103,44 @@ describe("paginate", () => {
       pageSize: 10,
       totalPages: 1,
     });
+  });
+});
+
+describe("buildPage", () => {
+  it("reports the page it was given when that page exists", () => {
+    const page = buildPage([1, 2], 20, 2, 2);
+    expect(page).toEqual({ items: [1, 2], total: 20, page: 2, pageSize: 2, totalPages: 10 });
+  });
+
+  it("clamps a page beyond the end to the last page", () => {
+    expect(buildPage([], 5, 99, 2).page).toBe(3);
+  });
+
+  it("clamps a page below one", () => {
+    expect(buildPage([], 5, 0, 2).page).toBe(1);
+  });
+
+  it("reports one page when there are no results, so the UI never shows 'page 1 of 0'", () => {
+    expect(buildPage([], 0, 1, 9)).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 9,
+      totalPages: 1,
+    });
+  });
+});
+
+describe("pageSkip", () => {
+  it("is zero on the first page", () => {
+    expect(pageSkip(1, 9)).toBe(0);
+  });
+
+  it("skips a full page per preceding page", () => {
+    expect(pageSkip(3, 9)).toBe(18);
+  });
+
+  it("never returns a negative skip for a bad page number", () => {
+    expect(pageSkip(0, 9)).toBe(0);
   });
 });

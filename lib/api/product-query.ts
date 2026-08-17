@@ -77,3 +77,24 @@ export function paginate<T>(items: readonly T[], page: number, pageSize: number)
     totalPages,
   };
 }
+
+/**
+ * Assembles a `Page` from a SQL result plus its `count()`, preserving the
+ * page-clamping behaviour `paginate` had when it sliced in memory.
+ */
+export function buildPage<T>(items: T[], total: number, page: number, pageSize: number): Page<T> {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  return {
+    items,
+    total,
+    page: Math.min(Math.max(1, page), totalPages),
+    pageSize,
+    totalPages,
+  };
+}
+
+/** The `skip` for a page, clamped so a bad page number cannot go negative. */
+export function pageSkip(page: number, pageSize: number): number {
+  return Math.max(0, (Math.max(1, page) - 1) * pageSize);
+}
