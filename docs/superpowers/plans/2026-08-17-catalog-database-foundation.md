@@ -49,10 +49,12 @@ Installs Prisma 7 the way Prisma 7 requires, writes the five-model schema, provi
 
 - [ ] **Step 1: Install dependencies**
 
+`@prisma/client` is required even though the client is generated to a custom path: the generated code does `import * as runtime from "@prisma/client/runtime/client"`. Omitting it makes `npm ci` produce a tree that cannot build, which a local `node_modules` will hide.
+
 `@prisma/adapter-pg` may or may not bundle `pg`; check rather than assume.
 
 ```bash
-npm install @prisma/adapter-pg
+npm install @prisma/client @prisma/adapter-pg
 npm install -D prisma tsx
 npm ls pg
 ```
@@ -62,6 +64,16 @@ If `npm ls pg` reports `(empty)` or missing, also run:
 ```bash
 npm install pg && npm install -D @types/pg
 ```
+
+Keep `@prisma/client` and `prisma` pinned to the same minor version — a client older than the CLI that generated it fails at runtime with a version-mismatch error.
+
+Verify the dependency is actually recorded, not just present in `node_modules`:
+
+```bash
+node -e "console.log(require('./package.json').dependencies['@prisma/client'])"
+```
+
+Expected: a version string, not `undefined`.
 
 - [ ] **Step 2: Write the schema**
 
