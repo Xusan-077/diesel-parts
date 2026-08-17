@@ -277,10 +277,25 @@ Neither file is deleted outright; each keeps what is still referenced elsewhere.
 - **`lib/product-collections.ts`** keeps its documented role as the home-row
   selector. `getBestSellerProducts` switches from `stockStatus` to numeric stock.
 - **`lib/data/products.ts`, `categories.ts`, `brands.ts`** stop being imported by
-  application code and become seed input only. They move to `prisma/seed-data/`
-  so that no page can accidentally import them again and silently bypass the
-  database. `lib/data/blog.ts`, `catalog-menu.ts`, and `regions.ts` stay put —
-  blog posts and navigation config are not part of this sub-project.
+  application code and become seed input only. They move to `prisma/seed-data/`.
+  `lib/data/blog.ts`, `catalog-menu.ts`, and `regions.ts` stay put — blog posts and
+  navigation config are not part of this sub-project.
+
+  A file move alone does not prevent re-import; it only makes it less likely, and
+  nothing would flag a new import from the new path. The guarantee is therefore
+  enforced in `eslint.config.mjs` with a `no-restricted-imports` rule banning
+  `prisma/seed-data/*` from `app/**`, `components/**`, and `lib/**`, with an
+  override permitting it in `prisma/**` and in `*.test.ts`. The rule message names
+  the repository as the correct alternative, so the failure teaches the fix.
+
+  Six test files legitimately use the mock arrays as fixtures and keep doing so via
+  the override: `app/sitemap.test.ts`, `lib/cart-summary.test.ts`,
+  `lib/filters.test.ts`, `lib/product-collections.test.ts`,
+  `lib/product-lookup.test.ts`, and `lib/catalog-menu.test.ts`. Their imports are
+  repointed at the new path. `lib/catalog-menu.test.ts` is the one to watch: it
+  cross-checks catalog-menu category ids against the category list, so it must be
+  updated in step with the seed data, not just its import path. `lib/data/data.test.ts`
+  moves alongside the data it validates.
 
 ## 5. Client components — the real work
 
@@ -360,10 +375,21 @@ Seeded stock numbers are derived from the current `stockStatus` values so the si
 looks identical after migration: `available` → 25, `limited` → 3, `out_of_stock`
 → 0, with `minStock` 5.
 
-**Prices remain placeholders.** `lib/data/products.ts` already says so in a
-`TODO(Xusan)`; that warning is carried into the seed script's header comment and
-into the README, so no one mistakes seeded values for real pricing. Three products
-keep `price: null` to exercise the "price not set" path.
+**Prices remain placeholders, and this must be impossible to miss.**
+`lib/data/products.ts` already says so in a `TODO(Xusan)`, but a buried comment is
+not enough once the numbers are sitting in a real database and look authoritative.
+Three places carry the warning:
+
+1. A header comment at the top of `prisma/seed-data/products.ts`.
+2. A header comment at the top of the seed script, plus a line the seed **prints to
+   stdout on every run**: a explicit warning that the seeded prices are placeholders
+   in UZS and must be replaced before the catalog is shown to customers. A warning
+   that appears each time the command is run cannot be scrolled past once and
+   forgotten.
+3. A short, clearly marked warning block in the README's database section — not a
+   footnote at the bottom.
+
+Three products keep `price: null` to exercise the "price not set" path.
 
 ## 8. Testing and verification
 
