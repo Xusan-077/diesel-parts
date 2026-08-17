@@ -94,7 +94,14 @@ export function buildPage<T>(items: T[], total: number, page: number, pageSize: 
   };
 }
 
-/** The `skip` for a page, clamped so a bad page number cannot go negative. */
+/**
+ * The `skip` for a page, clamped so a bad page number cannot go negative.
+ *
+ * Callers MUST pass the page number already clamped by `buildPage`, not the raw
+ * request value. This function cannot clamp the upper bound itself — it never
+ * sees `total` — so a raw out-of-range page skips past the end and returns no
+ * rows while the response still claims to be a valid page.
+ */
 export function pageSkip(page: number, pageSize: number): number {
   return Math.max(0, (Math.max(1, page) - 1) * pageSize);
 }

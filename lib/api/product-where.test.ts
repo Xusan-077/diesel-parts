@@ -48,6 +48,18 @@ describe("buildProductWhere", () => {
     expect(where.categoryId).toEqual({ in: [] });
   });
 
+  it("an explicit category set wins over a single category id", () => {
+    const { where } = buildProductWhere(
+      query({ categoryId: "turbocharger", categoryIds: ["injector"] })
+    );
+    expect(where.categoryId).toEqual({ in: ["injector"] });
+  });
+
+  it("an empty category set still wins, rather than being treated as absent", () => {
+    const { where } = buildProductWhere(query({ categoryId: "turbocharger", categoryIds: [] }));
+    expect(where.categoryId).toEqual({ in: [] });
+  });
+
   it("filters availability by the persisted status column", () => {
     expect(buildProductWhere(query({ availability: "limited" })).where.stockStatus).toBe("limited");
   });

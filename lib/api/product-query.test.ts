@@ -144,3 +144,20 @@ describe("pageSkip", () => {
     expect(pageSkip(0, 9)).toBe(0);
   });
 });
+
+describe("buildPage and pageSkip composed", () => {
+  it("clamping the page before computing skip keeps the page and its rows in agreement", () => {
+    const total = 15;
+    const pageSize = 9;
+
+    const clamped = buildPage([], total, 99, pageSize).page;
+    expect(clamped).toBe(2);
+    expect(pageSkip(clamped, pageSize)).toBe(9);
+  });
+
+  it("computing skip from the raw page instead lands past the end of the results", () => {
+    // Documents the trap the contract exists to prevent: this skip returns no
+    // rows for a 15-row catalog, yet buildPage would still report page 2 of 2.
+    expect(pageSkip(99, 9)).toBe(882);
+  });
+});
