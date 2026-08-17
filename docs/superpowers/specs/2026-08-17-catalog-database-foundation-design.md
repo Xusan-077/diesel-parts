@@ -258,13 +258,19 @@ are flat. It exists so the catalog tree can be introduced without a migration.
 | `getProductsByIds(ids, lang)` | `Promise<ResolvedProduct[]>` |
 | `listBrands()` | `Promise<Brand[]>` |
 | `listCategories()` | `Promise<Category[]>` |
-| `getProductsForHomeRows(count)` | `Promise<Product[]>` |
+| `getProductsForHomeRows(count)` | `Promise<{ popular: Product[]; newest: Product[]; bestSellers: Product[] }>` |
+| `listProductSlugs()` | `Promise<string[]>` |
 
 `getProductsForHomeRows` takes an explicit count and applies it as a SQL `take`.
 It must not load the whole table — that would reintroduce exactly the problem the
 SQL-native approach was chosen to avoid. The three home rows need distinct slices,
-so it issues one query per row shape (head of catalog order, newest first, in-stock
-first) rather than one unbounded query sliced in JavaScript.
+so it returns all three from one call, issuing one bounded query per row shape
+(head of catalog order, newest first, in-stock first) rather than one unbounded
+query sliced in JavaScript.
+
+`listProductSlugs` exists for `app/sitemap.ts`, which legitimately wants every
+active product and only its slug. Paging through `queryProducts` to build a sitemap
+would map full rows for no reason.
 
 A single Prisma client instance lives in `lib/db.ts`, guarded against
 hot-reload duplication in development by a `globalThis` cache.
