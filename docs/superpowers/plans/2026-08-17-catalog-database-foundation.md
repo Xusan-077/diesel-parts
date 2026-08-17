@@ -278,10 +278,21 @@ The Railway CLI is installed and authenticated as Xusan; no project is linked ye
 ```bash
 railway init --name diesel-parts --json
 railway add --database postgres
-railway variables --kv
+railway tcp-proxy create --service Postgres --port 5432 --json
+railway variables --service Postgres --json
 ```
 
-Copy the `DATABASE_URL` value from that output into `.env.local` (gitignored, created if absent):
+**`DATABASE_URL` as Railway publishes it is NOT usable from a development machine.** Its host is `postgres.railway.internal`, which resolves only inside Railway's private network, so `prisma migrate` run locally fails on DNS. Railway does not publish a `DATABASE_PUBLIC_URL` for this service either. That is why the TCP proxy above exists: it adds `RAILWAY_TCP_PROXY_DOMAIN` and `RAILWAY_TCP_PROXY_PORT`, from which the external URL is assembled by hand —
+
+```
+postgresql://<PGUSER>:<PGPASSWORD>@<RAILWAY_TCP_PROXY_DOMAIN>:<RAILWAY_TCP_PROXY_PORT>/<PGDATABASE>
+```
+
+Same credentials and database as the internal URL; only host and port differ. Note that the proxy exposes the database to the public internet, guarded by the password alone.
+
+Two URLs therefore exist, and they are not interchangeable: the **external** one belongs in `.env.local` for local migrate/seed/studio, and the **internal** one is what a future Railway deployment of the app itself should use, since it stays on the private network and is faster. When the app is deployed, set its `DATABASE_URL` from the internal value, not from `.env.local`.
+
+Write the external URL into `.env.local` (gitignored, created if absent):
 
 ```
 DATABASE_URL="postgresql://..."
