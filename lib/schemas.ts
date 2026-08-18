@@ -60,3 +60,72 @@ export const staffLoginSchema = z.object({
 });
 
 export type StaffLoginInput = z.infer<typeof staffLoginSchema>;
+
+/* ── Director panel: product management ───────────────────────────────────── */
+
+/** One localized text field, required in all three languages. */
+const localizedSchema = z.object({
+  uz: z.string().min(1),
+  ru: z.string().min(1),
+  en: z.string().min(1),
+});
+
+export const productSpecSchema = z.object({
+  label: localizedSchema,
+  value: z.string().min(1),
+});
+
+/**
+ * `stockStatus` is deliberately absent: the repository derives it from
+ * stock/minStock on every write, so accepting it from a caller would let the
+ * column drift away from the numbers it describes.
+ */
+export const productWriteSchema = z.object({
+  sku: z.string().min(1).max(64),
+  slug: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug_format"),
+  oemNumbers: z.array(z.string().min(1)).max(20),
+  name: localizedSchema,
+  description: localizedSchema,
+  price: z.number().nonnegative().nullable(),
+  stock: z.number().int().min(0).max(1_000_000),
+  minStock: z.number().int().min(0).max(1_000_000),
+  categoryId: z.string().min(1),
+  brandId: z.string().min(1),
+  compatibleModels: z.array(z.string().min(1)).max(50),
+  specs: z.array(productSpecSchema).max(30),
+  imageLabels: z.array(z.string().min(1)).max(10),
+  isActive: z.boolean(),
+});
+
+export type ProductWriteInput = z.infer<typeof productWriteSchema>;
+
+/* ── Director panel: user management ──────────────────────────────────────── */
+
+export const userCreateSchema = z.object({
+  name: z.string().min(1).max(120),
+  email: z.string().email(),
+  phone: z.string().max(32).optional().nullable(),
+  password: z.string().min(8).max(200),
+  role: z.enum(["DIRECTOR", "SELLER"]),
+  discountLimit: z.number().int().min(0).max(100),
+});
+
+export type UserCreateInput = z.infer<typeof userCreateSchema>;
+
+/**
+ * Password is absent on purpose. Changing someone else's password is a separate
+ * action with its own audit line, not a side effect of editing their profile.
+ */
+export const userUpdateSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().max(32).optional().nullable(),
+  role: z.enum(["DIRECTOR", "SELLER"]),
+  discountLimit: z.number().int().min(0).max(100),
+  isActive: z.boolean(),
+});
+
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;

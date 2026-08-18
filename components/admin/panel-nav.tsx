@@ -15,11 +15,20 @@ import type { AdminNavItem } from "@/lib/auth/admin-nav";
 export function PanelNav({ items }: { items: AdminNavItem[] }) {
   const pathname = usePathname();
 
+  /*
+   * Longest match wins. Every director page sits under /admin/director, so a
+   * plain prefix test would light up the dashboard entry on the products page
+   * too, and two sections would claim to be current at once.
+   */
+  const currentHref = items
+    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   return (
     <nav aria-label="Panel bo'limlari" className="border-l border-border">
       <ul>
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = item.href === currentHref;
 
           return (
             <li key={item.href} className="relative">

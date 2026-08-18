@@ -15,6 +15,8 @@ export interface AdminNavItem {
  */
 export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: "/admin/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
+  { href: "/admin/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
+  { href: "/admin/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
   { href: "/admin/seller", label: "Sotuvchi paneli", roles: ["SELLER", "DIRECTOR"] },
 ];
 

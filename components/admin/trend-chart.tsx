@@ -76,15 +76,41 @@ export function TrendChart({
       xs: current.map((_, index) => x(index)),
       currentPath: path(current),
       previousPath: path(previous),
-      ticks: [0, 0.25, 0.5, 0.75, 1].map((fraction) => ({
-        y: PAD.top + PLOT_H - fraction * PLOT_H,
-        label: formatCompact(top * fraction),
-      })),
+      // Deduped by label: a narrow range rounds several gridlines to the same
+      // number, and repeating it says nothing while implying a scale that is
+      // finer than the one actually drawn.
+      ticks: [0, 0.25, 0.5, 0.75, 1]
+        .map((fraction) => ({
+          y: PAD.top + PLOT_H - fraction * PLOT_H,
+          label: formatCompact(top * fraction),
+        }))
+        .filter((tick, index, all) => index === 0 || tick.label !== all[index - 1].label),
     };
   }, [current, previous]);
 
   const yOf = (value: number) => PAD.top + PLOT_H - (value / max) * PLOT_H;
   const active = hover === null ? null : current[hover];
+
+  /*
+   * With nothing sold in either window there is no scale to draw. Rendering the
+   * axis anyway produced ticks reading 1, 1, 1, 0, 0 — rounded from fractions of
+   * a one-unit range — under a flat line, which looks like a broken chart rather
+   * than an empty one.
+   */
+  const hasData =
+    current.some((point) => point.value > 0) || previous.some((point) => point.value > 0);
+
+  if (!hasData) {
+    return (
+      <div className="py-10 text-center">
+        <p className="text-sm text-foreground">Bu davrda yakunlangan savdo yo&apos;q.</p>
+        <p className="mt-1 text-xs text-muted">
+          Sotuvchilar buyurtmalarni yopgach, bu yerda {currentLabel.toLowerCase()} va{" "}
+          {previousLabel.toLowerCase()} taqqoslanadi.
+        </p>
+      </div>
+    );
+  }
 
   function onMove(event: React.MouseEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
