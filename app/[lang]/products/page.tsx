@@ -3,7 +3,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
 import { resolveCatalogScope } from "@/lib/catalog-menu";
 import { DEFAULT_PAGE_SIZE } from "@/lib/api/product-query";
-import { queryProducts } from "@/lib/api/product-repository";
+import { listBrands, listCategories, queryProducts } from "@/lib/api/product-repository";
 import { localeAlternates } from "@/lib/seo";
 import { ProductCatalogClient } from "@/components/product/product-catalog-client";
 import { Container } from "@/components/ui/container";
@@ -60,17 +60,21 @@ export default async function ProductsPage({
 
   // Rendered on the server and handed to React Query as `initialData`, so the
   // first paint already has products instead of a spinner.
-  const initialData = queryProducts({
-    q: initialSearch,
-    brandId: "all",
-    categoryId: "all",
-    categoryIds: scope?.categoryIds,
-    availability: "all",
-    sort: "newest",
-    page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
-    lang,
-  });
+  const [initialData, categories, brands] = await Promise.all([
+    queryProducts({
+      q: initialSearch,
+      brandId: "all",
+      categoryId: "all",
+      categoryIds: scope?.categoryIds,
+      availability: "all",
+      sort: "newest",
+      page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      lang,
+    }),
+    listCategories(),
+    listBrands(),
+  ]);
 
   return (
     <Container as="main" className="pb-24 pt-12">
@@ -92,6 +96,8 @@ export default async function ProductsPage({
           stockDict={dict.common.stock}
           requestPriceLabel={dict.common.requestPrice}
           actions={dict.productActions}
+          categories={categories}
+          brands={brands}
           initialData={initialData}
         />
       </div>

@@ -62,25 +62,9 @@ export interface Page<T> {
   totalPages: number;
 }
 
-/** Slices a list into a page, clamping the page number to what exists. */
-export function paginate<T>(items: readonly T[], page: number, pageSize: number): Page<T> {
-  const total = items.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const current = Math.min(Math.max(1, page), totalPages);
-  const start = (current - 1) * pageSize;
-
-  return {
-    items: items.slice(start, start + pageSize),
-    total,
-    page: current,
-    pageSize,
-    totalPages,
-  };
-}
-
 /**
  * Assembles a `Page` from a SQL result plus its `count()`, preserving the
- * page-clamping behaviour `paginate` had when it sliced in memory.
+ * page-clamping behaviour the in-memory slice it replaced used to provide.
  */
 export function buildPage<T>(items: T[], total: number, page: number, pageSize: number): Page<T> {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));

@@ -4,7 +4,6 @@ import {
   MAX_PAGE_SIZE,
   buildPage,
   pageSkip,
-  paginate,
   parseProductQuery,
 } from "./product-query";
 
@@ -73,38 +72,6 @@ describe("parseProductQuery", () => {
   });
 });
 
-describe("paginate", () => {
-  const items = Array.from({ length: 25 }, (_, index) => index + 1);
-
-  it("returns the requested slice", () => {
-    expect(paginate(items, 2, 10).items).toEqual([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
-  });
-
-  it("reports totals", () => {
-    const page = paginate(items, 1, 10);
-    expect(page.total).toBe(25);
-    expect(page.totalPages).toBe(3);
-  });
-
-  it("clamps a page beyond the end to the last page", () => {
-    expect(paginate(items, 99, 10).page).toBe(3);
-    expect(paginate(items, 99, 10).items).toEqual([21, 22, 23, 24, 25]);
-  });
-
-  it("clamps a page below one", () => {
-    expect(paginate(items, 0, 10).page).toBe(1);
-  });
-
-  it("handles an empty list without dividing by zero", () => {
-    expect(paginate([], 1, 10)).toEqual({
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 10,
-      totalPages: 1,
-    });
-  });
-});
 
 describe("buildPage", () => {
   it("reports the page it was given when that page exists", () => {

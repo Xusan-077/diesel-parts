@@ -4,15 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
-import { categories } from "@/prisma/seed-data/categories";
-import { brands } from "@/prisma/seed-data/brands";
 import type { AvailabilityFilter, SortKey } from "@/lib/filters";
 import { fetchProducts, productsQueryKey, type ProductListParams } from "@/lib/api/products";
 import { DEFAULT_PAGE_SIZE, type Page } from "@/lib/api/product-query";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Product } from "@/lib/types";
+import type { Brand, Category, Product } from "@/lib/types";
 import { ProductFilters } from "./product-filters";
 import { ProductCard } from "@/components/marketing/product-card";
 import { Pagination } from "@/components/ui/pagination";
@@ -24,6 +22,9 @@ interface ProductCatalogClientProps {
   stockDict: Dictionary["common"]["stock"];
   requestPriceLabel: string;
   actions: Dictionary["productActions"];
+  /** Filter reference data, read from the database by the server page. */
+  categories: Category[];
+  brands: Brand[];
   /** Seeded from the `?q=` param so the header search lands on real results. */
   initialSearch?: string;
   /**
@@ -44,6 +45,8 @@ export function ProductCatalogClient({
   stockDict,
   requestPriceLabel,
   actions,
+  categories,
+  brands,
   initialSearch = "",
   scopeCategoryIds,
   scopeLabel,
