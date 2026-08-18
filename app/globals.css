@@ -26,6 +26,19 @@
    * white, so links, prices and active states use this darker cast instead.
    */
   --accent-strong: #b45309;
+  /*
+   * Chart marks. The dashboard compares this period against the last one, which
+   * is an emphasis pair, not a categorical palette: the current window carries
+   * the brand hue and the comparison window is deliberately neutral.
+   *
+   * Both steps were checked with the data-viz validator against this surface —
+   * CVD separation dE 12.4 (target >= 8), normal-vision dE 17.4 (floor 15), and
+   * both clear 3:1 against the surface. The validator's chroma floor rejects
+   * --chart-context on purpose: it is meant to read as grey.
+   */
+  --chart-series: #b45309;
+  --chart-context: #5c6370;
+  --chart-grid: #e5e7eb;
   --danger: #b91c1c;
   --danger-surface: #fee2e2;
   --success: #15803d;
@@ -46,6 +59,10 @@
   --accent-foreground: #17181c;
   /* On dark surfaces the brand orange itself already clears 6:1. */
   --accent-strong: #f5a04f;
+  /* Re-stepped for the dark surface, not flipped: CVD dE 14.1, normal 15.5. */
+  --chart-series: #cf7728;
+  --chart-context: #8a9099;
+  --chart-grid: #2e2f34;
   --danger: #fca5a5;
   --danger-surface: #3f1d1d;
   --success: #86efac;
@@ -71,6 +88,9 @@
   --color-success-surface: var(--success-surface);
   --color-warning: var(--warning);
   --color-warning-surface: var(--warning-surface);
+  --color-chart-series: var(--chart-series);
+  --color-chart-context: var(--chart-context);
+  --color-chart-grid: var(--chart-grid);
   --font-sans: var(--font-geist-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
@@ -218,4 +238,13 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/*
+ * The staff panel loads Geist Mono (app/admin/layout.tsx) and lines every SKU,
+ * price and count up in tabular figures. The marketing site does not load it and
+ * keeps the zero-cost system stack, so the override is scoped to the panel.
+ */
+.admin-root {
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
