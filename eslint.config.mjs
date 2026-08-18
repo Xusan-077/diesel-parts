@@ -53,13 +53,6 @@ const eslintConfig = defineConfig([
     files: ["**/*.test.ts", "**/*.test.tsx"],
     rules: { "no-restricted-imports": "off" },
   },
-  {
-    // TEMPORARY: the last file still reading seed data directly. Removed in
-    // Task 8 of docs/superpowers/plans/2026-08-17-catalog-database-foundation.md,
-    // once the wishlist, cart and compare lists resolve ids over HTTP instead.
-    files: ["lib/product-lookup.ts"],
-    rules: { "no-restricted-imports": "off" },
-  },
 ]);
 
 export default eslintConfig;

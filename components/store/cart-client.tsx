@@ -7,7 +7,8 @@ import { StoreEmpty } from "@/components/store/store-empty";
 import { useCart } from "@/hooks/use-store";
 import { formatPrice, sumPrices } from "@/lib/format-price";
 import { MAX_QUANTITY } from "@/lib/store/cart";
-import { resolveProduct } from "@/lib/product-lookup";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
@@ -21,10 +22,16 @@ interface CartClientProps {
 export function CartClient({ lang, dict, stock }: CartClientProps) {
   const cart = useCart();
 
+  const { items: resolved, isLoading } = useResolvedProducts(
+    cart.items.map((item) => item.productId),
+    lang,
+  );
+  const byId = new Map(resolved.map((entry) => [entry.product.id, entry]));
+
   const lines = cart.items
     .map((item) => {
-      const resolved = resolveProduct(item.productId, lang);
-      return resolved ? { ...resolved, quantity: item.quantity } : null;
+      const entry = byId.get(item.productId);
+      return entry ? { ...entry, quantity: item.quantity } : null;
     })
     .filter((line): line is NonNullable<typeof line> => line !== null);
 
@@ -32,6 +39,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
     lines.map((line) => ({ price: line.product.price, quantity: line.quantity }))
   );
   const totalLabel = formatPrice(total, lang);
+
+  if (isLoading) {
+    return <ResolvedProductsSkeleton count={cart.items.length} />;
+  }
 
   if (lines.length === 0) {
     return (

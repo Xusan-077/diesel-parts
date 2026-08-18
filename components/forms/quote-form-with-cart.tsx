@@ -11,7 +11,8 @@ import {
   type CartLine,
 } from "@/lib/cart-summary";
 import { formatPrice, sumPrices } from "@/lib/format-price";
-import { resolveProduct } from "@/lib/product-lookup";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
@@ -29,10 +30,16 @@ interface QuoteFormWithCartProps {
 export function QuoteFormWithCart({ lang, dict, cartDict }: QuoteFormWithCartProps) {
   const cart = useCart();
 
+  const { items: resolved, isLoading } = useResolvedProducts(
+    cart.items.map((item) => item.productId),
+    lang,
+  );
+  const byId = new Map(resolved.map((entry) => [entry.product.id, entry]));
+
   const lines: CartLine[] = cart.items
     .map((item) => {
-      const resolved = resolveProduct(item.productId, lang);
-      return resolved ? { product: resolved.product, quantity: item.quantity } : null;
+      const entry = byId.get(item.productId);
+      return entry ? { product: entry.product, quantity: item.quantity } : null;
     })
     .filter((line): line is CartLine => line !== null);
 
@@ -47,7 +54,9 @@ export function QuoteFormWithCart({ lang, dict, cartDict }: QuoteFormWithCartPro
 
   return (
     <div className="space-y-8">
-      {lines.length > 0 ? (
+      {isLoading ? <ResolvedProductsSkeleton count={cart.items.length} /> : null}
+
+      {!isLoading && lines.length > 0 ? (
         <section className="rounded-lg border border-accent/40 bg-accent/5 p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Icon icon={ShoppingCart} className="text-accent-strong" />

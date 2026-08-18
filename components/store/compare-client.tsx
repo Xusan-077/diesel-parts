@@ -5,7 +5,8 @@ import { Scale, X } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCompare } from "@/hooks/use-store";
-import { resolveProducts } from "@/lib/product-lookup";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -19,7 +20,11 @@ interface CompareClientProps {
 
 export function CompareClient({ lang, dict, stock }: CompareClientProps) {
   const compare = useCompare();
-  const items = resolveProducts(compare.ids, lang);
+  const { items, isLoading } = useResolvedProducts(compare.ids, lang);
+
+  if (isLoading) {
+    return <ResolvedProductsSkeleton count={compare.ids.length} />;
+  }
 
   if (items.length === 0) {
     return (
