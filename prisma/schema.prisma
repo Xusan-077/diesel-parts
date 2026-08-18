@@ -82,6 +82,7 @@ model Product {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   inquiries        Inquiry[]
+  orderItems       OrderItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -91,17 +92,23 @@ model Product {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  phone         String?   @unique
-  passwordHash  String
-  role          Role
-  isActive      Boolean   @default(true)
+  id                 String            @id @default(cuid())
+  name               String
+  email              String            @unique
+  phone              String?           @unique
+  passwordHash       String
+  role               Role
+  isActive           Boolean           @default(true)
   /// Percent a SELLER may discount without director approval.
-  discountLimit Int       @default(0)
-  createdAt     DateTime  @default(now())
-  inquiries     Inquiry[] @relation("AssignedInquiries")
+  discountLimit      Int               @default(0)
+  createdAt          DateTime          @default(now())
+  inquiries          Inquiry[]         @relation("AssignedInquiries")
+  assignedCustomers  Customer[]        @relation("AssignedCustomers")
+  orders             Order[]           @relation("SellerOrders")
+  requestedDiscounts DiscountRequest[] @relation("RequestedDiscounts")
+  reviewedDiscounts  DiscountRequest[] @relation("ReviewedDiscounts")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
 }
 
 model Inquiry {
@@ -123,4 +130,157 @@ model Inquiry {
 
   @@index([status, createdAt])
   @@index([assignedSellerId])
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum DiscountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  LOW_STOCK
+  NEW_INQUIRY
+  DISCOUNT_REQUESTED
+  DISCOUNT_DECIDED
+  ORDER_STATUS
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  IMPORT
+  LOGIN
+}
+
+/// A buyer a seller works with repeatedly. Distinct from Inquiry, which records
+/// one anonymous approach from the public site and may never become a Customer.
+model Customer {
+  id               String   @id @default(cuid())
+  name             String
+  /// Not unique: a company's switchboard number is shared by several contacts.
+  phone            String
+  email            String?
+  company          String?
+  notes            String?
+  /// Null means unassigned — visible to directors, claimable by any seller.
+  assignedSellerId String?
+  assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
+  orders           Order[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([assignedSellerId])
+  @@index([phone])
+}
+
+model Order {
+  id                       String            @id @default(cuid())
+  /// Human-readable reference quoted to the customer, e.g. "DP-2026-0042".
+  orderNumber              String            @unique
+  customerId               String
+  customer                 Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  sellerId                 String
+  seller                   User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
+  status                   OrderStatus       @default(DRAFT)
+  currency                 String            @default("UZS")
+  /// Sum of the line items before any discount. Stored rather than derived so a
+  /// later price change on the product cannot rewrite a historical order.
+  subtotal                 Decimal           @db.Decimal(14, 2)
+  /// Percent the seller asked for. Within their User.discountLimit it applies
+  /// immediately; above it, a DiscountRequest gates approval.
+  discountRequestedPercent Decimal           @default(0) @db.Decimal(5, 2)
+  /// Percent actually in force. Equals the requested percent once approved.
+  discountApprovedPercent  Decimal           @default(0) @db.Decimal(5, 2)
+  /// subtotal minus discountApprovedPercent, recomputed on every write.
+  totalAmount              Decimal           @db.Decimal(14, 2)
+  notes                    String?
+  items                    OrderItem[]
+  discountRequests         DiscountRequest[]
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@index([sellerId, status])
+  @@index([customerId])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  /// Snapshots, so the line still reads correctly after the product is renamed
+  /// or repriced. Same pattern as Inquiry.productSku.
+  productSku  String
+  productName String
+  qty         Int
+  unitPrice   Decimal @db.Decimal(14, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model DiscountRequest {
+  id               String         @id @default(cuid())
+  orderId          String
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sellerId         String
+  seller           User           @relation("RequestedDiscounts", fields: [sellerId], references: [id], onDelete: Restrict)
+  requestedPercent Decimal        @db.Decimal(5, 2)
+  reason           String?
+  status           DiscountStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedBy       User?          @relation("ReviewedDiscounts", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt       DateTime?
+  decisionNote     String?
+  createdAt        DateTime       @default(now())
+
+  @@index([status, createdAt])
+  @@index([sellerId])
+  @@index([orderId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  message   String
+  /// Id of the row the notification points at — order, inquiry or product.
+  /// Untyped on purpose: the type field says which table to read it against.
+  entityId  String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  /// Null once the acting user is deleted; the trail itself must survive.
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     AuditAction
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime    @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
