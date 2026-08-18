@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { brands } from "@/lib/data/brands";
-import { products } from "@/lib/data/products";
-import { categories } from "@/lib/data/categories";
+import { brands } from "@/prisma/seed-data/brands";
+import { products } from "@/prisma/seed-data/products";
+import { categories } from "@/prisma/seed-data/categories";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { localeAlternates } from "@/lib/seo";

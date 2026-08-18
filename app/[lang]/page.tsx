@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
-import { products } from "@/lib/data/products";
+import { products } from "@/prisma/seed-data/products";
 import { localeAlternates } from "@/lib/seo";
 import {
   getBestSellerProducts,

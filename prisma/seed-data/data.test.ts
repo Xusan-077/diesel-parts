@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { brands } from "./brands";
 import { categories } from "./categories";
 import { products } from "./products";
-import { blogPosts } from "./blog";
+import { blogPosts } from "@/lib/data/blog";
 
 function expectUniqueSlugs(items: { slug: string }[]) {
   const slugs = items.map((item) => item.slug);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categories } from "@/lib/data/categories";
+import { categories } from "@/prisma/seed-data/categories";
 import { catalogGroups } from "@/lib/data/catalog-menu";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import {

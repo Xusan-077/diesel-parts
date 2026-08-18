@@ -1,5 +1,5 @@
-import { brands } from "@/lib/data/brands";
-import { categories } from "@/lib/data/categories";
+import { brands } from "@/prisma/seed-data/brands";
+import { categories } from "@/prisma/seed-data/categories";
 import { Container } from "@/components/ui/container";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";

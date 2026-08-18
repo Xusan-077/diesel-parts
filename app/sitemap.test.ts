@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import sitemap, { STATIC_PATHS } from "./sitemap";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
-import { products } from "@/lib/data/products";
-import { categories } from "@/lib/data/categories";
-import { brands } from "@/lib/data/brands";
+import { products } from "@/prisma/seed-data/products";
+import { categories } from "@/prisma/seed-data/categories";
+import { brands } from "@/prisma/seed-data/brands";
 import { blogPosts } from "@/lib/data/blog";
 
 const STATIC_PATH_COUNT = STATIC_PATHS.length;

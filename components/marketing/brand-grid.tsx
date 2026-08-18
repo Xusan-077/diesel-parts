@@ -1,4 +1,4 @@
-import { brands } from "@/lib/data/brands";
+import { brands } from "@/prisma/seed-data/brands";
 import type { Locale } from "@/lib/i18n/locales";
 import { BrandLogo } from "./brand-logo";
 

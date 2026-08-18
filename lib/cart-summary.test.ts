@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { products } from "@/lib/data/products";
+import { products } from "@/prisma/seed-data/products";
 import {
   formatCartForQuote,
   toQuoteCartItems,

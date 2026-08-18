@@ -1,6 +1,6 @@
-import { brands } from "@/lib/data/brands";
-import { categories } from "@/lib/data/categories";
-import { products } from "@/lib/data/products";
+import { brands } from "@/prisma/seed-data/brands";
+import { categories } from "@/prisma/seed-data/categories";
+import { products } from "@/prisma/seed-data/products";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Product } from "@/lib/types";
 

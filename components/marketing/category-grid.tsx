@@ -1,4 +1,4 @@
-import { categories } from "@/lib/data/categories";
+import { categories } from "@/prisma/seed-data/categories";
 import type { Locale } from "@/lib/i18n/locales";
 import { CategoryCard } from "./category-card";
 

@@ -1,9 +1,15 @@
 import type { Product } from "@/lib/types";
 
-/**
- * TODO(Xusan): the `price` values are placeholders in UZS. Three products are
- * intentionally left at `null` to exercise the "price not set" path.
- */
+/* ============================================================================
+ * PLACEHOLDER PRICES — NOT REAL PRICING
+ *
+ * Every `price` below is an invented UZS figure. They exist so the catalog UI
+ * has something to render and so currency formatting can be exercised. They
+ * must be replaced with real prices before the catalog is shown to customers.
+ *
+ * Three products keep `price: null` on purpose, to exercise the
+ * "price not set" path that shows a contact action instead of a price.
+ * ==========================================================================*/
 export const products: Product[] = [
   {
     id: "cat-injector-3126",

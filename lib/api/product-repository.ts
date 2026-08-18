@@ -1,4 +1,4 @@
-import { products } from "@/lib/data/products";
+import { products } from "@/prisma/seed-data/products";
 import { filterProducts, sortProducts } from "@/lib/filters";
 import type { Product } from "@/lib/types";
 import { paginate, type Page, type ProductQuery } from "./product-query";

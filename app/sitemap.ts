@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site-config";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
-import { products } from "@/lib/data/products";
-import { categories } from "@/lib/data/categories";
-import { brands } from "@/lib/data/brands";
+import { products } from "@/prisma/seed-data/products";
+import { categories } from "@/prisma/seed-data/categories";
+import { brands } from "@/prisma/seed-data/brands";
 import { blogPosts } from "@/lib/data/blog";
 
 
