@@ -129,3 +129,11 @@ export const userUpdateSchema = z.object({
 });
 
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+/** A director's answer to a discount request. */
+export const discountDecisionSchema = z.object({
+  approve: z.boolean(),
+  note: z.string().max(500).optional().nullable(),
+});
+
+export type DiscountDecisionInput = z.infer<typeof discountDecisionSchema>;
