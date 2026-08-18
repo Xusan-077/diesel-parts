@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { quoteRequestSchema } from "@/lib/schemas";
+import { createInquiry } from "@/lib/api/inquiry-repository";
+import { formatCartMessage } from "@/lib/api/inquiry-message";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -23,12 +25,34 @@ export async function POST(request: Request) {
 
   const { cartItems, ...contact } = result.data;
 
-  // TODO(Xusan): forward to a CRM or mailbox once one exists.
-  console.log("[quote-request]", contact);
-  if (cartItems?.length) {
-    console.log(
-      "[quote-request] cart:",
-      cartItems.map((item) => `${item.sku} × ${item.quantity}`).join(", ")
+  /*
+   * The quote form asks for company, country, what they want and how many, and
+   * none of those has a column. Dropping them would leave a seller with a name
+   * and a phone number, so they go into the message body alongside the cart.
+   */
+  const details = [
+    `Company: ${contact.company}`,
+    `Country: ${contact.country}`,
+    `Products: ${contact.products}`,
+    `Quantity: ${contact.quantity}`,
+  ].join("\n");
+
+  const written = contact.message?.trim() ?? "";
+  const messageBody = written.length > 0 ? `${written}\n\n${details}` : details;
+
+  try {
+    await createInquiry({
+      customerName: contact.name,
+      phone: contact.phone,
+      email: contact.email,
+      message: formatCartMessage(messageBody, cartItems ?? []),
+      source: "QUOTE_FORM",
+    });
+  } catch (error) {
+    console.error("[quote-request] failed to persist", error);
+    return NextResponse.json(
+      { success: false, errors: { _root: ["Could not save your request. Please try again."] } },
+      { status: 500 }
     );
   }
 
