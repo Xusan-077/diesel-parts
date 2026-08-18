@@ -49,3 +49,14 @@ export const verifyCodeSchema = z.object({
 });
 
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
+
+/**
+ * Staff sign-in. The password is only checked for presence: a length rule here
+ * would reject nothing an attacker sends and would advertise the policy.
+ */
+export const staffLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export type StaffLoginInput = z.infer<typeof staffLoginSchema>;
