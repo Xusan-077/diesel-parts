@@ -54,27 +54,10 @@ const eslintConfig = defineConfig([
     rules: { "no-restricted-imports": "off" },
   },
   {
-    // TEMPORARY: these still read seed data directly. Removed in Task 8 of
-    // docs/superpowers/plans/2026-08-17-catalog-database-foundation.md once
-    // every one of them reads through the repository.
-    //
-    // `*` stands in for the `[lang]` and `[slug]` segments: ESLint matches
-    // these with minimatch, where `[lang]` is a character class rather than a
-    // directory name, so the literal bracketed path can never match.
-    files: [
-      "app/sitemap.ts",
-      "app/*/page.tsx",
-      "app/*/products/*/page.tsx",
-      "app/*/categories/*/page.tsx",
-      "app/*/brands/*/page.tsx",
-      "lib/api/product-repository.ts",
-      "lib/product-lookup.ts",
-      "components/marketing/brand-grid.tsx",
-      "components/marketing/category-grid.tsx",
-      "components/marketing/product-row.tsx",
-      "components/product/product-catalog-client.tsx",
-      "components/product/related-products.tsx",
-    ],
+    // TEMPORARY: the last file still reading seed data directly. Removed in
+    // Task 8 of docs/superpowers/plans/2026-08-17-catalog-database-foundation.md,
+    // once the wishlist, cart and compare lists resolve ids over HTTP instead.
+    files: ["lib/product-lookup.ts"],
     rules: { "no-restricted-imports": "off" },
   },
 ]);

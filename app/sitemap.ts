@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site-config";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
-import { products } from "@/prisma/seed-data/products";
-import { categories } from "@/prisma/seed-data/categories";
-import { brands } from "@/prisma/seed-data/brands";
+import {
+  listBrands,
+  listCategories,
+  listProductSlugs,
+} from "@/lib/api/product-repository";
 import { blogPosts } from "@/lib/data/blog";
 
 
@@ -21,15 +23,21 @@ export const STATIC_PATHS = [
   "/request-quote",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [productSlugs, categories, brands] = await Promise.all([
+    listProductSlugs(),
+    listCategories(),
+    listBrands(),
+  ]);
+
   const entries: MetadataRoute.Sitemap = [];
 
   for (const lang of SUPPORTED_LOCALES) {
     for (const path of STATIC_PATHS) {
       entries.push({ url: `${SITE_URL}/${lang}${path}`, lastModified: new Date() });
     }
-    for (const product of products) {
-      entries.push({ url: `${SITE_URL}/${lang}/products/${product.slug}`, lastModified: new Date() });
+    for (const slug of productSlugs) {
+      entries.push({ url: `${SITE_URL}/${lang}/products/${slug}`, lastModified: new Date() });
     }
     for (const category of categories) {
       entries.push({ url: `${SITE_URL}/${lang}/categories/${category.slug}`, lastModified: new Date() });

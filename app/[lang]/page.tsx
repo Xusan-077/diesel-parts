@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
-import { products } from "@/prisma/seed-data/products";
 import { localeAlternates } from "@/lib/seo";
-import {
-  getBestSellerProducts,
-  getNewProducts,
-  getPopularProducts,
-} from "@/lib/product-collections";
+import { HOME_ROW_SIZE } from "@/lib/product-collections";
+import { getProductsForHomeRows } from "@/lib/api/product-repository";
 import { Hero } from "@/components/marketing/hero";
 import { TrustBadges } from "@/components/marketing/trust-badges";
 import { CategoryGrid } from "@/components/marketing/category-grid";
@@ -16,6 +12,9 @@ import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { ProductRow } from "@/components/marketing/product-row";
 import { CtaBanner } from "@/components/marketing/cta-banner";
 import { Container } from "@/components/ui/container";
+
+/** Catalog rows change rarely; an hour keeps the page static and fresh enough. */
+export const revalidate = 3600;
 
 export async function generateMetadata({
   params,
@@ -39,6 +38,7 @@ export default async function HomePage({
   const { lang: rawLang } = await params;
   const lang = isLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const dict = getDictionary(lang);
+  const { popular, newest, bestSellers } = await getProductsForHomeRows(HOME_ROW_SIZE);
 
   const rowProps = {
     lang,
@@ -68,7 +68,7 @@ export default async function HomePage({
       <ProductRow
         {...rowProps}
         title={dict.home.popularTitle}
-        products={getPopularProducts(products)}
+        products={popular}
         autoplay
       />
 
@@ -83,7 +83,7 @@ export default async function HomePage({
       <ProductRow
         {...rowProps}
         title={dict.home.newTitle}
-        products={getNewProducts(products)}
+        products={newest}
         ribbon={dict.home.newBadge}
       />
 
@@ -98,7 +98,7 @@ export default async function HomePage({
       <ProductRow
         {...rowProps}
         title={dict.home.bestSellersTitle}
-        products={getBestSellerProducts(products)}
+        products={bestSellers}
       />
 
       <Container as="section" className="py-16">

@@ -114,3 +114,13 @@ export async function getProductsForHomeRows(count: number): Promise<{
     bestSellers: bestSellers.map(toProduct),
   };
 }
+
+/** Every active product slug, for the sitemap. Slugs only — no row mapping. */
+export async function listProductSlugs(): Promise<string[]> {
+  const rows = await prisma.product.findMany({
+    where: { isActive: true },
+    select: { slug: true },
+    orderBy: { id: "asc" },
+  });
+  return rows.map((row) => row.slug);
+}

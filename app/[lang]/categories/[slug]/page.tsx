@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { categories } from "@/prisma/seed-data/categories";
-import { products } from "@/prisma/seed-data/products";
-import { brands } from "@/prisma/seed-data/brands";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+import { DEFAULT_PAGE_SIZE } from "@/lib/api/product-query";
+import { listBrands, listCategories, queryProducts } from "@/lib/api/product-repository";
 import { localeAlternates } from "@/lib/seo";
 import { ProductCard } from "@/components/marketing/product-card";
 import { Container } from "@/components/ui/container";
 
-export function generateStaticParams() {
-  return SUPPORTED_LOCALES.flatMap((lang) => categories.map((category) => ({ lang, slug: category.slug })));
+/** Catalog content changes rarely; an hour keeps the page static and fresh enough. */
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const categories = await listCategories();
+  return SUPPORTED_LOCALES.flatMap((lang) =>
+    categories.map((category) => ({ lang, slug: category.slug })),
+  );
 }
 
 export async function generateMetadata({
@@ -19,6 +24,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang: rawLang, slug } = await params;
+  const categories = await listCategories();
   const category = categories.find((c) => c.slug === slug);
   const lang = isLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   if (!category) {
@@ -41,37 +47,52 @@ export default async function CategoryDetailPage({
   const lang = isLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const dict = getDictionary(lang);
 
+  const categories = await listCategories();
   const category = categories.find((c) => c.slug === slug);
   if (!category) {
     notFound();
   }
 
-  const categoryProducts = products.filter((p) => p.categoryId === category.id);
+  const [page, brands] = await Promise.all([
+    queryProducts({
+      q: "",
+      brandId: "all",
+      categoryId: category.id,
+      categoryIds: undefined,
+      availability: "all",
+      sort: "newest",
+      page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      lang,
+    }),
+    listBrands(),
+  ]);
+
+  const brandNameById = new Map(brands.map((brand) => [brand.id, brand.name]));
 
   return (
     <Container as="main" className="pb-24 pt-12">
       <p className="text-sm text-muted">{dict.categories.title}</p>
       <h1 className="mt-1 text-3xl font-semibold text-foreground">{category.name[lang]}</h1>
       <p className="mt-2 text-muted">
-        {categoryProducts.length} {dict.categories.productsInCategory}
+        {page.total} {dict.categories.productsInCategory}
       </p>
 
       <div className="mt-10 grid grid-cols-2 gap-6 lg:grid-cols-3">
-        {categoryProducts.map((product) => {
-          const brand = brands.find((b) => b.id === product.brandId)!;
-          return (
-            <ProductCard
-              key={product.id}
-              product={product}
-              lang={lang}
-              categoryName={category.name[lang]}
-              brandName={brand.name}
-              stock={dict.common.stock}
-              requestPriceLabel={dict.common.requestPrice}
-              actions={dict.productActions}
-            />
-          );
-        })}
+        {page.items.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            lang={lang}
+            categoryName={category.name[lang]}
+            // Empty rather than a crash: a product whose brand row was deleted
+            // should still appear in the grid.
+            brandName={brandNameById.get(product.brandId) ?? ""}
+            stock={dict.common.stock}
+            requestPriceLabel={dict.common.requestPrice}
+            actions={dict.productActions}
+          />
+        ))}
       </div>
     </Container>
   );

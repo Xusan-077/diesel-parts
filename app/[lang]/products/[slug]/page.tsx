@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { products } from "@/prisma/seed-data/products";
-import { categories } from "@/prisma/seed-data/categories";
-import { brands } from "@/prisma/seed-data/brands";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import {
+  getProductBySlug,
+  listBrands,
+  listCategories,
+  listProductSlugs,
+} from "@/lib/api/product-repository";
 import { DEFAULT_LOCALE, isLocale, SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { SpecsTable } from "@/components/product/specs-table";
@@ -16,8 +19,12 @@ import { ProductJsonLd } from "@/components/product/product-json-ld";
 import { InquiryDialog } from "@/components/forms/inquiry-dialog";
 import { Container } from "@/components/ui/container";
 
-export function generateStaticParams() {
-  return SUPPORTED_LOCALES.flatMap((lang) => products.map((product) => ({ lang, slug: product.slug })));
+/** Catalog content changes rarely; an hour keeps the page static and fresh enough. */
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const slugs = await listProductSlugs();
+  return SUPPORTED_LOCALES.flatMap((lang) => slugs.map((slug) => ({ lang, slug })));
 }
 
 export async function generateMetadata({
@@ -26,7 +33,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang: rawLang, slug } = await params;
-  const product = products.find((p) => p.slug === slug);
+  const product = await getProductBySlug(slug);
   const lang = isLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   if (!product) {
     return {};
@@ -48,13 +55,21 @@ export default async function ProductDetailPage({
   const lang = isLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const dict = getDictionary(lang);
 
-  const product = products.find((p) => p.slug === slug);
+  const product = await getProductBySlug(slug);
   if (!product) {
     notFound();
   }
 
-  const category = categories.find((c) => c.id === product.categoryId)!;
-  const brand = brands.find((b) => b.id === product.brandId)!;
+  const [categories, brands] = await Promise.all([listCategories(), listBrands()]);
+  const category = categories.find((c) => c.id === product.categoryId);
+  const brand = brands.find((b) => b.id === product.brandId);
+
+  // A product always has both, but the row could have been deleted out from
+  // under it; the page renders rather than throwing, and the structured data
+  // is simply omitted.
+  if (category === undefined || brand === undefined) {
+    notFound();
+  }
 
   return (
     <Container as="main" className="pb-24 pt-12">

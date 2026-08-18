@@ -1,5 +1,4 @@
-import { brands } from "@/prisma/seed-data/brands";
-import { categories } from "@/prisma/seed-data/categories";
+import { listBrands, listCategories } from "@/lib/api/product-repository";
 import { Container } from "@/components/ui/container";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -33,7 +32,7 @@ interface ProductRowProps {
  * Stays a server component so the brand and category lookups run once at build
  * time — only the scrolling track below needs to ship to the browser.
  */
-export function ProductRow({
+export async function ProductRow({
   lang,
   title,
   products,
@@ -49,6 +48,8 @@ export function ProductRow({
   if (products.length === 0) {
     return null;
   }
+
+  const [brands, categories] = await Promise.all([listBrands(), listCategories()]);
 
   const meta = Object.fromEntries(
     products.map((product) => [
