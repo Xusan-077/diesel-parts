@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CheckboxField } from "@/components/ui/checkbox";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ProductWriteInput } from "@/lib/schemas";
 
@@ -26,8 +28,6 @@ function linesToList(value: string): string[] {
 function listToLines(values: readonly string[]): string {
   return values.join("\n");
 }
-
-const FIELD = "border-l-2 border-border pl-4 transition-colors focus-within:border-accent-strong";
 
 const EMPTY: ProductWriteInput = {
   sku: "",
@@ -127,199 +127,153 @@ export function ProductForm({
   return (
     <form onSubmit={save} className="mt-8 max-w-3xl space-y-10" noValidate>
       <section className="space-y-5">
-        <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+        <h2 className="type-eyebrow text-muted">
           Identifikatsiya
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className={FIELD}>
-            <Label htmlFor="sku">SKU</Label>
+          <FormField label="SKU">
             <Input
-              id="sku"
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
-              className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+              className="font-mono"
               required
             />
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor="slug">Slug (URL)</Label>
+          </FormField>
+          <FormField label="Slug (URL)">
             <Input
-              id="slug"
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value })}
-              className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+              className="font-mono"
               placeholder="cat-fuel-injector-3126"
               required
             />
-          </div>
+          </FormField>
         </div>
       </section>
 
       <section className="space-y-5">
-        <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+        <h2 className="type-eyebrow text-muted">
           Nomi
         </h2>
         {(["uz", "ru", "en"] as const).map((lang) => (
-          <div key={lang} className={FIELD}>
-            <Label htmlFor={"name-" + lang}>{lang.toUpperCase()}</Label>
+          <FormField key={lang} label={lang.toUpperCase()}>
             <Input
-              id={"name-" + lang}
               value={form.name[lang]}
               onChange={(e) => setForm({ ...form, name: { ...form.name, [lang]: e.target.value } })}
-              className="mt-1.5 border-0 px-0 focus:border-0"
               required
             />
-          </div>
+          </FormField>
         ))}
       </section>
 
       <section className="space-y-5">
-        <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+        <h2 className="type-eyebrow text-muted">
           Tavsif
         </h2>
         {(["uz", "ru", "en"] as const).map((lang) => (
-          <div key={lang} className={FIELD}>
-            <Label htmlFor={"desc-" + lang}>{lang.toUpperCase()}</Label>
+          <FormField key={lang} label={lang.toUpperCase()}>
             <Textarea
-              id={"desc-" + lang}
               value={form.description[lang]}
               onChange={(e) =>
                 setForm({ ...form, description: { ...form.description, [lang]: e.target.value } })
               }
-              rows={2}
-              className="mt-1.5 border-0 px-0 focus:border-0"
+              rows={3}
               required
             />
-          </div>
+          </FormField>
         ))}
       </section>
 
       <section className="space-y-5">
-        <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+        <h2 className="type-eyebrow text-muted">
           Narx va zaxira
         </h2>
         <div className="grid gap-5 sm:grid-cols-3">
-          <div className={FIELD}>
-            <Label htmlFor="price">Narx (so&apos;m)</Label>
+          {/* No placeholder: the hint below already says what an empty box
+              means, and saying it twice in two type sizes is not clearer. */}
+          <FormField label="Narx (so'm)" hint={`Bo'sh qoldirilsa — "so'rov bo'yicha"`}>
             <Input
-              id="price"
               inputMode="numeric"
               value={priceText}
               onChange={(e) => setPriceText(e.target.value)}
-              className="mt-1.5 border-0 px-0 font-mono tabular-nums focus:border-0"
-              placeholder="belgilanmagan"
+              className="font-mono tabular-nums"
             />
-            <p className="mt-1 text-xs text-muted">Bo&apos;sh qoldirilsa — &quot;so&apos;rov bo&apos;yicha&quot;</p>
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor="stock">Qoldiq</Label>
+          </FormField>
+          <FormField label="Qoldiq">
             <Input
-              id="stock"
               inputMode="numeric"
               value={String(form.stock)}
               onChange={(e) => setForm({ ...form, stock: Number(e.target.value) || 0 })}
-              className="mt-1.5 border-0 px-0 font-mono tabular-nums focus:border-0"
+              className="font-mono tabular-nums"
             />
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor="minStock">Minimal qoldiq</Label>
+          </FormField>
+          <FormField label="Minimal qoldiq" hint={'Shu chegarada "kam qoldi" deb belgilanadi'}>
             <Input
-              id="minStock"
               inputMode="numeric"
               value={String(form.minStock)}
               onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) || 0 })}
-              className="mt-1.5 border-0 px-0 font-mono tabular-nums focus:border-0"
+              className="font-mono tabular-nums"
             />
-            <p className="mt-1 text-xs text-muted">Shu chegarada &quot;kam qoldi&quot; deb belgilanadi</p>
-          </div>
+          </FormField>
         </div>
       </section>
 
       <section className="space-y-5">
-        <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+        <h2 className="type-eyebrow text-muted">
           Tasnif
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className={FIELD}>
-            <Label htmlFor="categoryId">Kategoriya</Label>
-            <select
-              id="categoryId"
+          <FormField label="Kategoriya">
+            <Select
               value={form.categoryId}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              className="mt-1.5 h-10 w-full bg-transparent text-sm text-foreground"
             >
               {categories.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
                 </option>
               ))}
-            </select>
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor="brandId">Brend</Label>
-            <select
-              id="brandId"
+            </Select>
+          </FormField>
+          <FormField label="Brend">
+            <Select
               value={form.brandId}
               onChange={(e) => setForm({ ...form, brandId: e.target.value })}
-              className="mt-1.5 h-10 w-full bg-transparent text-sm text-foreground"
             >
               {brands.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.label}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormField>
         </div>
 
-        <div className={FIELD}>
-          <Label htmlFor="oem">OEM raqamlar — har biri yangi qatorda</Label>
+        {/* The label names the field; how to fill it is the hint's job. */}
+        <FormField label="OEM raqamlar" hint="Har biri yangi qatorda">
           <Textarea
-            id="oem"
             value={oem}
             onChange={(e) => setOem(e.target.value)}
             rows={3}
-            className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+            className="font-mono"
           />
-        </div>
+        </FormField>
 
-        <div className={FIELD}>
-          <Label htmlFor="models">Mos texnika — har biri yangi qatorda</Label>
-          <Textarea
-            id="models"
-            value={models}
-            onChange={(e) => setModels(e.target.value)}
-            rows={3}
-            className="mt-1.5 border-0 px-0 focus:border-0"
-          />
-        </div>
+        <FormField label="Mos texnika" hint="Har biri yangi qatorda">
+          <Textarea value={models} onChange={(e) => setModels(e.target.value)} rows={3} />
+        </FormField>
 
-        <div className={FIELD}>
-          <Label htmlFor="images">Rasm yorliqlari — har biri yangi qatorda</Label>
-          <Textarea
-            id="images"
-            value={images}
-            onChange={(e) => setImages(e.target.value)}
-            rows={2}
-            className="mt-1.5 border-0 px-0 focus:border-0"
-          />
-        </div>
+        <FormField label="Rasm yorliqlari" hint="Har biri yangi qatorda">
+          <Textarea value={images} onChange={(e) => setImages(e.target.value)} rows={2} />
+        </FormField>
       </section>
 
-      <section className={FIELD}>
-        <label className="flex items-center gap-3 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Katalogda ko&apos;rinsin
-        </label>
-        <p className="mt-1 text-xs text-muted">
-          Belgi olib tashlansa mahsulot saytdan yo&apos;qoladi, lekin eski buyurtmalarda qoladi.
-        </p>
-      </section>
+      <CheckboxField
+        label="Katalogda ko'rinsin"
+        hint="Belgi olib tashlansa mahsulot saytdan yo'qoladi, lekin eski buyurtmalarda qoladi."
+        checked={form.isActive}
+        onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+      />
 
       <div aria-live="polite" className="min-h-5">
         {error ? (

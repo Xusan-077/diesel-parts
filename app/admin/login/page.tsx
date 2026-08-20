@@ -31,7 +31,7 @@ export default async function AdminLoginPage({
     <main className="min-h-dvh bg-background px-6 py-16 sm:px-10 lg:px-20">
       <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-6xl items-center">
         <div className="w-full max-w-sm">
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+          <p className="type-eyebrow text-muted">
             Diesel Parts <span aria-hidden="true">/</span> Boshqaruv paneli
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground">Kirish</h1>

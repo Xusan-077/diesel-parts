@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { listProductsForAdmin } from "@/lib/api/product-write-repository";
 import { formatInteger, formatSum } from "@/lib/analytics/format";
+import { controlVariants, fieldRail } from "@/components/ui/field-styles";
+import { cn } from "@/lib/utils";
 import { CatalogTransfer } from "@/components/admin/catalog-transfer";
 
 const SORTS = [
@@ -53,7 +55,7 @@ export default async function DirectorProductsPage({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+          <p className="type-eyebrow text-muted">
             Direktor paneli
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
@@ -75,7 +77,7 @@ export default async function DirectorProductsPage({
 
       <div className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4">
         <form method="get" className="flex items-end gap-2">
-          <div className="border-l-2 border-border pl-3 transition-colors focus-within:border-accent-strong">
+          <div className={fieldRail({ className: "pl-3" })}>
             <label htmlFor="q" className="block text-xs text-muted">
               SKU, nom yoki OEM raqami
             </label>
@@ -83,7 +85,10 @@ export default async function DirectorProductsPage({
               id="q"
               name="q"
               defaultValue={search}
-              className="mt-1 h-9 w-64 bg-transparent font-mono text-sm text-foreground placeholder:text-muted"
+              className={cn(
+                controlVariants({ variant: "rail" }),
+                "mt-1 h-9 w-64 font-mono",
+              )}
               placeholder="DP-INJ-3126"
             />
           </div>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidPhone } from "@/lib/auth/phone";
+import { PRODUCT_SEARCH_MIN_LENGTH } from "@/lib/api/product-search";
 
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
@@ -137,3 +138,140 @@ export const discountDecisionSchema = z.object({
 });
 
 export type DiscountDecisionInput = z.infer<typeof discountDecisionSchema>;
+
+/* ── Seller panel: inquiries, customers, orders ───────────────────────────── */
+
+/**
+ * A follow-up date the seller picked. Accepts a bare `2026-09-01` as well as a
+ * full timestamp: the panel's date input sends the short form, and rejecting it
+ * would push a timezone conversion into the browser for no gain.
+ */
+const isoDateSchema = z.union([z.iso.datetime({ offset: true }), z.iso.date()]);
+
+/** One page of any seller listing. */
+const pageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
+
+export const inquiryColumnSchema = z.enum(["new", "claimed", "in_progress", "won", "lost"]);
+
+export const inquiryListQuerySchema = z.object({
+  column: inquiryColumnSchema.optional(),
+  /** Directors only; a seller's list is scoped to them whatever they ask for. */
+  sellerId: z.string().min(1).optional(),
+  page: pageSchema,
+});
+
+export type InquiryListQuery = z.infer<typeof inquiryListQuerySchema>;
+
+/**
+ * A board move. "Band qilingan" is absent on purpose: claiming is its own
+ * endpoint, and the column falls out of the assignee (see `inquiry-board.ts`).
+ *
+ * Every field is optional and the object must carry at least one, so a PATCH
+ * can move the card, leave a note, or set a callback date without the caller
+ * having to resend the two it is not touching.
+ */
+export const inquiryUpdateSchema = z
+  .object({
+    status: z.enum(["NEW", "IN_PROGRESS", "WON", "LOST"]).optional(),
+    notes: z.string().max(2000).nullable().optional(),
+    followUpAt: isoDateSchema.nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, "no_fields");
+
+export type InquiryUpdateInput = z.infer<typeof inquiryUpdateSchema>;
+
+export const customerListQuerySchema = z.object({
+  search: z.string().max(120).optional(),
+  /** Switches a seller's list to the unclaimed pool instead of their own book. */
+  pool: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+  page: pageSchema,
+});
+
+export type CustomerListQuery = z.infer<typeof customerListQuerySchema>;
+
+export const customerCreateSchema = z.object({
+  name: z.string().min(1).max(160),
+  // Not unique in the database — a company switchboard is shared by several
+  // contacts — so nothing here pretends it identifies a person.
+  phone: z.string().min(1).max(32),
+  email: z.string().email().nullable().optional(),
+  company: z.string().max(160).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
+
+export const customerUpdateSchema = customerCreateSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, "no_fields");
+
+export type CustomerUpdateInput = z.infer<typeof customerUpdateSchema>;
+
+/**
+ * One order line.
+ *
+ * `unitPrice` is optional because the repository snapshots `Product.price`
+ * instead of trusting the caller — an editable line price lets a seller reach
+ * any total they like and routes around `User.discountLimit` entirely. It is
+ * accepted, and then required, only for products priced on request, where
+ * there is no catalog figure to snapshot.
+ */
+export const orderItemSchema = z.object({
+  productId: z.string().min(1),
+  qty: z.number().int().min(1).max(100_000),
+  unitPrice: z.number().nonnegative().max(1_000_000_000).nullable().optional(),
+});
+
+export type OrderItemInput = z.infer<typeof orderItemSchema>;
+
+export const orderCreateSchema = z.object({
+  customerId: z.string().min(1),
+  items: z.array(orderItemSchema).min(1).max(100),
+  notes: z.string().max(2000).nullable().optional(),
+  /** Set when the order was raised from a board card. */
+  inquiryId: z.string().min(1).nullable().optional(),
+});
+
+export type OrderCreateInput = z.infer<typeof orderCreateSchema>;
+
+export const orderUpdateSchema = z
+  .object({
+    status: z.enum(["DRAFT", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+    items: z.array(orderItemSchema).min(1).max(100).optional(),
+    notes: z.string().max(2000).nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, "no_fields");
+
+export type OrderUpdateInput = z.infer<typeof orderUpdateSchema>;
+
+export const orderListQuerySchema = z.object({
+  status: z.enum(["DRAFT", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]).optional(),
+  customerId: z.string().min(1).optional(),
+  page: pageSchema,
+});
+
+export type OrderListQuery = z.infer<typeof orderListQuerySchema>;
+
+/**
+ * The catalog lookup the order form types into. The floor on `q` is the one in
+ * `product-search.ts`: a one-character term matches half the catalog.
+ */
+export const productLookupQuerySchema = z.object({
+  q: z.string().trim().min(PRODUCT_SEARCH_MIN_LENGTH).max(120),
+});
+
+export type ProductLookupQuery = z.infer<typeof productLookupQuerySchema>;
+
+/**
+ * A discount on an order. Inside the seller's own limit it applies at once;
+ * above it this creates the `DiscountRequest` the director's queue answers.
+ */
+export const discountRequestSchema = z.object({
+  percent: z.number().min(0).max(100),
+  reason: z.string().max(500).nullable().optional(),
+});
+
+export type DiscountRequestInput = z.infer<typeof discountRequestSchema>;

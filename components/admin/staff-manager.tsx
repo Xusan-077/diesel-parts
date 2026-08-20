@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { CheckboxField } from "@/components/ui/checkbox";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 export interface StaffView {
   id: string;
@@ -22,8 +24,6 @@ const ROLE_LABEL: Record<StaffView["role"], string> = {
   DIRECTOR: "Direktor",
   SELLER: "Sotuvchi",
 };
-
-const FIELD = "border-l-2 border-border pl-4 transition-colors focus-within:border-accent-strong";
 
 async function send(url: string, method: string, body: unknown): Promise<string | null> {
   try {
@@ -77,64 +77,50 @@ function EditRow({ user, onDone }: { user: StaffView; onDone: () => void }) {
     <tr className="border-b border-border bg-surface-muted">
       <td colSpan={6} className="px-3 py-5">
         <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
-          <div className={FIELD}>
-            <Label htmlFor={"name-" + user.id}>Ismi</Label>
+          <FormField label="Ismi">
             <Input
-              id={"name-" + user.id}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1.5 border-0 px-0 focus:border-0"
             />
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor={"phone-" + user.id}>Telefon</Label>
+          </FormField>
+          <FormField label="Telefon">
             <Input
-              id={"phone-" + user.id}
+              type="tel"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+              className="font-mono"
               placeholder="+998 90 000 00 00"
             />
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor={"role-" + user.id}>Rol</Label>
-            <select
-              id={"role-" + user.id}
+          </FormField>
+          <FormField label="Rol">
+            <Select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value as StaffView["role"] })}
-              className="mt-1.5 h-10 w-full bg-transparent text-sm text-foreground"
             >
               <option value="SELLER">Sotuvchi</option>
               <option value="DIRECTOR">Direktor</option>
-            </select>
-          </div>
-          <div className={FIELD}>
-            <Label htmlFor={"limit-" + user.id}>Chegirma limiti (%)</Label>
+            </Select>
+          </FormField>
+          <FormField
+            label="Chegirma limiti (%)"
+            hint="Shu foizdan yuqorisi direktor tasdig'ini talab qiladi"
+          >
             <Input
-              id={"limit-" + user.id}
               inputMode="numeric"
               value={String(form.discountLimit)}
               onChange={(e) => setForm({ ...form, discountLimit: Number(e.target.value) || 0 })}
-              className="mt-1.5 border-0 px-0 font-mono tabular-nums focus:border-0"
+              className="font-mono tabular-nums"
             />
-            <p className="mt-1 text-xs text-muted">
-              Shu foizdan yuqorisi direktor tasdig&apos;ini talab qiladi
-            </p>
-          </div>
+          </FormField>
         </div>
 
-        <label className="mt-5 flex items-center gap-3 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-            className="h-4 w-4 accent-[var(--accent)]"
-          />
-          Hisob faol
-        </label>
-        <p className="mt-1 text-xs text-muted">
-          Belgi olib tashlansa hisob darhol kira olmaydi — ochiq sessiya ham to&apos;xtaydi.
-        </p>
+        <CheckboxField
+          label="Hisob faol"
+          hint="Belgi olib tashlansa hisob darhol kira olmaydi — ochiq sessiya ham to'xtaydi."
+          checked={form.isActive}
+          onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+          fieldClassName="mt-5"
+        />
 
         <div aria-live="polite" className="min-h-5">
           {error ? (
@@ -193,79 +179,65 @@ function CreateForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={create} className="mt-6 max-w-3xl rounded-lg border border-border p-6" noValidate>
-      <h2 className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+      <h2 className="type-eyebrow text-muted">
         Yangi xodim
       </h2>
 
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
-        <div className={FIELD}>
-          <Label htmlFor="new-name">Ismi</Label>
+        <FormField label="Ismi">
           <Input
-            id="new-name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="mt-1.5 border-0 px-0 focus:border-0"
             required
           />
-        </div>
-        <div className={FIELD}>
-          <Label htmlFor="new-email">Email</Label>
+        </FormField>
+        <FormField label="Email">
           <Input
-            id="new-email"
             type="email"
             autoComplete="off"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="mt-1.5 border-0 px-0 focus:border-0"
             required
           />
-        </div>
-        <div className={FIELD}>
-          <Label htmlFor="new-phone">Telefon</Label>
+        </FormField>
+        <FormField label="Telefon">
           <Input
-            id="new-phone"
+            type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+            className="font-mono"
+            placeholder="+998 90 000 00 00"
           />
-        </div>
-        <div className={FIELD}>
-          <Label htmlFor="new-password">Boshlang&apos;ich parol</Label>
+        </FormField>
+        <FormField label="Boshlang'ich parol" hint="Kamida 8 belgi. Xodimga o'zingiz yetkazasiz.">
           <Input
-            id="new-password"
             type="password"
             autoComplete="new-password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="mt-1.5 border-0 px-0 focus:border-0"
             required
           />
-          <p className="mt-1 text-xs text-muted">
-            Kamida 8 belgi. Xodimga o&apos;zingiz yetkazasiz.
-          </p>
-        </div>
-        <div className={FIELD}>
-          <Label htmlFor="new-role">Rol</Label>
-          <select
-            id="new-role"
+        </FormField>
+        <FormField label="Rol">
+          <Select
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value as StaffView["role"] })}
-            className="mt-1.5 h-10 w-full bg-transparent text-sm text-foreground"
           >
             <option value="SELLER">Sotuvchi</option>
             <option value="DIRECTOR">Direktor</option>
-          </select>
-        </div>
-        <div className={FIELD}>
-          <Label htmlFor="new-limit">Chegirma limiti (%)</Label>
+          </Select>
+        </FormField>
+        <FormField
+          label="Chegirma limiti (%)"
+          hint="Shu foizdan yuqorisi direktor tasdig'ini talab qiladi"
+        >
           <Input
-            id="new-limit"
             inputMode="numeric"
             value={String(form.discountLimit)}
             onChange={(e) => setForm({ ...form, discountLimit: Number(e.target.value) || 0 })}
-            className="mt-1.5 border-0 px-0 font-mono tabular-nums focus:border-0"
+            className="font-mono tabular-nums"
           />
-        </div>
+        </FormField>
       </div>
 
       <div aria-live="polite" className="min-h-5">

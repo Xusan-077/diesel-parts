@@ -17,7 +17,7 @@ export function Logo({
       className={cn("flex shrink-0 items-center gap-2", className)}
       aria-label={siteName}
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
         {siteName.charAt(0)}
       </span>
       <span className="text-lg font-semibold tracking-tight text-foreground">{siteName}</span>

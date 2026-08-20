@@ -100,7 +100,7 @@ model User {
   role               Role
   isActive           Boolean           @default(true)
   /// Percent a SELLER may discount without director approval.
-  discountLimit      Int               @default(0)
+  discountLimit      Int               @default(5)
   createdAt          DateTime          @default(now())
   inquiries          Inquiry[]         @relation("AssignedInquiries")
   assignedCustomers  Customer[]        @relation("AssignedCustomers")
@@ -126,10 +126,16 @@ model Inquiry {
   source           InquirySource
   assignedSellerId String?
   assignedSeller   User?         @relation("AssignedInquiries", fields: [assignedSellerId], references: [id], onDelete: SetNull)
+  /// The seller's own running note on the lead. Free text, not shown publicly.
+  notes            String?
+  /// When the seller means to call back. Null means nothing is scheduled.
+  followUpAt       DateTime?
+  orders           Order[]
   createdAt        DateTime      @default(now())
 
   @@index([status, createdAt])
   @@index([assignedSellerId])
+  @@index([followUpAt])
 }
 
 enum OrderStatus {
@@ -206,6 +212,10 @@ model Order {
   /// subtotal minus discountApprovedPercent, recomputed on every write.
   totalAmount              Decimal           @db.Decimal(14, 2)
   notes                    String?
+  /// Set when the order was raised from a board card, so the conversion figure
+  /// is counted rather than estimated and one inquiry cannot be billed twice.
+  inquiryId                String?
+  inquiry                  Inquiry?          @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   items                    OrderItem[]
   discountRequests         DiscountRequest[]
   createdAt                DateTime          @default(now())
@@ -214,6 +224,7 @@ model Order {
   @@index([sellerId, status])
   @@index([customerId])
   @@index([status, createdAt])
+  @@index([inquiryId])
 }
 
 model OrderItem {

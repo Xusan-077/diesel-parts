@@ -19,7 +19,7 @@ export function PanelShell({
     <div className="admin-root min-h-dvh bg-background">
       <div className="mx-auto flex max-w-[1400px] flex-col lg:flex-row">
         <aside className="shrink-0 border-b border-border px-6 py-6 lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:border-b-0 lg:border-r lg:px-6">
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+          <p className="type-eyebrow text-muted">
             Diesel Parts
           </p>
           <p className="mt-1 text-sm font-medium text-foreground">

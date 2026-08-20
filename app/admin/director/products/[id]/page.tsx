@@ -23,7 +23,7 @@ export default async function EditProductPage({
 
   return (
     <div>
-      <p className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+      <p className="type-eyebrow text-muted">
         Mahsulotlar
       </p>
       <div className="mt-1 flex flex-wrap items-center justify-between gap-4">

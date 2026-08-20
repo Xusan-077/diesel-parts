@@ -72,7 +72,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
 
       <div className="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-3">
         <div>
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+          <p className="type-eyebrow text-muted">
             So&apos;ralgan chegirma
           </p>
           <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
@@ -83,7 +83,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
           </p>
         </div>
         <div>
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+          <p className="type-eyebrow text-muted">
             Buyurtma summasi
           </p>
           <p className="mt-1 font-mono text-sm tabular-nums text-foreground">
@@ -94,7 +94,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
           </p>
         </div>
         <div>
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+          <p className="type-eyebrow text-muted">
             Chegirma qiymati
           </p>
           <p className="mt-1 font-mono text-sm tabular-nums text-danger">

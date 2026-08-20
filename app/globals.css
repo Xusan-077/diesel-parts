@@ -2,73 +2,212 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   DESIGN TOKENS
+   --------------------------------------------------------------------------
+   One place for colour, type, spacing, radius and elevation. Components read
+   these through Tailwind utilities (`bg-surface`, `text-muted`, `rounded-lg`)
+   and never hardcode a value.
+
+   The neutral ramp is not grey. Every neutral is mixed at hue 57 — the brand
+   orange's own hue — with chroma held between 0.004 and 0.014. Light surfaces
+   pick up the warmth of catalogue paper, dark surfaces read as oiled steel,
+   and the accent lands as the saturated end of one continuous family instead
+   of an orange stapled onto a blue-grey shell. It costs nothing in contrast:
+   every pair below was measured, and every one clears WCAG AA.
+
+   THE ONE RULE THAT FIXES THE OLD PALETTE:
+   orange means "you can act on this, or you are here". It is never a status.
+   Previously --accent-strong, --warning and --chart-series were all #b45309,
+   so an active link, a warning badge and the revenue line were the same
+   colour. They are now three separate tokens that cannot collide.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --surface: #ffffff;
-  --surface-muted: #f4f5f7;
-  --surface-hover: #eef0f3;
-  --foreground: #17181c;
-  /*
-   * #6b7280 measured 4.43:1 against --surface-muted, just under the 4.5:1
-   * WCAG AA floor. This value clears 5.5:1 on every surface token.
-   */
-  --muted: #5c6370;
-  --border-color: #e5e7eb;
-  /* Brand orange. Only ever a fill — see --accent-strong for text. */
-  --accent: #f5841f;
-  /*
-   * White on brand orange is 2.56:1. Near-black on the same orange is 6.93:1,
-   * so the fill keeps its brand value and the label becomes readable.
-   */
-  --accent-foreground: #17181c;
-  /*
-   * Text-weight orange. The brand orange as a foreground colour is 2.56:1 on
-   * white, so links, prices and active states use this darker cast instead.
-   */
-  --accent-strong: #b45309;
-  /*
-   * Chart marks. The dashboard compares this period against the last one, which
-   * is an emphasis pair, not a categorical palette: the current window carries
-   * the brand hue and the comparison window is deliberately neutral.
-   *
-   * Both steps were checked with the data-viz validator against this surface —
-   * CVD separation dE 12.4 (target >= 8), normal-vision dE 17.4 (floor 15), and
-   * both clear 3:1 against the surface. The validator's chroma floor rejects
-   * --chart-context on purpose: it is meant to read as grey.
-   */
-  --chart-series: #b45309;
-  --chart-context: #5c6370;
-  --chart-grid: #e5e7eb;
-  --danger: #b91c1c;
-  --danger-surface: #fee2e2;
-  --success: #15803d;
-  --success-surface: #dcfce7;
-  --warning: #b45309;
-  --warning-surface: #fef3c7;
+  /* Native controls -- the select's open list, scrollbars, the date picker --
+     are painted by the OS, not by these tokens. This is the one declaration
+     that tells it which theme it is painting into. */
+  color-scheme: light;
+
+  /* --- Neutral ramp -------------------------------------------------------
+     Ordered by role, not by lightness. `surface` is the one container colour;
+     `surface-muted` is a recessed area inside it (table head, inset, well).
+     Both themes keep that meaning — the old file inverted it between light
+     and dark, which is why cards and panels disagreed from page to page. */
+  --background: #fbf8f6;      /* the page itself */
+  --surface: #ffffff;         /* raised: cards, panels, menus, dialogs */
+  --surface-muted: #f4f0ee;   /* recessed: table heads, wells, meter tracks */
+  --surface-hover: #eee9e5;   /* pointer feedback on any of the above */
+
+  /* Dividers are decorative and stay light. Anything that marks a *control*
+     boundary — an input, a segmented control — uses --border-strong, which
+     clears the 3:1 that WCAG 1.4.11 asks of user-interface components. */
+  --border-color: #e2ddd9;    /* 1.27:1 — divider, intentionally quiet */
+  --border-strong: #807974;   /* 4.28:1 on surface — control boundaries */
+
+  --muted: #6f6761;           /* 4.60:1 on surface-hover, the worst case */
+  --foreground: #231d19;      /* 16.65:1 on surface */
+
+  /* --- Accent: one hue, four jobs ----------------------------------------
+     The brand orange is untouched. What changed is that each job now has its
+     own token, so none of them can be mistaken for another. */
+  --accent: #f5841f;            /* FILL ONLY: primary button, active nav */
+  --accent-foreground: #231d19; /* 6.50:1 on the fill */
+  /* The fill is 2.56:1 against white — below the 3:1 a control boundary
+     needs. Buttons carry this 1px edge (3.53:1) so the shape is perceivable
+     without altering the brand orange itself. */
+  --accent-edge: #ce7011;
+  /* TEXT: links, prices, the active nav marker. 5.17:1 on surface. */
+  --accent-strong: #a85800;
+  --accent-subtle: #feeee2;     /* tint fill; --accent-strong reads 4.57:1 */
+
+  /* --- Status ------------------------------------------------------------
+     Separated from the accent and from each other by LIGHTNESS, not hue,
+     because lightness is the channel that survives colour-blindness. Danger
+     sits deliberately deep: at the old lightness it was indistinguishable
+     from an orange link under deuteranopia (ΔE 1.2 — now 7.5).
+
+     Status colour is always reinforcement, never the only signal. Every mark
+     that uses it also carries a word, an arrow or an icon. */
+  --success: #167839;         /* 5.56:1 on surface */
+  --success-surface: #dcf7e1; /* 4.88:1 for the text on top */
+  --danger: #93001d;          /* 9.31:1 on surface */
+  --danger-surface: #fee9e8;
+  --warning: #796e1e;         /* gold-olive, 38° off the accent hue */
+  --warning-surface: #f9f4cf;
+
+  /* --- Chart -------------------------------------------------------------
+     The dashboard compares this period against the last one. That is an
+     emphasis pair, not a categorical palette: the current window carries the
+     brand hue, the comparison window is deliberately neutral. Both clear 3:1
+     against the surface they are drawn on. */
+  --chart-series: #bf5c00;    /* 4.42:1 on surface */
+  --chart-context: #6f6761;   /* 5.54:1 — meant to read as grey */
+  --chart-grid: #e2ddd9;
+
+  /* --- Elevation ---------------------------------------------------------
+     Depth comes from borders. Shadows are reserved for the three things that
+     genuinely float above the page, and they are theme-swapped rather than
+     reused, because a black shadow is invisible on a dark surface. */
+  --elevation-1: 0 1px 2px rgb(35 29 25 / 0.06), 0 1px 3px rgb(35 29 25 / 0.08);
+  --elevation-2: 0 2px 4px rgb(35 29 25 / 0.05), 0 8px 16px -4px rgb(35 29 25 / 0.10);
+  --elevation-3: 0 4px 8px rgb(35 29 25 / 0.06), 0 24px 48px -12px rgb(35 29 25 / 0.22);
 }
 
 .dark {
-  --background: #1a1a1a;
-  --surface: #242424;
-  --surface-muted: #202020;
-  --surface-hover: #2c2c2c;
-  --foreground: #f5f5f5;
-  --muted: #9ca3af;
-  --border-color: #2e2f34;
+  color-scheme: dark;
+
+  --background: #13110f;
+  --surface: #1e1a17;
+  --surface-muted: #191513;
+  --surface-hover: #282320;
+
+  --border-color: #342f2b;
+  --border-strong: #78716b;   /* 3.60:1 on surface */
+
+  --muted: #aaa099;           /* 6.07:1 on surface-hover, the worst case */
+  --foreground: #f2efed;
+
   --accent: #f5841f;
-  --accent-foreground: #17181c;
-  /* On dark surfaces the brand orange itself already clears 6:1. */
-  --accent-strong: #f5a04f;
-  /* Re-stepped for the dark surface, not flipped: CVD dE 14.1, normal 15.5. */
-  --chart-series: #cf7728;
-  --chart-context: #8a9099;
-  --chart-grid: #2e2f34;
-  --danger: #fca5a5;
-  --danger-surface: #3f1d1d;
-  --success: #86efac;
-  --success-surface: #14321f;
-  --warning: #fcd34d;
-  --warning-surface: #3a2c10;
+  --accent-foreground: #1a1511;
+  /* On a dark surface the brand orange is already 6.75:1, so the edge is only
+     there to keep the button's silhouette identical across themes. */
+  --accent-edge: #ce7011;
+  --accent-strong: #f9a462;   /* 8.65:1 on surface */
+  --accent-subtle: #302116;
+
+  --success: #7cd591;
+  --success-surface: #17301d;
+  --danger: #e05c5f;
+  --danger-surface: #381616;
+  --warning: #e6d982;
+  --warning-surface: #312c0d;
+
+  /* Re-stepped for the dark surface, not flipped. */
+  --chart-series: #ed8641;
+  --chart-context: #aaa099;
+  --chart-grid: #342f2b;
+
+  /* Dark elevation needs a hairline of light as well as a shadow — a drop
+     shadow alone disappears against a near-black page. */
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --elevation-2: 0 8px 20px -4px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --elevation-3: 0 24px 56px -12px rgb(0 0 0 / 0.70), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* ==========================================================================
+   SCALES
+   These override Tailwind's defaults in place, so existing markup picks the
+   new system up without a single class being rewritten.
+   ========================================================================== */
+
+@theme {
+  /* --- Type: five steps ---------------------------------------------------
+     caption / body / title / section / page, plus a lead size for marketing
+     prose and three display sizes the marketing hero already uses.
+
+     The old panel carried hierarchy on weight alone — a dashboard <h2> was
+     `text-sm font-semibold`, the same *size* as the body text beside it.
+     Sizes are re-cut so a heading is legible as a heading before you read it.
+     Line heights are absolute, not ratios, so text in a table row and text in
+     a card land on the same rhythm. */
+  --text-xs: 0.75rem;            /* caption, meta, table micro-copy */
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;           /* body, labels, table cells — the default */
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;             /* lead paragraph, marketing body */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;           /* title: card headings */
+  --text-lg--line-height: 1.5rem;
+  --text-lg--letter-spacing: -0.011em;
+  --text-xl: 1.375rem;           /* section: <h2> */
+  --text-xl--line-height: 1.75rem;
+  --text-xl--letter-spacing: -0.015em;
+  --text-2xl: 1.75rem;           /* page: <h1>, stat values */
+  --text-2xl--line-height: 2.125rem;
+  --text-2xl--letter-spacing: -0.021em;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-3xl--letter-spacing: -0.023em;
+  --text-4xl: 3rem;              /* marketing */
+  --text-4xl--line-height: 1.06;
+  --text-4xl--letter-spacing: -0.026em;
+  --text-6xl: 4rem;
+  --text-6xl--line-height: 1.02;
+  --text-6xl--letter-spacing: -0.03em;
+
+  /* --- Weight: three, each with one job ----------------------------------
+     400 body and data · 500 UI labels, table heads, nav, buttons ·
+     600 headings and stat values. The other six are deleted from the theme so
+     a fourth weight cannot quietly appear. */
+  --font-weight-thin: initial;
+  --font-weight-extralight: initial;
+  --font-weight-light: initial;
+  --font-weight-extrabold: initial;
+  --font-weight-black: initial;
+
+  /* --- Radius: four values, by element size ------------------------------
+     Was six with no rule (rounded-md 49 · lg 33 · bare 8 · xs 4 · sm 3 · xl 1). */
+  --radius: 0.375rem;      /* bare `rounded` == md */
+  --radius-xs: 0.125rem;   /* marks under 16px — flag icons */
+  --radius-sm: 0.25rem;    /* nested inside a rounded box — menu items, bars */
+  --radius-md: 0.375rem;   /* controls: buttons, inputs, chips, tabs */
+  --radius-lg: 0.625rem;   /* containers: cards, panels, menus, dialogs */
+  --radius-xl: 0.625rem;   /* collapsed onto lg */
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
+
+  /* --- Spacing -----------------------------------------------------------
+     The 4px base is unchanged, so no existing padding shifts. The rhythm the
+     panel should hold to is six steps:
+       2 (8px)  inline gaps, chip padding
+       3 (12px) tight stacks, control padding
+       4 (16px) component padding
+       6 (24px) card and panel padding
+       8 (32px) gap between blocks in a section
+      12 (48px) break between sections */
+  --spacing: 0.25rem;
 }
 
 @theme inline {
@@ -79,9 +218,12 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border-color);
+  --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-edge: var(--accent-edge);
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
   --color-success: var(--success);
@@ -91,9 +233,99 @@
   --color-chart-series: var(--chart-series);
   --color-chart-context: var(--chart-context);
   --color-chart-grid: var(--chart-grid);
+
+  /* Three elevations, aliased onto the keys the codebase already uses. */
+  --shadow-xs: var(--elevation-1);
+  --shadow-sm: var(--elevation-1);   /* chart tooltip */
+  --shadow-md: var(--elevation-2);
+  --shadow-lg: var(--elevation-2);   /* dropdown menu */
+  --shadow-xl: var(--elevation-3);
+  --shadow-2xl: var(--elevation-3);  /* dialog, mega menu */
+
   --font-sans: var(--font-geist-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+/* ==========================================================================
+   SEMANTIC TYPE
+   Named steps so the follow-up sweep over the pages is a find-and-replace
+   rather than a judgement call each time.
+
+   These set type only -- size, leading, tracking, weight. Colour stays a
+   separate decision at the call site (`type-caption text-muted`), so a utility
+   and a colour class never tie on specificity and leave source order to break
+   the tie.
+   ========================================================================== */
+
+/*
+ * The panel's eyebrow: a mono, uppercase, wide-tracked kicker above a heading.
+ * It was hand-rolled in at least three places at two different trackings
+ * (0.2em in the shell and the dashboard, 0.15em in the stat tile). One
+ * definition, one tracking.
+ */
+@utility type-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@utility type-page {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  letter-spacing: var(--text-2xl--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-section {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  letter-spacing: var(--text-xl--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-title {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  letter-spacing: var(--text-lg--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-body {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+
+@utility type-label {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 500;
+}
+
+@utility type-caption {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 400;
+}
+
+/*
+ * The one container recipe. `Card` used bg-surface-muted while the dashboard
+ * chart panel used bg-surface with a different padding — the same object,
+ * built twice. Anything that is a raised box uses this.
+ */
+@utility panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface);
+  padding: calc(var(--spacing) * 6);
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
 
 /*
  * Keyboard focus. The UA default here resolved to a 0.67px outline that

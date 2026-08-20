@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { recordAudit } from "./audit";
+import { applyDiscount } from "./order-money";
 
 export interface DiscountRequestView {
   id: string;
@@ -15,10 +16,6 @@ export interface DiscountRequestView {
   /** What the order would total if this request were approved. */
   totalIfApproved: number;
   createdAt: Date;
-}
-
-function applyDiscount(subtotal: number, percent: number): number {
-  return subtotal * (1 - percent / 100);
 }
 
 export async function listPendingDiscounts(): Promise<DiscountRequestView[]> {

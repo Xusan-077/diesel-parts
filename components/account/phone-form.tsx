@@ -20,16 +20,8 @@ import { FlagIcon } from "@/components/layout/flag-icon";
 interface PhoneFormProps {
   lang: Locale;
   dict: Dictionary["account"];
-  /**
-   * `page` renders one field holding the full "+998 ..." value.
-   * `dialog` splits the country code into a static addon beside the field.
-   */
   variant?: "page" | "dialog";
   submitLabel?: string;
-  /**
-   * When given, replaces the navigation to the verify page. Receives the
-   * masked number so the caller can show which phone the code went to.
-   */
   onSuccess?: (maskedPhone: string) => void;
 }
 
@@ -60,10 +52,12 @@ export function PhoneForm({
     setError(null);
 
     try {
+      const canonicalPhone = toCanonicalPhone(phone) ?? phone;
+
       const response = await fetch("/api/auth/request-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: canonicalPhone }),
       });
 
       if (!response.ok) {
@@ -74,8 +68,7 @@ export function PhoneForm({
       }
 
       if (onSuccess) {
-        const canonical = toCanonicalPhone(phone);
-        onSuccess(canonical ? maskPhone(canonical) : "");
+        onSuccess(maskPhone(canonicalPhone));
         return;
       }
       router.push(`/${lang}/account/verify`);

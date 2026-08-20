@@ -48,7 +48,7 @@ export default async function DirectorDashboardPage({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-muted">
+          <p className="type-eyebrow text-muted">
             Direktor paneli
           </p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">

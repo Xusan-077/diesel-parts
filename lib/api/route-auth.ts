@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import type { ZodError, ZodType } from "zod";
 import { getStaffUser, type StaffUser } from "@/lib/auth/dal";
 
 /**
@@ -39,4 +40,64 @@ export async function authenticateDirector(): Promise<StaffGuard> {
   }
 
   return guard;
+}
+
+/**
+ * The 401/403 pair above answers "may you call this at all". These three answer
+ * "is what you sent usable", in the one response shape the panel's fetch layer
+ * already reads: `{ success: false, errors: { <field>: [...] } }`, with root
+ * complaints under `_root`.
+ */
+export function validationError(error: ZodError): NextResponse {
+  // `flatten()` types its field map from the schema's own shape, which this
+  // helper is deliberately blind to; it is a string-keyed map either way.
+  const flat = error.flatten() as {
+    formErrors: string[];
+    fieldErrors: Record<string, string[] | undefined>;
+  };
+  const errors: Record<string, string[]> = {};
+
+  for (const [field, messages] of Object.entries(flat.fieldErrors)) {
+    if (messages) {
+      errors[field] = messages;
+    }
+  }
+
+  // A whole-object rule — "send at least one field" — has no field to sit under.
+  if (flat.formErrors.length > 0) {
+    errors._root = flat.formErrors;
+  }
+
+  return NextResponse.json({ success: false, errors }, { status: 400 });
+}
+
+export type ParsedBody<T> = { ok: true; data: T } | { ok: false; response: NextResponse };
+
+export async function parseJsonBody<T>(
+  request: Request,
+  schema: ZodType<T>,
+): Promise<ParsedBody<T>> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return { ok: false, response: apiError(400, "Invalid JSON body") };
+  }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return { ok: false, response: validationError(parsed.error) };
+  }
+
+  return { ok: true, data: parsed.data };
+}
+
+/** Query strings arrive as strings; the schema coerces what needs coercing. */
+export function parseQuery<T>(url: string, schema: ZodType<T>): ParsedBody<T> {
+  const params = Object.fromEntries(new URL(url).searchParams);
+  const parsed = schema.safeParse(params);
+
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, response: validationError(parsed.error) };
 }

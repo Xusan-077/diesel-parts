@@ -56,7 +56,7 @@ export function formatDelta(change: number | null): string | null {
 }
 
 /** `2026-08-18` rendered as `18 avg` for a chart axis. */
-const MONTHS_SHORT = [
+export const MONTHS_SHORT = [
   "yan", "fev", "mar", "apr", "may", "iyn",
   "iyl", "avg", "sen", "okt", "noy", "dek",
 ];

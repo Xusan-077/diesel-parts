@@ -26,7 +26,7 @@ export function StatTile({
 
   return (
     <div className="border-l-2 border-border pl-4">
-      <p className="font-mono text-[0.6875rem] uppercase tracking-[0.15em] text-muted">
+      <p className="type-eyebrow text-muted">
         {label}
       </p>
       <p className="mt-2 font-mono text-2xl font-semibold tabular-nums tracking-tight text-foreground">
