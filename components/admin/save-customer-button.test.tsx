@@ -2,16 +2,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import axios from "axios";
 import { SaveCustomerButton } from "./save-customer-button";
+import { refusal } from "./refusal.fixture";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
-const fetchMock = vi.fn();
-
-function jsonResponse(body: unknown) {
-  return Promise.resolve({ json: () => Promise.resolve(body) } as Response);
-}
+const post = vi.fn();
 
 const lead = {
   customerName: "Sardor Aliyev",
@@ -21,27 +19,26 @@ const lead = {
 };
 
 beforeEach(() => {
-  fetchMock.mockReset();
+  post.mockReset();
   refresh.mockReset();
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(axios, "post").mockImplementation(post);
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("SaveCustomerButton", () => {
   it("creates the customer from the card and then links to it", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => jsonResponse({ success: true, id: "cus-9" }));
+    post.mockResolvedValue({ data: { success: true, id: "cus-9" } });
     render(<SaveCustomerButton {...lead} saved={null} />);
 
     await user.click(screen.getByRole("button", { name: "Mijozlarga qo'shish" }));
 
-    const init = fetchMock.mock.calls[0][1] as RequestInit;
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/customers");
-    expect(JSON.parse(init.body as string)).toEqual({
+    expect(post.mock.calls[0][0]).toBe("/api/v1/customers");
+    expect(post.mock.calls[0][1]).toEqual({
       name: "Sardor Aliyev",
       phone: "+998901234567",
       email: "sardor@example.uz",
@@ -61,14 +58,12 @@ describe("SaveCustomerButton", () => {
       "/admin/seller/customers/cus-1",
     );
     expect(screen.queryByRole("button")).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
   });
 
   it("keeps the button and says why when the save is refused", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() =>
-      jsonResponse({ success: false, errors: { _root: ["Saqlanmadi."] } }),
-    );
+    post.mockRejectedValue(refusal({ success: false, errors: { _root: ["Saqlanmadi."] } }));
     render(<SaveCustomerButton {...lead} saved={null} />);
 
     await user.click(screen.getByRole("button", { name: "Mijozlarga qo'shish" }));
@@ -79,7 +74,7 @@ describe("SaveCustomerButton", () => {
 
   it("says so when the request never lands", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => Promise.reject(new Error("offline")));
+    post.mockRejectedValue(new Error("offline"));
     render(<SaveCustomerButton {...lead} saved={null} />);
 
     await user.click(screen.getByRole("button", { name: "Mijozlarga qo'shish" }));

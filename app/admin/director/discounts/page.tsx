@@ -1,4 +1,5 @@
 import { listPendingDiscounts } from "@/lib/api/discount-repository";
+import { PageHeader } from "@/components/admin/page-header";
 import { DiscountQueue } from "@/components/admin/discount-queue";
 
 export default async function DirectorDiscountsPage() {
@@ -6,16 +7,11 @@ export default async function DirectorDiscountsPage() {
 
   return (
     <div>
-      <p className="type-eyebrow text-muted">
-        Direktor paneli
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-        Chegirma so&apos;rovlari
-      </h1>
-      <p className="mt-1 max-w-prose text-sm text-muted">
-        Sotuvchining limitidan yuqori chegirmalar shu yerda tasdiqlanadi. Tasdiqlangan
-        foiz buyurtma summasiga darhol qo&apos;llanadi.
-      </p>
+      <PageHeader
+        eyebrow="Direktor paneli"
+        title="Chegirma so'rovlari"
+        description="Sotuvchining limitidan yuqori chegirmalar shu yerda tasdiqlanadi. Tasdiqlangan foiz buyurtma summasiga darhol qo'llanadi."
+      />
 
       <DiscountQueue
         requests={requests.map((request) => ({

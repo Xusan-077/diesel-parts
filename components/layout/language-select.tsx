@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,14 +8,33 @@ import {
   DropdownMenuSelectableItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SUPPORTED_LOCALES, switchLocalePath, type Locale } from "@/lib/i18n/locales";
+import { useLanguage } from "@/hooks/use-store";
+import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/locales";
 import { FlagIcon } from "./flag-icon";
 import { Icon } from "@/components/ui/icon";
 
 const LOCALE_LABELS: Record<Locale, string> = { uz: "UZ", ru: "RU", en: "EN" };
 
+/**
+ * `lang` is the language the server rendered this page in. It seeds the
+ * displayed value so the first client render matches the HTML, and the store
+ * takes over once it has read localStorage.
+ */
 export function LanguageSelect({ lang, label }: { lang: Locale; label: string }) {
-  const pathname = usePathname();
+  const router = useRouter();
+  const { language, setLanguage } = useLanguage(lang);
+
+  function choose(locale: Locale) {
+    if (locale === language) {
+      return;
+    }
+
+    setLanguage(locale);
+    // Every string on the page was rendered on the server from the cookie
+    // `setLanguage` just wrote, so the new language arrives with the refresh
+    // rather than with the state update.
+    router.refresh();
+  }
 
   return (
     <DropdownMenu>
@@ -24,18 +42,20 @@ export function LanguageSelect({ lang, label }: { lang: Locale; label: string })
         aria-label={label}
         className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
       >
-        <FlagIcon locale={lang} className="h-3 w-4.5 shrink-0 rounded-xs" />
-        <span className="font-medium">{LOCALE_LABELS[lang]}</span>
+        <FlagIcon locale={language} className="h-3 w-4.5 shrink-0 rounded-xs" />
+        <span className="font-medium">{LOCALE_LABELS[language]}</span>
         <Icon icon={ChevronDown} size="xs" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="min-w-[7rem]">
         {SUPPORTED_LOCALES.map((locale) => (
-          <DropdownMenuSelectableItem key={locale} asChild selected={locale === lang}>
-            <Link href={switchLocalePath(pathname, locale)}>
-              <FlagIcon locale={locale} className="h-3 w-4.5 shrink-0 rounded-xs" />
-              {LOCALE_LABELS[locale]}
-            </Link>
+          <DropdownMenuSelectableItem
+            key={locale}
+            selected={locale === language}
+            onSelect={() => choose(locale)}
+          >
+            <FlagIcon locale={locale} className="h-3 w-4.5 shrink-0 rounded-xs" />
+            {LOCALE_LABELS[locale]}
           </DropdownMenuSelectableItem>
         ))}
       </DropdownMenuContent>

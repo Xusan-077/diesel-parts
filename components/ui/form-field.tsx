@@ -144,7 +144,7 @@ export function FormField({
       <Label htmlFor={controlId} className={cn("block", disabled && "text-muted")}>
         {label}
       </Label>
-      <div className="mt-1.5">
+      <div className="mt-2">
         <FieldContext.Provider value={state}>{children}</FieldContext.Provider>
       </div>
       {message === null ? null : (

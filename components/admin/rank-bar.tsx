@@ -39,7 +39,7 @@ export function RankBar({ rows, emptyMessage }: { rows: RankRow[]; emptyMessage:
               {formatCompact(row.value)}
             </span>
           </div>
-          <div className="mt-1.5 h-2 w-full overflow-hidden rounded-sm bg-surface-muted">
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-sm bg-surface-muted">
             <div
               className="h-full rounded-sm bg-chart-series"
               style={{ width: Math.max(2, (row.value / max) * 100) + "%" }}

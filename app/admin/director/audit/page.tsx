@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listAudit, listAuditEntityTypes } from "@/lib/api/discount-repository";
+import { PageHeader } from "@/components/admin/page-header";
 
 const ACTION_LABEL: Record<string, string> = {
   CREATE: "yaratdi",
@@ -87,25 +88,23 @@ export default async function DirectorAuditPage({
 
   return (
     <div>
-      <p className="type-eyebrow text-muted">
-        Direktor paneli
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-        Amallar tarixi
-      </h1>
-      <p className="mt-1 max-w-prose text-sm text-muted">
-        Kim nima qilgani. {result.total} ta yozuv — o&apos;chirib bo&apos;lmaydi.
-      </p>
+      <PageHeader
+        eyebrow="Direktor paneli"
+        title="Amallar tarixi"
+        description={
+          <>Kim nima qilgani. {result.total} ta yozuv — o&apos;chirib bo&apos;lmaydi.</>
+        }
+      />
 
-      <nav aria-label="Turi bo'yicha" className="mt-6 flex flex-wrap items-center gap-1">
+      <nav aria-label="Turi bo'yicha" className="mt-8 flex flex-wrap items-center gap-1">
         <Link
           href={href({ type: "", page: 1 })}
           aria-current={type === "" ? "true" : undefined}
           className={
-            "rounded px-2.5 py-1 text-xs transition-colors " +
+            "rounded-sm px-3 py-1 text-xs transition-colors " +
             (type === ""
               ? "bg-surface-muted font-medium text-foreground"
-              : "text-muted hover:text-foreground")
+              : "text-muted hover:bg-surface-hover hover:text-foreground")
           }
         >
           Hammasi
@@ -116,10 +115,10 @@ export default async function DirectorAuditPage({
             href={href({ type: entity, page: 1 })}
             aria-current={type === entity ? "true" : undefined}
             className={
-              "rounded px-2.5 py-1 text-xs transition-colors " +
+              "rounded-sm px-3 py-1 text-xs transition-colors " +
               (type === entity
                 ? "bg-surface-muted font-medium text-foreground"
-                : "text-muted hover:text-foreground")
+                : "text-muted hover:bg-surface-hover hover:text-foreground")
             }
           >
             {entity}
@@ -127,12 +126,15 @@ export default async function DirectorAuditPage({
         ))}
       </nav>
 
+      {/* A chronological log is a feed, not a card grid: one divided
+          column reads faster than 50 bordered boxes, and boxing it would
+          also fight `panel`'s own 24px padding at the first and last row. */}
       <ul className="mt-8 divide-y divide-border">
         {result.items.map((entry) => {
           const { before, after } = diff(entry.before, entry.after);
 
           return (
-            <li key={entry.id} className="py-3">
+            <li key={entry.id} className="py-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
                 <p className="text-sm text-foreground">
                   <span className="font-medium">{entry.actorName ?? "O'chirilgan hisob"}</span>{" "}

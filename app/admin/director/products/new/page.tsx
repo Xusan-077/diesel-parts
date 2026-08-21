@@ -1,4 +1,5 @@
 import { listBrands, listCategories } from "@/lib/api/product-repository";
+import { PageHeader } from "@/components/admin/page-header";
 import { ProductForm } from "@/components/admin/product-form";
 
 export default async function NewProductPage() {
@@ -6,12 +7,7 @@ export default async function NewProductPage() {
 
   return (
     <div>
-      <p className="type-eyebrow text-muted">
-        Mahsulotlar
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-        Yangi mahsulot
-      </h1>
+      <PageHeader eyebrow="Mahsulotlar" title="Yangi mahsulot" />
 
       <ProductForm
         categories={categories.map((c) => ({ id: c.id, label: c.name.uz }))}

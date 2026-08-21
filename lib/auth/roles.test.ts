@@ -10,7 +10,7 @@ describe("isAdminPath", () => {
 
   it("does not match a path that merely starts with the same letters", () => {
     expect(isAdminPath("/administrator")).toBe(false);
-    expect(isAdminPath("/uz/admin")).toBe(false);
+    expect(isAdminPath("/blog/admin")).toBe(false);
     expect(isAdminPath("/")).toBe(false);
   });
 });

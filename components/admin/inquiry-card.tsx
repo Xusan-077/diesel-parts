@@ -105,7 +105,7 @@ export function InquiryCard({
 
       <a
         href={tel ?? undefined}
-        className="mt-0.5 inline-block font-mono text-xs tabular-nums text-foreground hover:underline"
+        className="mt-1 inline-block font-mono text-xs tabular-nums text-foreground hover:underline"
       >
         {card.phone}
       </a>
@@ -116,7 +116,7 @@ export function InquiryCard({
         <p className="mt-2 type-eyebrow text-foreground">
           {card.productSku}
           {card.quantity === null ? null : (
-            <span className="ml-1.5 text-muted">× {card.quantity}</span>
+            <span className="ml-2 text-muted">× {card.quantity}</span>
           )}
         </p>
       )}

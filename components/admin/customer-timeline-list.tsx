@@ -15,7 +15,7 @@ import { ORDER_STATUS_LABEL, type TimelineEntry } from "@/lib/admin/customer-tim
  */
 export function CustomerTimelineList({ entries }: { entries: readonly TimelineEntry[] }) {
   return (
-    <ol className="mt-4 space-y-5">
+    <ol className="mt-4 space-y-4">
       {entries.map((entry) => (
         <li key={`${entry.kind}-${entry.id}`} className="border-l-2 border-border pl-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -48,7 +48,7 @@ export function CustomerTimelineList({ entries }: { entries: readonly TimelineEn
               {entry.productSku === null ? null : (
                 <p className="mt-1 type-eyebrow text-muted">
                   {entry.productSku}
-                  {entry.quantity === null ? null : <span className="ml-1.5">× {entry.quantity}</span>}
+                  {entry.quantity === null ? null : <span className="ml-2">× {entry.quantity}</span>}
                 </p>
               )}
             </>
@@ -59,7 +59,7 @@ export function CustomerTimelineList({ entries }: { entries: readonly TimelineEn
               it is shown where it happened rather than pooled into one list
               that would lose what each note was about. */}
           {entry.notes === null ? null : (
-            <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted">{entry.notes}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{entry.notes}</p>
           )}
 
           {entry.sellerName === null ? null : (

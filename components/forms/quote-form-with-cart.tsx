@@ -92,7 +92,7 @@ export function QuoteFormWithCart({ lang, dict, cartDict }: QuoteFormWithCartPro
           ) : null}
 
           <Link
-            href={`/${lang}/cart`}
+            href="/cart"
             className="mt-4 inline-block text-xs text-accent-strong transition-opacity hover:underline"
           >
             {dict.fromCartEdit}

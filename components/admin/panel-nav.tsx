@@ -2,31 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { AdminNavItem } from "@/lib/auth/admin-nav";
+import { currentNavHref, type AdminNavItem } from "@/lib/auth/admin-nav";
 
 /**
  * The panel's spine.
  *
- * One hairline rule runs the height of the navigation, and the active section is
- * marked by a solid brand-orange segment on that same rule — the only colour in
- * the chrome, and it only ever means "you are here". The label also changes
- * weight and ink, so the state is never carried by colour alone.
+ * One hairline rule runs the height of the navigation, and the active section
+ * is marked on that same rule. The mark is the only colour in the chrome, and
+ * it only ever means "you are here".
+ *
+ * A 2px stroke on its own was doing too much work: it clears 3:1 as a
+ * graphical indicator (`--accent-strong` is 5.17:1 on light, 8.65:1 on dark),
+ * but two pixels at the far edge of a 240px sidebar is easy to miss on a
+ * glance, and hunting for it is exactly what a sidebar should never cost. It
+ * now sits against an `--accent-subtle` tint that fills the row, so the state
+ * has an area as well as an edge. Weight and ink still change too — the state
+ * is never carried by colour alone.
  */
 export function PanelNav({ items }: { items: AdminNavItem[] }) {
   const pathname = usePathname();
-
-  /*
-   * Longest match wins. Every director page sits under /admin/director, so a
-   * plain prefix test would light up the dashboard entry on the products page
-   * too, and two sections would claim to be current at once.
-   */
-  const currentHref = items
-    .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const currentHref = currentNavHref(
+    pathname,
+    items.map((item) => item.href),
+  );
 
   return (
     <nav aria-label="Panel bo'limlari" className="border-l border-border">
-      <ul>
+      <ul className="flex flex-col gap-1">
         {items.map((item) => {
           const active = item.href === currentHref;
 
@@ -41,10 +43,15 @@ export function PanelNav({ items }: { items: AdminNavItem[] }) {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`block py-2 pl-4 text-sm transition-colors ${
+                /*
+                 * `rounded-r-sm`: the tint is anchored to the spine, so its
+                 * left edge stays square and the 2px mark lands flush on it
+                 * instead of clipping a rounded corner.
+                 */
+                className={`block rounded-r-sm py-2 pr-3 pl-4 text-sm transition-colors ${
                   active
-                    ? "font-medium text-foreground"
-                    : "text-muted hover:text-foreground"
+                    ? "bg-accent-subtle font-medium text-foreground"
+                    : "text-muted hover:bg-surface-hover hover:text-foreground"
                 }`}
               >
                 {item.label}

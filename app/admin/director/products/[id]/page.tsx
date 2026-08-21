@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { listBrands, listCategories } from "@/lib/api/product-repository";
 import { getProductForEdit } from "@/lib/api/product-write-repository";
+import { PageHeader } from "@/components/admin/page-header";
 import { ProductForm } from "@/components/admin/product-form";
 import { RetireProductButton } from "@/components/admin/retire-product-button";
 
@@ -23,16 +24,12 @@ export default async function EditProductPage({
 
   return (
     <div>
-      <p className="type-eyebrow text-muted">
-        Mahsulotlar
-      </p>
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          {product.name.uz}
-        </h1>
-        {product.isActive ? <RetireProductButton productId={id} /> : null}
-      </div>
-      <p className="mt-1 font-mono text-xs text-muted">{product.sku}</p>
+      <PageHeader
+        eyebrow="Mahsulotlar"
+        title={product.name.uz}
+        description={<span className="font-mono text-xs">{product.sku}</span>}
+        actions={product.isActive ? <RetireProductButton productId={id} /> : null}
+      />
 
       <ProductForm
         productId={id}

@@ -63,7 +63,7 @@ function CardIndexMark() {
  */
 export function CustomerBookEmpty() {
   return (
-    <div className="border-t border-border py-14 text-center">
+    <div className="border-t border-border py-12 text-center">
       <div className="flex justify-center">
         <CardIndexMark />
       </div>

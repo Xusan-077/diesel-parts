@@ -1,22 +1,26 @@
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 
 export interface NavItem {
   href: string;
   label: string;
 }
 
-/** Links rendered in the third header row and mirrored in the mobile drawer. */
-export function buildMainNav(lang: Locale, nav: Dictionary["nav"]): NavItem[] {
+/**
+ * Links rendered in the third header row and mirrored in the mobile drawer.
+ *
+ * The hrefs carry no locale any more — one address per page, with the language
+ * chosen by the store — so only the labels still depend on the dictionary.
+ */
+export function buildMainNav(nav: Dictionary["nav"]): NavItem[] {
   return [
-    { href: `/${lang}/products`, label: nav.allProducts },
-    { href: `/${lang}/brands`, label: nav.brands },
-    { href: `/${lang}/partnership`, label: nav.partnership },
-    { href: `/${lang}/services`, label: nav.services },
-    { href: `/${lang}/delivery`, label: nav.delivery },
-    { href: `/${lang}/payment`, label: nav.payment },
-    { href: `/${lang}/about`, label: nav.about },
-    { href: `/${lang}/contact`, label: nav.contacts },
+    { href: "/products", label: nav.allProducts },
+    { href: "/brands", label: nav.brands },
+    { href: "/partnership", label: nav.partnership },
+    { href: "/services", label: nav.services },
+    { href: "/delivery", label: nav.delivery },
+    { href: "/payment", label: nav.payment },
+    { href: "/about", label: nav.about },
+    { href: "/contact", label: nav.contacts },
   ];
 }
 
@@ -27,15 +31,12 @@ export interface HeaderActionItem extends NavItem {
 }
 
 /** The icon links on the right of the second header row. */
-export function buildHeaderActions(
-  lang: Locale,
-  header: Dictionary["header"]
-): HeaderActionItem[] {
+export function buildHeaderActions(header: Dictionary["header"]): HeaderActionItem[] {
   return [
-    { key: "compare", href: `/${lang}/compare`, label: header.compare },
-    { key: "favorites", href: `/${lang}/wishlist`, label: header.favorites },
-    { key: "cart", href: `/${lang}/cart`, label: header.cart },
-    { key: "account", href: `/${lang}/account`, label: header.account },
+    { key: "compare", href: "/compare", label: header.compare },
+    { key: "favorites", href: "/wishlist", label: header.favorites },
+    { key: "cart", href: "/cart", label: header.cart },
+    { key: "account", href: "/account", label: header.account },
   ];
 }
 

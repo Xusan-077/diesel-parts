@@ -1,11 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { DayPoint } from "@/lib/analytics/period";
 import { formatCompact, formatDayLabel, formatSum } from "@/lib/analytics/format";
 
 const W = 720;
-const H = 220;
+/*
+ * The plot was 176px of a 720x220 box — 3.27:1, wide and shallow, which is the
+ * shape that flattens every curve drawn in it and leaves a modest week looking
+ * like a line pinned to the floor of an empty room. 260 puts the plot at 216px
+ * and the frame at 2.77:1, so the same series gets a quarter more vertical
+ * travel per unit. That is half the fix for "the low values sit in a lot of
+ * empty space"; the other half is the area fill, which makes the region under
+ * the curve belong to the mark instead of reading as void.
+ *
+ * The zero baseline stays. This is a cumulative revenue total, and the distance
+ * from the axis to the curve *is* the money — cropping it would overstate the
+ * period's growth to make the picture livelier.
+ */
+const H = 260;
+/* left: the widest tick this axis draws is "999,9 mlrd" at 11px. */
 const PAD = { top: 16, right: 16, bottom: 28, left: 60 };
 const PLOT_W = W - PAD.left - PAD.right;
 const PLOT_H = H - PAD.top - PAD.bottom;
@@ -56,8 +70,10 @@ export function TrendChart({
   previousLabel: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  // Two dashboards on one page would otherwise share one gradient id.
+  const gradientId = useId();
 
-  const { max, xs, currentPath, previousPath, ticks } = useMemo(() => {
+  const { max, xs, currentPath, currentArea, previousPath, ticks } = useMemo(() => {
     const peak = Math.max(1, ...current.map((p) => p.value), ...previous.map((p) => p.value));
     const top = niceMax(peak);
     const count = Math.max(current.length, 1);
@@ -71,11 +87,23 @@ export function TrendChart({
         .map((point, index) => (index === 0 ? "M" : "L") + x(index) + " " + y(point.value))
         .join(" ");
 
+    const baseline = PAD.top + PLOT_H;
+    const lastX = x(Math.max(current.length - 1, 0));
+
     return {
       max: top,
       xs: current.map((_, index) => x(index)),
       currentPath: path(current),
       previousPath: path(previous),
+      /*
+       * The same line, closed down to the baseline. Only the current series is
+       * filled: two fills would turn an emphasis pair into two categories, and
+       * the comparison window is meant to stay in the background.
+       */
+      currentArea:
+        current.length === 0
+          ? ""
+          : path(current) + " L " + lastX + " " + baseline + " L " + x(0) + " " + baseline + " Z",
       // Deduped by label: a narrow range rounds several gridlines to the same
       // number, and repeating it says nothing while implying a scale that is
       // finer than the one actually drawn.
@@ -102,7 +130,7 @@ export function TrendChart({
 
   if (!hasData) {
     return (
-      <div className="py-10 text-center">
+      <div className="py-12 text-center">
         <p className="text-sm text-foreground">Bu davrda yakunlangan savdo yo&apos;q.</p>
         <p className="mt-1 text-xs text-muted">
           Sotuvchilar buyurtmalarni yopgach, bu yerda {currentLabel.toLowerCase()} va{" "}
@@ -132,7 +160,7 @@ export function TrendChart({
 
   return (
     <figure className="m-0">
-      <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+      <figcaption className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
         <span className="flex items-center gap-2 text-foreground">
           <span aria-hidden="true" className="h-0.5 w-5 rounded-full bg-chart-series" />
           {currentLabel}
@@ -186,6 +214,15 @@ export function TrendChart({
               </text>
             </g>
           ))}
+
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--chart-series)" stopOpacity="0.20" />
+              <stop offset="100%" stopColor="var(--chart-series)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          <path d={currentArea} fill={"url(#" + gradientId + ")"} stroke="none" />
 
           <path
             d={previousPath}
@@ -310,11 +347,11 @@ export function TrendChart({
             <tbody>
               {currentDaily.map((point, index) => (
                 <tr key={point.day} className="border-t border-border">
-                  <td className="px-3 py-1.5 font-mono text-muted">{formatDayLabel(point.day)}</td>
-                  <td className="px-3 py-1.5 text-right font-mono tabular-nums text-foreground">
+                  <td className="px-3 py-2 font-mono text-muted">{formatDayLabel(point.day)}</td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums text-foreground">
                     {formatCompact(point.value)}
                   </td>
-                  <td className="px-3 py-1.5 text-right font-mono tabular-nums text-muted">
+                  <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">
                     {formatCompact(previousDaily[index]?.value ?? 0)}
                   </td>
                 </tr>

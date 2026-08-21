@@ -2,7 +2,6 @@ import Link from "next/link";
 import { FeatureIcon } from "@/components/marketing/feature-icon";
 import { Container } from "@/components/ui/container";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 
 /**
  * TODO(Xusan): replace with the real office coordinates. These point at the
@@ -13,7 +12,6 @@ const MAP_EMBED_URL =
   "https://yandex.uz/map-widget/v1/?ll=69.240562%2C41.311081&z=15";
 
 interface FooterProps {
-  lang: Locale;
   siteName: string;
   footer: Dictionary["footer"];
   nav: Dictionary["nav"];
@@ -21,14 +19,14 @@ interface FooterProps {
   phone: string;
 }
 
-export function Footer({ lang, siteName, footer, nav, payment, phone }: FooterProps) {
+export function Footer({ siteName, footer, nav, payment, phone }: FooterProps) {
   const year = new Date().getFullYear();
 
   const links = [
-    { href: `/${lang}/products`, label: nav.products },
-    { href: `/${lang}/about`, label: nav.about },
-    { href: `/${lang}/blog`, label: nav.blog },
-    { href: `/${lang}/contact`, label: nav.contact },
+    { href: "/products", label: nav.products },
+    { href: "/about", label: nav.about },
+    { href: "/blog", label: nav.blog },
+    { href: "/contact", label: nav.contact },
   ];
 
   return (

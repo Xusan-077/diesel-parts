@@ -101,13 +101,13 @@ export default async function SellerCustomerPage({
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="type-page text-foreground">
             {customer.name}
           </h1>
           <p className="mt-1 text-sm text-muted">
             {customer.company ?? "Kompaniya ko'rsatilmagan"}
             {pooled ? (
-              <span className="ml-2 rounded-full bg-surface-muted px-2 py-0.5 text-xs">
+              <span className="ml-2 rounded-full bg-surface-muted px-2 py-1 text-xs">
                 egasiz
               </span>
             ) : customer.assignedSellerName !== null && user.role === "DIRECTOR" ? (
@@ -125,7 +125,7 @@ export default async function SellerCustomerPage({
         <dl className="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2">
           <div>
             <dt className="text-xs text-muted">Telefon</dt>
-            <dd className="mt-0.5">
+            <dd className="mt-1">
               <a
                 href={tel ?? undefined}
                 className="font-mono text-sm tabular-nums text-foreground hover:underline"
@@ -136,7 +136,7 @@ export default async function SellerCustomerPage({
           </div>
           <div>
             <dt className="text-xs text-muted">Email</dt>
-            <dd className="mt-0.5 text-sm text-foreground">{customer.email ?? "—"}</dd>
+            <dd className="mt-1 text-sm text-foreground">{customer.email ?? "—"}</dd>
           </div>
         </dl>
 
@@ -162,20 +162,20 @@ export default async function SellerCustomerPage({
       {/* Money the account has actually brought in, kept apart from money that
           is only promised. A single "lifetime value" adding drafts to closed
           business would be a figure a seller could raise by typing. */}
-      <section className="mt-10">
+      <section className="mt-8">
         <h2 className={EYEBROW}>Hisob</h2>
 
-        <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-4">
+        <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-4">
           <div>
             <dt className="text-xs text-muted">Yopilgan buyurtmalar</dt>
-            <dd className="mt-0.5 font-mono text-lg tabular-nums text-foreground">
+            <dd className="mt-1 font-mono text-lg tabular-nums text-foreground">
               {formatSum(value.earned)}
               <span className="ml-2 text-xs text-muted">{value.completedCount} ta</span>
             </dd>
           </div>
           <div>
             <dt className="text-xs text-muted">Jarayondagilar</dt>
-            <dd className="mt-0.5 font-mono text-lg tabular-nums text-muted">
+            <dd className="mt-1 font-mono text-lg tabular-nums text-muted">
               {formatSum(value.open)}
               <span className="ml-2 text-xs">{value.openCount} ta</span>
             </dd>
@@ -189,7 +189,7 @@ export default async function SellerCustomerPage({
         ) : null}
       </section>
 
-      <section className="mt-10">
+      <section className="mt-8">
         <h2 className={EYEBROW}>Izoh</h2>
         <div className="mt-3 max-w-2xl">
           <CustomerNotes customerId={customer.id} notes={customer.notes} editable={editable} />
@@ -199,7 +199,7 @@ export default async function SellerCustomerPage({
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-8">
         <h2 className={EYEBROW}>Tarix</h2>
         <p className="mt-2 max-w-prose text-xs text-muted">
           Buyurtmalar shu mijoz kartasiga bog&apos;langan. So&apos;rovlar esa telefon raqami

@@ -3,8 +3,8 @@ import { isSkipped } from "./proxy";
 
 /**
  * These guard a bug that was invisible from the outside: the `config.matcher`
- * regex this file used to carry matched only `/`, so the locale redirect never
- * ran anywhere else. The filter replacing it is worth pinning.
+ * regex this file used to carry matched only `/`, so nothing below it ever ran
+ * anywhere else. The filter replacing it is worth pinning.
  */
 describe("isSkipped", () => {
   it("skips framework paths", () => {
@@ -21,7 +21,7 @@ describe("isSkipped", () => {
   it("does not skip routes", () => {
     expect(isSkipped("/")).toBe(false);
     expect(isSkipped("/contact")).toBe(false);
-    expect(isSkipped("/uz/products")).toBe(false);
+    expect(isSkipped("/products")).toBe(false);
     expect(isSkipped("/admin/seller")).toBe(false);
   });
 

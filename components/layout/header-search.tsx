@@ -4,17 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 
 interface HeaderSearchProps {
-  lang: Locale;
   placeholder: string;
   label: string;
   className?: string;
 }
 
-export function HeaderSearch({ lang, placeholder, label, className }: HeaderSearchProps) {
+export function HeaderSearch({ placeholder, label, className }: HeaderSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -22,7 +20,7 @@ export function HeaderSearch({ lang, placeholder, label, className }: HeaderSear
     event.preventDefault();
     const trimmed = query.trim();
     router.push(
-      trimmed ? `/${lang}/products?q=${encodeURIComponent(trimmed)}` : `/${lang}/products`
+      trimmed ? `/products?q=${encodeURIComponent(trimmed)}` : "/products"
     );
   }
 

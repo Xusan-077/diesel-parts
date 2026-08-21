@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { formatInteger } from "@/lib/analytics/format";
 import { formatArrival } from "@/lib/admin/inquiry-board-state";
 import { CustomerAdd } from "@/components/admin/customer-add";
+import { PageHeader } from "@/components/admin/page-header";
 import { CustomerBookEmpty } from "@/components/admin/customer-book-empty";
 
 function firstParam(value: string | string[] | undefined): string {
@@ -65,21 +66,16 @@ export default async function SellerCustomersPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="type-eyebrow text-muted">
-            Sotuvchi paneli
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Mijozlar</h1>
-          <p className="mt-1 text-sm text-muted">
-            {pool
-              ? `${formatInteger(result.total)} ta egasiz mijoz`
-              : `${formatInteger(result.total)} ta mijoz kitobingizda`}
-          </p>
-        </div>
-
-        <CustomerAdd />
-      </div>
+      <PageHeader
+        eyebrow="Sotuvchi paneli"
+        title="Mijozlar"
+        description={
+          pool
+            ? `${formatInteger(result.total)} ta egasiz mijoz`
+            : `${formatInteger(result.total)} ta mijoz kitobingizda`
+        }
+        actions={<CustomerAdd />}
+      />
 
       <div className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4">
         <form method="get" className="flex items-end gap-2">
@@ -117,7 +113,7 @@ export default async function SellerCustomersPage({
               href={tab.href}
               aria-current={tab.active ? "page" : undefined}
               className={
-                "rounded px-2.5 py-1 text-xs transition-colors " +
+                "rounded px-3 py-1 text-xs transition-colors " +
                 (tab.active
                   ? "bg-surface-muted font-medium text-foreground"
                   : "text-muted hover:text-foreground")
@@ -164,7 +160,7 @@ export default async function SellerCustomersPage({
             <tbody>
               {result.items.map((customer) => (
                 <tr key={customer.id} className="border-b border-border last:border-0">
-                  <td className="py-2.5 pr-3">
+                  <td className="py-3 pr-3">
                     <Link
                       href={"/admin/seller/customers/" + customer.id}
                       className="text-foreground transition-colors hover:text-accent-strong"
@@ -180,14 +176,14 @@ export default async function SellerCustomersPage({
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-2.5 pr-3 font-mono text-xs tabular-nums text-muted">
+                  <td className="py-3 pr-3 font-mono text-xs tabular-nums text-muted">
                     {customer.phone}
                   </td>
-                  <td className="py-2.5 pr-3 text-muted">{customer.company ?? "—"}</td>
-                  <td className="py-2.5 pl-3 text-right font-mono tabular-nums text-foreground">
+                  <td className="py-3 pr-3 text-muted">{customer.company ?? "—"}</td>
+                  <td className="py-3 pl-3 text-right font-mono tabular-nums text-foreground">
                     {formatInteger(customer.orderCount)}
                   </td>
-                  <td className="py-2.5 pl-3 text-right font-mono text-xs tabular-nums text-muted">
+                  <td className="py-3 pl-3 text-right font-mono text-xs tabular-nums text-muted">
                     {formatArrival(customer.updatedAt)}
                   </td>
                 </tr>

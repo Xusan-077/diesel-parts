@@ -2,7 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import axios from "axios";
 import { InquiryBoard } from "./inquiry-board";
+import { refusal } from "./refusal.fixture";
 import type { BoardCard } from "@/lib/admin/inquiry-board-state";
 import type { InquiryColumn } from "@/lib/api/inquiry-board";
 
@@ -72,34 +74,39 @@ function column(name: string) {
   return within(screen.getByRole("region", { name }));
 }
 
-function jsonResponse(body: unknown) {
-  return Promise.resolve({ json: () => Promise.resolve(body) } as Response);
+const post = vi.fn();
+const patch = vi.fn();
+
+/** Claims go out as a POST, every other card edit as a PATCH. */
+function settleAll(value: { data: unknown }) {
+  post.mockResolvedValue(value);
+  patch.mockResolvedValue(value);
 }
 
-const fetchMock = vi.fn();
-
 beforeEach(() => {
-  fetchMock.mockReset();
+  post.mockReset();
+  patch.mockReset();
   refresh.mockReset();
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(axios, "post").mockImplementation(post);
+  vi.spyOn(axios, "patch").mockImplementation(patch);
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("InquiryBoard", () => {
   it("claims a lead and then moves it into the working column", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => jsonResponse({ success: true, id: "i1" }));
+    settleAll({ data: { success: true, id: "i1" } });
     renderBoard([card()]);
 
     expect(column("Yangi").getByText("Sardor Aliyev")).toBeDefined();
 
     await user.click(column("Yangi").getByRole("button", { name: "Men olaman" }));
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/v1/inquiries/i1/claim", { method: "POST" });
+    expect(post).toHaveBeenCalledWith("/api/v1/inquiries/i1/claim");
 
     // The card is in the seller's hands before the server has said so.
     const claimed = await column("Band qilingan").findByText("Sardor Aliyev");
@@ -110,13 +117,9 @@ describe("InquiryBoard", () => {
       column("Band qilingan").getByRole("button", { name: "Jarayonga o'tkazish" }),
     );
 
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      "/api/v1/inquiries/i1",
-      expect.objectContaining({
-        method: "PATCH",
-        body: JSON.stringify({ status: "IN_PROGRESS" }),
-      }),
-    );
+    expect(patch).toHaveBeenLastCalledWith("/api/v1/inquiries/i1", {
+      status: "IN_PROGRESS",
+    });
 
     expect(await column("Jarayonda").findByText("Sardor Aliyev")).toBeDefined();
     expect(column("Band qilingan").queryByText("Sardor Aliyev")).toBeNull();
@@ -125,11 +128,14 @@ describe("InquiryBoard", () => {
 
   it("puts a lead back in the pool and says why when another seller won the race", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() =>
-      jsonResponse({
-        success: false,
-        errors: { _root: ["Bu so'rovni boshqa sotuvchi allaqachon band qilgan."] },
-      }),
+    post.mockRejectedValue(
+      refusal(
+        {
+          success: false,
+          errors: { _root: ["Bu so'rovni boshqa sotuvchi allaqachon band qilgan."] },
+        },
+        409,
+      ),
     );
     renderBoard([card()]);
 
@@ -144,7 +150,7 @@ describe("InquiryBoard", () => {
 
   it("keeps the lead where it was when the request never lands", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => Promise.reject(new Error("offline")));
+    patch.mockRejectedValue(new Error("offline"));
     renderBoard([card({ column: "claimed", assignedSellerName: "Nodir Karimov" })]);
 
     await user.click(
@@ -165,15 +171,14 @@ describe("InquiryBoard", () => {
 
   it("sets a callback date from the card", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => jsonResponse({ success: true, id: "i1" }));
+    settleAll({ data: { success: true, id: "i1" } });
     renderBoard([card({ column: "claimed", assignedSellerName: "Nodir Karimov" })]);
 
     await user.type(screen.getByLabelText("Qayta aloqa sanasi"), "2026-09-01");
 
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      "/api/v1/inquiries/i1",
-      expect.objectContaining({ body: JSON.stringify({ followUpAt: "2026-09-01" }) }),
-    );
+    expect(patch).toHaveBeenLastCalledWith("/api/v1/inquiries/i1", {
+      followUpAt: "2026-09-01",
+    });
     // Sent as an ISO date, shown the way the arrival stamp beside it is shown.
     expect(await screen.findByText(/Qayta aloqa: 1 sen/)).toBeDefined();
   });

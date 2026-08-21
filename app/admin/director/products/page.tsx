@@ -4,6 +4,8 @@ import { formatInteger, formatSum } from "@/lib/analytics/format";
 import { controlVariants, fieldRail } from "@/components/ui/field-styles";
 import { cn } from "@/lib/utils";
 import { CatalogTransfer } from "@/components/admin/catalog-transfer";
+import { PageHeader } from "@/components/admin/page-header";
+import { buttonVariants } from "@/components/ui/button";
 
 const SORTS = [
   { key: "stock", label: "Qoldiq bo'yicha" },
@@ -53,27 +55,24 @@ export default async function DirectorProductsPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="type-eyebrow text-muted">
-            Direktor paneli
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-            Mahsulotlar
-          </h1>
-          <p className="mt-1 text-sm text-muted">
+      <PageHeader
+        eyebrow="Direktor paneli"
+        title="Mahsulotlar"
+        description={
+          <>
             {formatInteger(result.total)} ta mahsulot
             {includeInactive ? " (arxiv bilan)" : ""}
-          </p>
-        </div>
-
-        <Link
-          href="/admin/director/products/new"
-          className="inline-flex h-10 items-center rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
-        >
-          Yangi mahsulot
-        </Link>
-      </div>
+          </>
+        }
+        actions={
+          /* buttonVariants, not a hand-rolled copy of the primary button: the
+             old inline class had drifted — it was missing the accent-edge
+             border that gives the orange fill its 3:1 boundary. */
+          <Link href="/admin/director/products/new" className={buttonVariants()}>
+            Yangi mahsulot
+          </Link>
+        }
+      />
 
       <div className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4">
         <form method="get" className="flex items-end gap-2">
@@ -109,10 +108,10 @@ export default async function DirectorProductsPage({
               href={link({ sort: option.key === "stock" ? "" : option.key, page: "" })}
               aria-current={option.key === sort ? "true" : undefined}
               className={
-                "rounded px-2.5 py-1 text-xs transition-colors " +
+                "rounded-sm px-3 py-1 text-xs transition-colors " +
                 (option.key === sort
                   ? "bg-surface-muted font-medium text-foreground"
-                  : "text-muted hover:text-foreground")
+                  : "text-muted hover:bg-surface-hover hover:text-foreground")
               }
             >
               {option.label}
@@ -128,13 +127,13 @@ export default async function DirectorProductsPage({
         </Link>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <CatalogTransfer />
       </div>
 
-      <div className="mt-8 overflow-x-auto">
+      <div className="panel mt-4 overflow-x-auto">
         {result.items.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="type-body text-muted">
             Hech narsa topilmadi. Qidiruvni o&apos;zgartiring yoki yangi mahsulot qo&apos;shing.
           </p>
         ) : (
@@ -154,7 +153,7 @@ export default async function DirectorProductsPage({
                 const short = product.stock <= product.minStock;
                 return (
                   <tr key={product.id} className="border-b border-border last:border-0">
-                    <td className="py-2.5 pr-3">
+                    <td className="py-3 pr-3">
                       <Link
                         href={"/admin/director/products/" + product.id}
                         className="text-foreground transition-colors hover:text-accent-strong"
@@ -163,9 +162,9 @@ export default async function DirectorProductsPage({
                       </Link>
                       <span className="ml-2 text-xs text-muted">{product.categoryName}</span>
                     </td>
-                    <td className="py-2.5 pr-3 font-mono text-xs text-muted">{product.sku}</td>
-                    <td className="py-2.5 pr-3 text-muted">{product.brandName}</td>
-                    <td className="py-2.5 text-right font-mono tabular-nums text-foreground">
+                    <td className="py-3 pr-3 font-mono text-xs text-muted">{product.sku}</td>
+                    <td className="py-3 pr-3 text-muted">{product.brandName}</td>
+                    <td className="py-3 text-right font-mono tabular-nums text-foreground">
                       {product.price === null ? (
                         <span className="text-muted">so&apos;rov bo&apos;yicha</span>
                       ) : (
@@ -174,7 +173,7 @@ export default async function DirectorProductsPage({
                     </td>
                     <td
                       className={
-                        "py-2.5 pl-3 text-right font-mono tabular-nums " +
+                        "py-3 pl-3 text-right font-mono tabular-nums " +
                         (product.stock === 0
                           ? "text-danger"
                           : short
@@ -185,11 +184,11 @@ export default async function DirectorProductsPage({
                       {formatInteger(product.stock)}
                       <span className="ml-1 text-muted">/ {formatInteger(product.minStock)}</span>
                     </td>
-                    <td className="py-2.5 pl-3 text-right">
+                    <td className="py-3 pl-3 text-right">
                       {product.isActive ? (
                         <span className="text-xs text-muted">faol</span>
                       ) : (
-                        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted">
+                        <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">
                           arxiv
                         </span>
                       )}

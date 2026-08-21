@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/locales";
 import { STAFF_SESSION_COOKIE } from "@/lib/auth/cookie-names";
 import {
   ADMIN_LOGIN_PATH,
@@ -15,9 +14,9 @@ import { verifyStaffToken } from "@/lib/auth/staff-token";
  *
  * This is a function rather than `config.matcher`. The documented regex form,
  * `/((?!_next|api|.*\..*).*)`, compiled on this Next.js version to something
- * that only ever matched `/`: the locale redirect below was silently dead on
- * every other path, and the panel guard would have been too. Filtering in code
- * costs one call per asset request and can be tested.
+ * that only ever matched `/`, which would have left the panel guard below dead
+ * on every other path. Filtering in code costs one call per asset request and
+ * can be tested.
  */
 const SKIPPED = /^\/(?:_next|api)(?:\/|$)/;
 
@@ -59,6 +58,11 @@ async function proxyAdmin(request: NextRequest): Promise<NextResponse> {
   return NextResponse.next();
 }
 
+/**
+ * The panel guard is all that is left here. The locale redirect that used to
+ * follow it is gone with the `[lang]` segment: the language is a cookie the
+ * server components read, so no URL needs rewriting to carry it.
+ */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
@@ -66,19 +70,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  // The staff panel is Uzbek-only and sits outside the [lang] segment, so it
-  // must be answered before the locale redirect claims the path.
   if (isAdminPath(pathname)) {
     return proxyAdmin(request);
   }
 
-  const firstSegment = pathname.split("/")[1] ?? "";
-
-  if (isLocale(firstSegment)) {
-    return NextResponse.next();
-  }
-
-  const url = request.nextUrl.clone();
-  url.pathname = `/${DEFAULT_LOCALE}${pathname === "/" ? "" : pathname}`;
-  return NextResponse.redirect(url);
+  return NextResponse.next();
 }

@@ -11,6 +11,7 @@ import {
   type BoardCard,
 } from "@/lib/admin/inquiry-board-state";
 import { InquiryBoard } from "@/components/admin/inquiry-board";
+import { PageHeader } from "@/components/admin/page-header";
 
 /**
  * The seller's board.
@@ -71,16 +72,11 @@ export default async function SellerInquiriesPage() {
 
   return (
     <div>
-      <p className="type-eyebrow text-muted">
-        Sotuvchi paneli
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-        So&apos;rovlar
-      </h1>
-      <p className="mt-2 max-w-prose text-sm text-muted">
-        Saytdan kelgan so&apos;rovlar. Band qilingandan keyin so&apos;rov sizniki
-        bo&apos;ladi va uni boshqa sotuvchi ko&apos;rmaydi.
-      </p>
+      <PageHeader
+        eyebrow="Sotuvchi paneli"
+        title="So'rovlar"
+        description="Saytdan kelgan so'rovlar. Band qilingandan keyin so'rov sizniki bo'ladi va uni boshqa sotuvchi ko'rmaydi."
+      />
 
       <InquiryBoard
         cards={cards}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "motion/react";
 import { MOTION } from "@/components/providers/motion-provider";
@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { catalogGroups } from "@/lib/data/catalog-menu";
 import { buildMainNav, isNavItemActive } from "@/lib/nav";
 import { SITE_PHONES } from "@/lib/site-config";
-import { SUPPORTED_LOCALES, switchLocalePath, type Locale } from "@/lib/i18n/locales";
+import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/locales";
+import { useLanguage } from "@/hooks/use-store";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { FlagIcon } from "./flag-icon";
 import { Icon } from "@/components/ui/icon";
@@ -35,11 +36,26 @@ export function MobileMenu({
   className,
 }: MobileMenuProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const items = buildMainNav(lang, nav);
+  const items = buildMainNav(nav);
+  const { language, setLanguage } = useLanguage(lang);
 
   function close() {
     setOpen(false);
+  }
+
+  function chooseLanguage(locale: Locale) {
+    close();
+
+    if (locale === language) {
+      return;
+    }
+
+    setLanguage(locale);
+    // The drawer's own labels come from the server too, so the refresh is what
+    // actually translates them.
+    router.refresh();
   }
 
   return (
@@ -106,7 +122,7 @@ export function MobileMenu({
                   {group.subcategories.map((subcategory) => (
                     <li key={subcategory.id}>
                       <Link
-                        href={`/${lang}/products?category=${subcategory.slug}`}
+                        href={`/products?category=${subcategory.slug}`}
                         onClick={close}
                         className="flex items-center gap-2.5 py-2 pl-2 text-sm text-muted transition-colors hover:text-accent-strong"
                       >
@@ -142,7 +158,7 @@ export function MobileMenu({
 
           <div className="px-4 py-2">
             <Link
-              href={`/${lang}/request-quote`}
+              href="/request-quote"
               onClick={close}
               className="flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
             >
@@ -166,18 +182,19 @@ export function MobileMenu({
           <div className="mt-auto flex items-center gap-2 border-t border-border px-4 py-4">
             <span className="mr-1 text-xs text-muted">{header.languageLabel}:</span>
             {SUPPORTED_LOCALES.map((locale) => (
-              <Link
+              <button
                 key={locale}
-                href={switchLocalePath(pathname, locale)}
-                onClick={close}
+                type="button"
+                onClick={() => chooseLanguage(locale)}
+                aria-current={locale === language ? "true" : undefined}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs uppercase transition-colors",
-                  locale === lang ? "bg-surface-hover text-accent-strong" : "text-muted"
+                  locale === language ? "bg-surface-hover text-accent-strong" : "text-muted"
                 )}
               >
                 <FlagIcon locale={locale} className="h-3 w-4.5 rounded-xs" />
                 {locale}
-              </Link>
+              </button>
             ))}
           </div>
               </motion.div>

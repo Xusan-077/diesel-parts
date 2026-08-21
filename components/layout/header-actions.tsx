@@ -9,7 +9,6 @@ import { useAuthHint } from "@/hooks/use-auth-hint";
 import { useCart, useCompare, useWishlist } from "@/hooks/use-store";
 import { buildHeaderActions, type HeaderActionKey } from "@/lib/nav";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 
 const ICONS: Record<HeaderActionKey, typeof Heart> = {
@@ -20,7 +19,6 @@ const ICONS: Record<HeaderActionKey, typeof Heart> = {
 };
 
 interface HeaderActionsProps {
-  lang: Locale;
   header: Dictionary["header"];
   account: Dictionary["account"];
   closeLabel: string;
@@ -30,7 +28,6 @@ interface HeaderActionsProps {
 }
 
 export function HeaderActions({
-  lang,
   header,
   account,
   closeLabel,
@@ -51,7 +48,7 @@ export function HeaderActions({
     account: 0,
   };
 
-  const actions = buildHeaderActions(lang, header).map((action) => ({
+  const actions = buildHeaderActions(header).map((action) => ({
     ...action,
     icon: ICONS[action.key],
     count: counts[action.key],
@@ -85,7 +82,7 @@ export function HeaderActions({
       {visible.map(({ key, href, label, icon: Icon, count }) =>
         // Signed-out visitors get the login modal instead of the account page.
         key === "account" && !signedIn ? (
-          <AuthDialog key={key} lang={lang} dict={account} closeLabel={closeLabel}>
+          <AuthDialog key={key} dict={account} closeLabel={closeLabel}>
             <button type="button" aria-label={label} title={label} className={itemClass}>
               {body(Icon, label, count)}
             </button>

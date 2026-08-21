@@ -2,40 +2,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import axios from "axios";
 import { CustomerCreateForm } from "./customer-create-form";
+import { refusal } from "./refusal.fixture";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
-const fetchMock = vi.fn();
+const post = vi.fn();
 const onDone = vi.fn();
 
-function jsonResponse(body: unknown) {
-  return Promise.resolve({ json: () => Promise.resolve(body) } as Response);
-}
-
-/** The body the form actually posted, parsed. */
+/** The body the form actually posted. */
 function postedBody(): Record<string, unknown> {
-  const init = fetchMock.mock.calls[0][1] as RequestInit;
-  return JSON.parse(init.body as string) as Record<string, unknown>;
+  return post.mock.calls[0][1] as Record<string, unknown>;
 }
 
 beforeEach(() => {
-  fetchMock.mockReset();
+  post.mockReset();
   refresh.mockReset();
   onDone.mockReset();
-  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(axios, "post").mockImplementation(post);
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("CustomerCreateForm", () => {
   it("posts the filled fields and closes on success", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => jsonResponse({ success: true, id: "cus-1" }));
+    post.mockResolvedValue({ data: { success: true, id: "cus-1" } });
     render(<CustomerCreateForm onDone={onDone} />);
 
     await user.type(screen.getByLabelText("Ismi"), "Anvar Karimov");
@@ -43,7 +40,7 @@ describe("CustomerCreateForm", () => {
     await user.type(screen.getByLabelText("Kompaniya"), "Yo'l Qurilish");
     await user.click(screen.getByRole("button", { name: "Mijoz qo'shish" }));
 
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/customers");
+    expect(post.mock.calls[0][0]).toBe("/api/v1/customers");
     expect(postedBody()).toEqual({
       name: "Anvar Karimov",
       phone: "+998901234567",
@@ -57,7 +54,7 @@ describe("CustomerCreateForm", () => {
 
   it("sends blank optional fields as null rather than as empty strings", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => jsonResponse({ success: true, id: "cus-1" }));
+    post.mockResolvedValue({ data: { success: true, id: "cus-1" } });
     render(<CustomerCreateForm onDone={onDone} />);
 
     await user.type(screen.getByLabelText("Ismi"), "  Anvar  ");
@@ -73,9 +70,7 @@ describe("CustomerCreateForm", () => {
 
   it("keeps the form open and shows why when the server refuses", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() =>
-      jsonResponse({ success: false, errors: { _root: ["Telefon noto'g'ri."] } }),
-    );
+    post.mockRejectedValue(refusal({ success: false, errors: { _root: ["Telefon noto'g'ri."] } }));
     render(<CustomerCreateForm onDone={onDone} />);
 
     await user.type(screen.getByLabelText("Ismi"), "Anvar");
@@ -90,7 +85,7 @@ describe("CustomerCreateForm", () => {
 
   it("says so when the request never lands", async () => {
     const user = userEvent.setup();
-    fetchMock.mockImplementation(() => Promise.reject(new Error("offline")));
+    post.mockRejectedValue(new Error("offline"));
     render(<CustomerCreateForm onDone={onDone} />);
 
     await user.type(screen.getByLabelText("Ismi"), "Anvar");

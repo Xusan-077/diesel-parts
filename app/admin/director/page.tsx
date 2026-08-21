@@ -13,7 +13,9 @@ import {
   cumulative,
   isPeriodDays,
 } from "@/lib/analytics/period";
-import { formatCompact, formatInteger, formatSum } from "@/lib/analytics/format";
+import { formatCompact, formatInteger } from "@/lib/analytics/format";
+import { PageHeader } from "@/components/admin/page-header";
+import { PanelSection } from "@/components/admin/panel-section";
 import { StatTile } from "@/components/admin/stat-tile";
 import { TrendChart } from "@/components/admin/trend-chart";
 import { RankBar } from "@/components/admin/rank-bar";
@@ -46,71 +48,77 @@ export default async function DirectorDashboardPage({
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="type-eyebrow text-muted">
-            Direktor paneli
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-            Ko&apos;rsatkichlar
-          </h1>
-        </div>
+      <PageHeader
+        eyebrow="Direktor paneli"
+        title="Ko'rsatkichlar"
+        actions={
+          <nav
+            aria-label="Davr"
+            className="flex items-center gap-1 rounded-md border border-border p-1"
+          >
+            {PERIOD_OPTIONS.map((option) => {
+              const active = option === days;
+              return (
+                <Link
+                  key={option}
+                  href={"/admin/director?days=" + option}
+                  aria-current={active ? "true" : undefined}
+                  className={
+                    "rounded-sm px-3 py-1 font-mono text-xs transition-colors " +
+                    (active
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted hover:bg-surface-hover hover:text-foreground")
+                  }
+                >
+                  {PERIOD_LABEL[option]}
+                </Link>
+              );
+            })}
+          </nav>
+        }
+      />
 
-        <nav aria-label="Davr" className="flex items-center gap-1 rounded-md border border-border p-1">
-          {PERIOD_OPTIONS.map((option) => {
-            const active = option === days;
-            return (
-              <Link
-                key={option}
-                href={"/admin/director?days=" + option}
-                aria-current={active ? "true" : undefined}
-                className={
-                  "rounded px-3 py-1 font-mono text-xs transition-colors " +
-                  (active
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted hover:text-foreground")
-                }
-              >
-                {PERIOD_LABEL[option]}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+      {/*
+        * One rhythm for the whole page: 32px between the blocks of a screen.
+        * The page used to alternate mt-8 and mt-12 with no rule behind which
+        * gap a given seam got. Cards carry their own 24px inside, so the gap
+        * between them is the only spacing decision left.
+        */}
+      <div className="mt-8 space-y-8">
+        {/* 4 -> 2 -> 1 columns. Equal gap in both axes, and h-full tiles, so
+            the strip stays a strip at every width. */}
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile
+            label="Daromad"
+            value={formatInteger(summary.current.revenue)}
+            unit="so'm"
+            change={summary.revenueChange}
+            comparisonLabel={comparison}
+          />
+          <StatTile
+            label="Buyurtmalar"
+            value={formatInteger(summary.current.orders)}
+            change={summary.ordersChange}
+            comparisonLabel={comparison}
+          />
+          <StatTile
+            label="O'rtacha chek"
+            value={formatInteger(summary.averageOrderValue)}
+            unit="so'm"
+            hint={"Yakunlangan " + formatInteger(summary.current.orders) + " buyurtma bo'yicha"}
+          />
+          <StatTile
+            label="Jarayondagi summa"
+            value={formatInteger(summary.pipelineValue)}
+            unit="so'm"
+            hint="Tasdiqlangan va kutilayotgan buyurtmalar"
+          />
+        </section>
 
-      <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          label="Daromad"
-          value={formatSum(summary.current.revenue)}
-          change={summary.revenueChange}
-          comparisonLabel={comparison}
-        />
-        <StatTile
-          label="Buyurtmalar"
-          value={formatInteger(summary.current.orders)}
-          change={summary.ordersChange}
-          comparisonLabel={comparison}
-        />
-        <StatTile
-          label="O'rtacha chek"
-          value={formatSum(summary.averageOrderValue)}
-          hint={"Yakunlangan " + formatInteger(summary.current.orders) + " buyurtma bo'yicha"}
-        />
-        <StatTile
-          label="Jarayondagi summa"
-          value={formatSum(summary.pipelineValue)}
-          hint="Tasdiqlangan va kutilayotgan buyurtmalar"
-        />
-      </section>
-
-      <section className="mt-12">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-foreground">To&apos;plangan daromad</h2>
-          <p className="text-xs text-muted">
-            Davr boshidan qo&apos;shilib boradi; kunlik raqamlar jadval ko&apos;rinishida
-          </p>
-        </div>
-        <div className="mt-5 rounded-lg border border-border bg-surface p-5">
+        <PanelSection
+          title="To'plangan daromad"
+          description="Davr boshidan qo'shilib boradi; kunlik raqamlar jadval ko'rinishida"
+        >
           <TrendChart
             current={cumulative(series.current)}
             previous={cumulative(series.previous)}
@@ -119,14 +127,13 @@ export default async function DirectorDashboardPage({
             currentLabel={"Oxirgi " + days + " kun"}
             previousLabel={"Oldingi " + days + " kun"}
           />
-        </div>
-      </section>
+        </PanelSection>
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-2">
-        <section>
-          <h2 className="text-sm font-semibold text-foreground">Sotuvchilar reytingi</h2>
-          <p className="mt-1 text-xs text-muted">Tanlangan davrdagi yakunlangan savdo</p>
-          <div className="mt-5">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <PanelSection
+            title="Sotuvchilar reytingi"
+            description="Tanlangan davrdagi yakunlangan savdo"
+          >
             <RankBar
               rows={sellers.map((seller) => ({
                 id: seller.sellerId,
@@ -136,19 +143,16 @@ export default async function DirectorDashboardPage({
               }))}
               emptyMessage="Bu davrda yakunlangan buyurtma yo'q."
             />
-          </div>
-        </section>
+          </PanelSection>
 
-        <section>
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-foreground">Kam qolgan zaxira</h2>
-            <p className="font-mono text-xs text-muted">{lowStock.length} ta</p>
-          </div>
-          <p className="mt-1 text-xs text-muted">Minimal chegaraga yetgan yoki tugagan</p>
-
-          <div className="mt-5 overflow-x-auto">
+          <PanelSection
+            title="Kam qolgan zaxira"
+            description="Minimal chegaraga yetgan yoki tugagan"
+            meta={lowStock.length + " ta"}
+            bodyClassName="overflow-x-auto"
+          >
             {lowStock.length === 0 ? (
-              <p className="text-sm text-muted">Hamma mahsulot zaxirasi yetarli.</p>
+              <p className="type-body text-muted">Hamma mahsulot zaxirasi yetarli.</p>
             ) : (
               <table className="w-full min-w-md text-left text-sm">
                 <thead>
@@ -162,17 +166,17 @@ export default async function DirectorDashboardPage({
                 <tbody>
                   {lowStock.map((product) => (
                     <tr key={product.id} className="border-b border-border last:border-0">
-                      <td className="py-2 pr-3 text-foreground">{product.name}</td>
-                      <td className="py-2 pr-3 font-mono text-xs text-muted">{product.sku}</td>
+                      <td className="py-3 pr-3 text-foreground">{product.name}</td>
+                      <td className="py-3 pr-3 font-mono text-xs text-muted">{product.sku}</td>
                       <td
                         className={
-                          "py-2 text-right font-mono tabular-nums " +
+                          "py-3 text-right font-mono tabular-nums " +
                           (product.stock === 0 ? "text-danger" : "text-foreground")
                         }
                       >
                         {product.stock === 0 ? "tugagan" : formatInteger(product.stock)}
                       </td>
-                      <td className="py-2 text-right font-mono tabular-nums text-muted">
+                      <td className="py-3 text-right font-mono tabular-nums text-muted">
                         {formatInteger(product.minStock)}
                       </td>
                     </tr>
@@ -180,27 +184,27 @@ export default async function DirectorDashboardPage({
                 </tbody>
               </table>
             )}
-          </div>
+          </PanelSection>
+        </div>
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          <StatTile
+            label="Yangi so'rovlar"
+            value={formatInteger(counts.newInquiries)}
+            hint="Hali sotuvchiga biriktirilmagan"
+          />
+          <StatTile
+            label="Chegirma so'rovlari"
+            value={formatInteger(counts.pendingDiscounts)}
+            hint="Tasdiqlash kutilmoqda"
+          />
+          <StatTile
+            label="Faol sotuvchilar"
+            value={formatInteger(counts.activeSellers)}
+            hint={"Davr savdosi " + formatCompact(summary.current.revenue) + " so'm"}
+          />
         </section>
       </div>
-
-      <section className="mt-12 grid gap-6 border-t border-border pt-8 sm:grid-cols-3">
-        <StatTile
-          label="Yangi so'rovlar"
-          value={formatInteger(counts.newInquiries)}
-          hint="Hali sotuvchiga biriktirilmagan"
-        />
-        <StatTile
-          label="Chegirma so'rovlari"
-          value={formatInteger(counts.pendingDiscounts)}
-          hint="Tasdiqlash kutilmoqda"
-        />
-        <StatTile
-          label="Faol sotuvchilar"
-          value={formatInteger(counts.activeSellers)}
-          hint={"Davr savdosi " + formatCompact(summary.current.revenue) + " so'm"}
-        />
-      </section>
     </div>
   );
 }
