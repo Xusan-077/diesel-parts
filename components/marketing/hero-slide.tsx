@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import type { HeroSlide as Slide } from "@/lib/data/hero-slides";
@@ -12,11 +13,19 @@ import { HeroLamp } from "./hero-lamp";
  * One hero: a headline, two buttons, and — when the slide names one — a
  * photograph behind them.
  *
- * The inspection grid stays on top of the picture rather than being replaced
- * by it. The grid is the thing that makes this hero *this* site's hero, and a
- * photograph with a headline over it is every other supplier's. Reading the
- * ruled module over a real workshop is the point: the part is being measured,
- * not merchandised.
+ * The two cases are laid out differently, because they are different pictures.
+ *
+ * With no photograph, the inspection grid *is* the image and the copy is
+ * centred on it: the grid is symmetrical, and the ruled module reading behind
+ * centred type is what makes this hero this site's rather than every other
+ * supplier's.
+ *
+ * With a photograph, the copy moves left. Every hero photograph here puts its
+ * subject on the right — that is what `public/hero/README.md` asks for, because
+ * a headline centred over a turbocharger is unreadable however the scrim is
+ * tuned. So the scrim is a left-to-right gradient rather than a flat wash: the
+ * left half is darkened enough to set white type on, and the right half is left
+ * alone, so the part stays a photograph of a part.
  *
  * A Server Component. The copy is the largest paint on the page and belongs in
  * the HTML; only `HeroLamp` ships any JavaScript.
@@ -25,7 +34,7 @@ export function HeroSlide({
   slide,
   home,
   lang,
-  /** Only the first slide is worth preloading; the rest are five seconds away. */
+  /** Only the first slide is worth preloading; the rest are six seconds away. */
   priority = false,
 }: {
   slide?: Slide;
@@ -53,25 +62,32 @@ export function HeroSlide({
             className="-z-10 object-cover"
           />
           {/*
-            The scrim is a gradient rather than a flat wash: the copy is
-            centred and the picture should stay a picture at the edges. Two
-            layers, because one dark enough for white text over a bright
-            workshop would grey out the whole frame.
+            Two layers doing two jobs. The horizontal one carries the type: it
+            is opaque at the left edge, where the words are, and gone by the
+            middle. The vertical one is a thin wash that ties the picture into
+            the page below it, and is far too light to grey out the subject.
           */}
           <div
             aria-hidden
-            className="absolute inset-0 -z-10 bg-background/70 backdrop-blur-[2px]"
+            className="absolute inset-0 -z-10 bg-linear-to-r from-background via-background/80 to-transparent"
           />
           <div
             aria-hidden
-            className="absolute inset-0 -z-10 bg-linear-to-b from-background/80 via-background/40 to-background"
+            className="absolute inset-0 -z-10 bg-linear-to-b from-background/30 via-transparent to-background"
           />
         </>
       ) : null}
 
       <HeroLamp />
 
-      <Container className="relative flex flex-1 flex-col justify-center py-20 text-center sm:py-28">
+      <Container
+        className={cn(
+          "relative flex flex-1 flex-col justify-center py-20 sm:py-28",
+          // Centred on the grid, left over a photograph. `items-start` so the
+          // buttons sit under the type rather than spanning the frame.
+          hasImage ? "items-start text-left" : "text-center"
+        )}
+      >
         <p
           className="hero-rise font-mono text-xs uppercase tracking-[0.2em] text-accent-strong"
           style={{ animationDelay: "60ms" }}
@@ -80,21 +96,32 @@ export function HeroSlide({
         </p>
 
         <h1
-          className="hero-rise mx-auto mt-5 max-w-3xl text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-6xl"
+          className={cn(
+            "hero-rise mt-5 max-w-3xl text-balance text-4xl font-semibold tracking-tight text-foreground sm:text-6xl",
+            // The photograph slides cap the measure tighter: the right half of
+            // the frame belongs to the part, so the type has to clear it.
+            hasImage ? "max-w-xl lg:max-w-2xl" : "mx-auto"
+          )}
           style={{ animationDelay: "140ms" }}
         >
           {title}
         </h1>
 
         <p
-          className="hero-rise mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted"
+          className={cn(
+            "hero-rise mt-6 max-w-2xl text-pretty text-lg text-muted",
+            hasImage ? "max-w-lg" : "mx-auto"
+          )}
           style={{ animationDelay: "220ms" }}
         >
           {subtitle}
         </p>
 
         <div
-          className="hero-rise mt-10 flex flex-wrap items-center justify-center gap-4"
+          className={cn(
+            "hero-rise mt-10 flex flex-wrap items-center gap-4",
+            hasImage ? "justify-start" : "justify-center"
+          )}
           style={{ animationDelay: "300ms" }}
         >
           <Link
