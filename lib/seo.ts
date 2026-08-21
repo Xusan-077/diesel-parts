@@ -1,27 +1,22 @@
 import type { Metadata } from "next";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, isLocale } from "@/lib/i18n/locales";
-import { OG_LOCALES } from "@/lib/site-config";
 
 /**
- * Canonical URL plus the hreflang set for one page.
+ * Canonical URL for one page.
  *
- * This has to be set per page rather than once in the layout: Next.js passes
- * a layout's `alternates` down to every page that does not define its own, so
- * a single canonical in the layout would tell crawlers that all 20 pages are
- * the locale's home page.
+ * This has to be set per page rather than once in the layout: Next.js passes a
+ * layout's `alternates` down to every page that does not define its own, so a
+ * single canonical in the layout would tell crawlers that all 20 pages are the
+ * home page.
  *
- * @param lang Locale segment as it came off the route params; an unrecognised
- *   value canonicalises to the default locale rather than emitting a URL for a
- *   locale that does not exist.
- * @param path Route below the locale segment, e.g. `/products`. Empty for home.
+ * There is no `languages` map any more. The locale left the URL when it moved
+ * into the language store, so all three translations of a page now share one
+ * address and there is no alternate URL to point an `hreflang` at; emitting one
+ * would claim a URL that does not exist. The cost is real — crawlers index
+ * whichever language the cookie-less request renders, which is Uzbek — and it
+ * is the trade the URL-free design makes.
+ *
+ * @param path Route below the origin, e.g. `/products`. Empty for home.
  */
-export function localeAlternates(lang: string, path = ""): Metadata["alternates"] {
-  const locale = isLocale(lang) ? lang : DEFAULT_LOCALE;
-  return {
-    canonical: `/${locale}${path}`,
-    languages: {
-      ...Object.fromEntries(SUPPORTED_LOCALES.map((l) => [OG_LOCALES[l], `/${l}${path}`])),
-      "x-default": `/${DEFAULT_LOCALE}${path}`,
-    },
-  };
+export function canonicalPath(path = ""): Metadata["alternates"] {
+  return { canonical: path === "" ? "/" : path };
 }

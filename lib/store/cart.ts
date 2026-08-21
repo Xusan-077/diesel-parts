@@ -52,14 +52,24 @@ export function removeFromCart(items: readonly CartItem[], productId: string): C
   return items.filter((item) => item.productId !== productId);
 }
 
-/** Total units across the cart — the number shown on the header badge. */
-export function cartUnitCount(items: readonly CartItem[]): number {
-  return items.reduce((total, item) => total + item.quantity, 0);
+/**
+ * Total units across the cart — the number on the header badge, in the cart
+ * page's summary, and prefilled into a quote request.
+ *
+ * All three used to add the quantities up themselves, which is how "two kinds
+ * of part" and "four parts" ended up being shown as the same number in
+ * different places. Anything with a `quantity` is accepted, because the callers
+ * hold three different shapes of line — the stored `{ productId, quantity }`,
+ * a resolved line carrying the whole product — and none of the rest of a line
+ * is any of this function's business.
+ */
+export function cartUnitCount(lines: readonly { quantity: number }[]): number {
+  return lines.reduce((total, line) => total + line.quantity, 0);
 }
 
-/** Number of distinct products, i.e. cart lines. */
-export function cartLineCount(items: readonly CartItem[]): number {
-  return items.length;
+/** Number of distinct products, i.e. cart lines. Its counterpart above. */
+export function cartLineCount(lines: readonly unknown[]): number {
+  return lines.length;
 }
 
 /** Accepts anything read back from localStorage and returns a clean cart. */

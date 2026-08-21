@@ -1,17 +1,34 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useControlProps, useFieldState } from "@/components/ui/form-field";
+import { controlVariants, type ControlVariant } from "@/components/ui/field-styles";
 
-export function Input({ className, ...props }: React.ComponentProps<"input">) {
+export interface InputProps extends React.ComponentProps<"input"> {
+  /** Inferred from the surrounding FormField; pass it only to override. */
+  variant?: ControlVariant;
+}
+
+export function Input({
+  className,
+  variant,
+  id,
+  disabled,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
+  ...props
+}: InputProps) {
+  const field = useFieldState();
+  const control = useControlProps(field, { variant, id, disabled, describedBy, invalid });
+
   return (
     <input
-      className={cn(
-        // The previous `focus:outline-none focus:ring-1 focus:ring-accent`
-        // traded the UA outline for a 1px orange ring at 2.56:1 — below the
-        // 3:1 floor for a focus indicator. The global :focus-visible ring in
-        // globals.css covers this now; the border shift marks the field itself.
-        "h-10 w-full rounded-md border border-border bg-transparent px-3 text-sm text-foreground placeholder:text-muted focus:border-accent-strong aria-invalid:border-danger",
-        className
-      )}
+      id={control.id}
+      disabled={control.disabled}
+      aria-describedby={control["aria-describedby"]}
+      aria-invalid={control["aria-invalid"]}
+      className={cn(controlVariants({ variant: control.variant }), "h-10", className)}
       {...props}
     />
   );

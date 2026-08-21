@@ -1,29 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
+import { getSecret } from "./secret";
 
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
-
-/**
- * Only used outside production so local development works with no setup.
- * `AUTH_SECRET` is mandatory in production — see getSecret below.
- */
-const DEV_SECRET = "diesel-parts-development-only-secret-key";
-const MIN_SECRET_LENGTH = 32;
-
-function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-
-  if (secret && secret.length >= MIN_SECRET_LENGTH) {
-    return new TextEncoder().encode(secret);
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      `AUTH_SECRET must be set to at least ${MIN_SECRET_LENGTH} characters in production.`
-    );
-  }
-
-  return new TextEncoder().encode(DEV_SECRET);
-}
 
 export interface Session {
   phone: string;

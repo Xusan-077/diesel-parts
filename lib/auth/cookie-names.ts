@@ -15,3 +15,11 @@ export const PENDING_PHONE_COOKIE = "dp_pending_phone";
  * an account link without making every page dynamic.
  */
 export const AUTH_HINT_COOKIE = "dp_auth";
+
+/**
+ * The staff panel session. Deliberately separate from SESSION_COOKIE: a
+ * customer session proves a phone number and nothing else, and one director
+ * may well be signed in as a customer at the same time. Two cookies keep the
+ * two sessions from ever being mistaken for one another.
+ */
+export const STAFF_SESSION_COOKIE = "dp_staff";

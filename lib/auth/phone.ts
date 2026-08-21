@@ -59,6 +59,21 @@ export function formatNationalDigits(input: string): string {
   return groups.filter((group) => group.length > 0).join(" ");
 }
 
+/**
+ * The last two digits, as a substring any written form of the number contains.
+ *
+ * `Customer.phone` and `Inquiry.phone` are free text — one typed by a seller,
+ * one by a visitor — so "+998 90 123-45-67" and "998901234567" are the same
+ * number and no SQL `equals` sees it. Matching therefore happens in JS on
+ * canonical digits, and this is the prefilter that keeps the scan small: the
+ * final pair is written together in every form this app produces and in every
+ * form a person types by hand. Anything looser scans the table; anything
+ * tighter starts missing real matches.
+ */
+export function phoneTail(input: string): string {
+  return extractNationalDigits(input).slice(7);
+}
+
 /** Masks all but the last two digits, for display on the code-entry screen. */
 export function maskPhone(canonical: string): string {
   const national = extractNationalDigits(canonical);

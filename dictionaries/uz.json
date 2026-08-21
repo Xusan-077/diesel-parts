@@ -22,7 +22,12 @@
     "carouselPrev": "Oldingi mahsulotlar",
     "carouselNext": "Keyingi mahsulotlar",
     "carouselPause": "Avtomatik aylanishni to'xtatish",
-    "carouselPlay": "Avtomatik aylanishni yoqish"
+    "carouselPlay": "Avtomatik aylanishni yoqish",
+    "productsUnavailable": "Hozircha mahsulotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
+    "dataUnavailable": "Hozircha ma'lumotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
+    "pageUnavailable": "Sahifani hozircha ko'rsatib bo'lmadi",
+    "breadcrumbLabel": "Sahifa yo'li",
+    "carouselSlide": "{n}-slayd"
   },
   "nav": {
     "products": "Mahsulotlar",
@@ -38,16 +43,22 @@
     "contact": "Aloqa",
     "contacts": "Kontaktlar",
     "requestQuote": "Narx so'rash",
-    "menu": "Menyu"
+    "menu": "Menyu",
+    "home": "Bosh sahifa"
   },
   "header": {
     "catalog": "Katalog",
     "searchPlaceholder": "Mahsulot, kod yoki brend...",
     "searchLabel": "Qidirish",
+    "searchSuggestions": "Qidiruv natijalari",
+    "searchLoading": "Qidirilmoqda...",
+    "searchEmpty": "Hech narsa topilmadi",
+    "searchViewAll": "Barcha natijalarni ko'rish",
     "compare": "Taqqoslash",
     "favorites": "Saralanganlar",
     "cart": "Savat",
     "account": "Kabinet",
+    "accountSignedIn": "Kabinet: {phone}",
     "regionLabel": "Viloyatni tanlang",
     "phoneLabel": "Telefon",
     "languageLabel": "Tilni tanlang",
@@ -140,7 +151,8 @@
     "ctaBannerTitle": "Ehtiyot qism kerakmi?",
     "ctaBannerText": "Bepul konsultatsiya oling — mutaxassislarimiz sizga mos qismni topishga yordam beradi.",
     "ctaBannerButton": "Bog'lanish",
-    "heroEyebrow": "10 000+ artikul · OEM sifat"
+    "heroEyebrow": "10 000+ artikul · OEM sifat",
+    "heroCarouselLabel": "Bosh sahifa slayderi"
   },
   "catalog": {
     "title": "Mahsulotlar katalogi",
@@ -168,7 +180,19 @@
     "nextPage": "Keyingi",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Katalog sahifalari",
-    "pageLabel": "{page}-sahifa"
+    "pageLabel": "{page}-sahifa",
+    "filtersTitle": "Filtrlar",
+    "filtersOpen": "Filtrlar",
+    "filtersClose": "Yopish",
+    "filtersApply": "Natijalarni ko'rish",
+    "filtersReset": "Filtrlarni tozalash",
+    "filtersActive": "{count} ta filtr yoqilgan",
+    "filtersActiveTitle": "Qo'llangan filtrlar",
+    "filtersClearAll": "Hammasini tozalash",
+    "filterRemove": "{label}: {value} filtrini olib tashlash",
+    "filterGroupToggle": "{label} bo'limini ochish yoki yopish",
+    "searchLabel": "Qidiruv",
+    "viewLabel": "Ko'rinish"
   },
   "product": {
     "skuLabel": "SKU",
@@ -179,7 +203,14 @@
     "compatibleModelsTitle": "Mos keladigan modellar",
     "specificationsTitle": "Texnik xususiyatlari",
     "relatedProductsTitle": "O'xshash mahsulotlar",
-    "galleryAlt": "Mahsulot rasmi"
+    "galleryAlt": "Mahsulot rasmi",
+    "ratingLabel": "5 tadan {rating}",
+    "reviewCount": "{count} ta sharh",
+    "reviewCountEmpty": "Sharh yo'q",
+    "orderedCount": "{count} marta buyurtma qilingan",
+    "imagePrev": "Oldingi rasm",
+    "imageNext": "Keyingi rasm",
+    "imageDot": "{n}-rasm"
   },
   "categories": {
     "title": "Kategoriya",
@@ -244,7 +275,15 @@
     "compareFull": "Taqqoslash ro'yxati to'lgan",
     "addToCart": "Savatga qo'shish",
     "inCart": "Savatda",
-    "contact": "Aloqa"
+    "contact": "Aloqa",
+    "toastCartAdded": "Savatga qo'shildi",
+    "toastWishlistAdded": "Saralanganlarga qo'shildi",
+    "toastWishlistRemoved": "Saralanganlardan olib tashlandi",
+    "toastCompareAdded": "Taqqoslashga qo'shildi",
+    "toastCompareRemoved": "Taqqoslashdan olib tashlandi",
+    "quantity": "Miqdor",
+    "increase": "Ko'paytirish",
+    "decrease": "Kamaytirish"
   },
   "wishlist": {
     "title": "Saralanganlar",
@@ -256,7 +295,10 @@
     "priceOnRequest": "So'rov bo'yicha",
     "remove": "O'chirish",
     "clear": "Ro'yxatni tozalash",
-    "count": "{count} ta mahsulot"
+    "count": "{count} ta mahsulot",
+    "toastCartAdded": "Savatga qo'shildi",
+    "toastRemoved": "Saralanganlardan olib tashlandi",
+    "toastCleared": "Saralanganlar ro'yxati tozalandi"
   },
   "cart": {
     "title": "Savat",
@@ -275,7 +317,9 @@
     "unpricedNote": "{count} ta pozitsiya narxi so'rov bo'yicha aniqlanadi.",
     "priceOnRequest": "So'rov bo'yicha",
     "priceNote": "Narx buyurtma hajmi va yetkazib berish shartlariga qarab hisoblanadi. So'rov qoldiring — menejerimiz aniq narxni aytadi.",
-    "checkout": "Buyurtma berish"
+    "checkout": "Buyurtma berish",
+    "toastRemoved": "Savatdan olib tashlandi",
+    "toastCleared": "Savat tozalandi"
   },
   "compare": {
     "title": "Taqqoslash",
@@ -292,7 +336,9 @@
     "rowPrice": "Narx",
     "priceOnRequest": "So'rov bo'yicha",
     "rowStock": "Mavjudlik",
-    "rowModels": "Mos keladigan modellar"
+    "rowModels": "Mos keladigan modellar",
+    "toastRemoved": "Taqqoslashdan olib tashlandi",
+    "toastCleared": "Taqqoslash ro'yxati tozalandi"
   },
   "account": {
     "loginTitle": "Kirish",
@@ -333,7 +379,9 @@
     "ordersTitle": "Buyurtmalar tarixi",
     "ordersEmpty": "Hozircha buyurtmalaringiz yo'q.",
     "ordersEmptyCta": "Katalogga o'tish",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "toastSignedIn": "Tizimga kirdingiz",
+    "toastSignedOut": "Tizimdan chiqdingiz"
   },
   "brandsIndex": {
     "title": "Brendlar",
@@ -547,5 +595,37 @@
     "errorRequired": "Bu maydon to'ldirilishi shart",
     "errorEmail": "To'g'ri email manzilini kiriting",
     "openButton": "So'rov yuborish"
+  },
+  "reviews": {
+    "title": "Sharhlar",
+    "count": "{count} ta sharh",
+    "empty": "Hali sharh yo'q. Bu detalni ishlatgan bo'lsangiz, birinchi bo'lib yozing.",
+    "signInPrompt": "Sharh qoldirish uchun tizimga kiring.",
+    "signInCta": "Kirish",
+    "purchasePrompt": "Sharh qoldirish uchun avval shu mahsulotni sotib oling.",
+    "purchaseNote": "Buyurtmangiz yetkazib berilgandan so'ng bu yerda sharh yozish mumkin bo'ladi.",
+    "formTitle": "Fikringizni yozing",
+    "formTitleEditing": "Sharhingizni tahrirlash",
+    "ratingLabel": "Bahoyingiz",
+    "ratingOption": "{n} yulduz",
+    "nameLabel": "Ismingiz",
+    "namePlaceholder": "Masalan, Anvar",
+    "bodyLabel": "Sharhingiz",
+    "bodyPlaceholder": "Qaysi texnikaga o'rnatdingiz, qancha vaqt ishladi?",
+    "bodyCounter": "{count}/{max}",
+    "submit": "Sharh qoldirish",
+    "submitEditing": "Sharhni yangilash",
+    "submitting": "Yuborilmoqda...",
+    "errorRating": "Bahoni tanlang",
+    "errorBodyShort": "Kamida {min} ta belgi yozing",
+    "errorBodyLong": "Ko'pi bilan {max} ta belgi",
+    "errorName": "Ismingizni kiriting",
+    "errorGeneric": "Sharh saqlanmadi. Qaytadan urinib ko'ring.",
+    "toastCreated": "Sharh qoldirildi",
+    "toastUpdated": "Sharh yangilandi",
+    "mine": "Sizning sharhingiz",
+    "showMore": "Yana {count} ta sharhni ko'rsatish",
+    "loadError": "Sharhlarni yuklab bo'lmadi.",
+    "retry": "Qayta urinish"
   }
 }

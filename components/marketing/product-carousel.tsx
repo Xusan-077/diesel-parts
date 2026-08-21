@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/icon";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Product } from "@/lib/types";
+import type { ProductStats } from "@/lib/product-stats";
 import { ProductCard } from "./product-card";
 
 interface ProductCarouselProps {
@@ -26,9 +27,12 @@ interface ProductCarouselProps {
   stock: Dictionary["common"]["stock"];
   requestPriceLabel: string;
   actions: Dictionary["productActions"];
+  productDict: Dictionary["product"];
   carousel: Omit<CarouselLabels, "region">;
   /** Resolved on the server so the cards stay free of lookup logic. */
   meta: Record<string, { categoryName: string; brandName: string }>;
+  /** Rating and sold counts, keyed by product id. Also read on the server. */
+  stats: Record<string, ProductStats>;
   /** Corner label applied to every card in this row. */
   ribbon?: string;
   /** Advance on a timer. Reserved for the one lead row, never all of them. */
@@ -52,8 +56,10 @@ export function ProductCarousel({
   stock,
   requestPriceLabel,
   actions,
+  productDict,
   carousel,
   meta,
+  stats,
   ribbon,
   autoplay = false,
 }: ProductCarouselProps) {
@@ -102,6 +108,8 @@ export function ProductCarousel({
               stock={stock}
               requestPriceLabel={requestPriceLabel}
               actions={actions}
+              productDict={productDict}
+              stats={stats[product.id]}
               ribbon={ribbon}
             />
           </CarouselItem>

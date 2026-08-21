@@ -2,10 +2,8 @@ import type { ReactNode } from "react";
 import { CtaBanner } from "@/components/marketing/cta-banner";
 import { Container } from "@/components/ui/container";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 
 interface ContentPageProps {
-  lang: Locale;
   title: string;
   subtitle: string;
   home: Dictionary["home"];
@@ -13,7 +11,7 @@ interface ContentPageProps {
 }
 
 /** Shared shell for the static marketing pages: hero, body, closing CTA. */
-export function ContentPage({ lang, title, subtitle, home, children }: ContentPageProps) {
+export function ContentPage({ title, subtitle, home, children }: ContentPageProps) {
   return (
     <main>
       <section className="border-b border-border bg-surface-muted">
@@ -26,7 +24,7 @@ export function ContentPage({ lang, title, subtitle, home, children }: ContentPa
       <Container className="py-16">{children}</Container>
 
       <Container as="section" className="pb-24">
-        <CtaBanner lang={lang} home={home} />
+        <CtaBanner home={home} />
       </Container>
     </main>
   );

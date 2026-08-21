@@ -9,15 +9,21 @@ import { MOTION } from "@/components/providers/motion-provider";
 import { CodeForm } from "./code-form";
 import { PhoneForm } from "./phone-form";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 
 type Step = "phone" | "code";
 
 interface AuthDialogProps {
-  lang: Locale;
   dict: Dictionary["account"];
   closeLabel: string;
+  /**
+   * What signing in was *for*. Omitted, it means "get me to my account", and
+   * the dialog goes there. Supplied, the caller had a reason of its own — the
+   * review form is the first — and the dialog stays where it is: taking
+   * someone off the page they were reading to a profile they did not ask for
+   * loses the very thing they signed in to do.
+   */
+  onVerified?: () => void;
   children: ReactNode;
 }
 
@@ -26,7 +32,7 @@ interface AuthDialogProps {
  * same dialog, so the URL never changes; the forms keep their own request,
  * validation and error handling untouched.
  */
-export function AuthDialog({ lang, dict, closeLabel, children }: AuthDialogProps) {
+export function AuthDialog({ dict, closeLabel, onVerified, children }: AuthDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("phone");
@@ -43,7 +49,13 @@ export function AuthDialog({ lang, dict, closeLabel, children }: AuthDialogProps
   function handleVerified() {
     setOpen(false);
     setStep("phone");
-    router.push(`/${lang}/account`);
+
+    if (onVerified) {
+      onVerified();
+      return;
+    }
+
+    router.push("/account");
     router.refresh();
   }
 
@@ -97,7 +109,6 @@ export function AuthDialog({ lang, dict, closeLabel, children }: AuthDialogProps
           <div className="mt-6">
             {step === "phone" ? (
               <PhoneForm
-                lang={lang}
                 dict={dict}
                 variant="dialog"
                 submitLabel={dict.signIn}
@@ -108,7 +119,6 @@ export function AuthDialog({ lang, dict, closeLabel, children }: AuthDialogProps
               />
             ) : (
               <CodeForm
-                lang={lang}
                 dict={dict}
                 onSuccess={handleVerified}
                 onChangePhone={() => setStep("phone")}

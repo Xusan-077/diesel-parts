@@ -2,6 +2,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeaderMain } from "./header-main";
 import { HeaderNav } from "./header-nav";
+import { HeaderShell } from "./header-shell";
 import { HeaderTopbar } from "./header-topbar";
 
 interface HeaderProps {
@@ -11,7 +12,11 @@ interface HeaderProps {
   header: Dictionary["header"];
   closeLabel: string;
   viewAllLabel: string;
+  /** Shown in a search suggestion whose part has no price yet. */
+  requestPriceLabel: string;
   account: Dictionary["account"];
+  /** The signed-in visitor's number, or null. See `HeaderActions`. */
+  phone: string | null;
 }
 
 export function Header({
@@ -21,11 +26,14 @@ export function Header({
   header,
   closeLabel,
   viewAllLabel,
+  requestPriceLabel,
   account,
+  phone,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <HeaderTopbar lang={lang} header={header} />
+    // `HeaderShell` is the only client component here; the rows themselves
+    // are still rendered on the server and passed through as children.
+    <HeaderShell topbar={<HeaderTopbar lang={lang} header={header} />}>
       <HeaderMain
         lang={lang}
         siteName={siteName}
@@ -33,9 +41,11 @@ export function Header({
         header={header}
         closeLabel={closeLabel}
         viewAllLabel={viewAllLabel}
+        requestPriceLabel={requestPriceLabel}
         account={account}
+        phone={phone}
       />
-      <HeaderNav lang={lang} nav={nav} />
-    </header>
+      <HeaderNav nav={nav} />
+    </HeaderShell>
   );
 }

@@ -22,7 +22,12 @@
     "carouselPrev": "Previous products",
     "carouselNext": "Next products",
     "carouselPause": "Stop automatic scrolling",
-    "carouselPlay": "Start automatic scrolling"
+    "carouselPlay": "Start automatic scrolling",
+    "productsUnavailable": "Products could not be loaded right now, please try again later.",
+    "dataUnavailable": "This section could not be loaded right now, please try again later.",
+    "pageUnavailable": "This page is temporarily unavailable",
+    "breadcrumbLabel": "Breadcrumb",
+    "carouselSlide": "Slide {n}"
   },
   "nav": {
     "products": "Products",
@@ -38,16 +43,22 @@
     "contact": "Contact",
     "contacts": "Contacts",
     "requestQuote": "Request Quote",
-    "menu": "Menu"
+    "menu": "Menu",
+    "home": "Home"
   },
   "header": {
     "catalog": "Catalog",
     "searchPlaceholder": "Product, code or brand...",
     "searchLabel": "Search",
+    "searchSuggestions": "Search results",
+    "searchLoading": "Searching...",
+    "searchEmpty": "Nothing found",
+    "searchViewAll": "See all results",
     "compare": "Compare",
     "favorites": "Favorites",
     "cart": "Cart",
     "account": "Account",
+    "accountSignedIn": "Account: {phone}",
     "regionLabel": "Select region",
     "phoneLabel": "Phone",
     "languageLabel": "Select language",
@@ -140,7 +151,8 @@
     "ctaBannerTitle": "Need a Spare Part?",
     "ctaBannerText": "Get a free consultation — our specialists will help you find the right part.",
     "ctaBannerButton": "Get in Touch",
-    "heroEyebrow": "10,000+ SKU · OEM quality"
+    "heroEyebrow": "10,000+ SKU · OEM quality",
+    "heroCarouselLabel": "Home page slideshow"
   },
   "catalog": {
     "title": "Product Catalog",
@@ -168,7 +180,19 @@
     "nextPage": "Next",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Catalog pages",
-    "pageLabel": "Page {page}"
+    "pageLabel": "Page {page}",
+    "filtersTitle": "Filters",
+    "filtersOpen": "Filters",
+    "filtersClose": "Close",
+    "filtersApply": "Show results",
+    "filtersReset": "Clear filters",
+    "filtersActive": "{count} filters on",
+    "filtersActiveTitle": "Applied filters",
+    "filtersClearAll": "Clear all",
+    "filterRemove": "Remove the {label}: {value} filter",
+    "filterGroupToggle": "Expand or collapse {label}",
+    "searchLabel": "Search",
+    "viewLabel": "View"
   },
   "product": {
     "skuLabel": "SKU",
@@ -179,7 +203,14 @@
     "compatibleModelsTitle": "Compatible Models",
     "specificationsTitle": "Specifications",
     "relatedProductsTitle": "Related Products",
-    "galleryAlt": "Product image"
+    "galleryAlt": "Product image",
+    "ratingLabel": "{rating} out of 5",
+    "reviewCount": "{count} reviews",
+    "reviewCountEmpty": "No reviews yet",
+    "orderedCount": "Ordered {count} times",
+    "imagePrev": "Previous photo",
+    "imageNext": "Next photo",
+    "imageDot": "Photo {n}"
   },
   "categories": {
     "title": "Category",
@@ -244,7 +275,15 @@
     "compareFull": "The compare list is full",
     "addToCart": "Add to cart",
     "inCart": "In cart",
-    "contact": "Contact us"
+    "contact": "Contact us",
+    "toastCartAdded": "Added to cart",
+    "toastWishlistAdded": "Added to favourites",
+    "toastWishlistRemoved": "Removed from favourites",
+    "toastCompareAdded": "Added to compare",
+    "toastCompareRemoved": "Removed from compare",
+    "quantity": "Quantity",
+    "increase": "Increase",
+    "decrease": "Decrease"
   },
   "wishlist": {
     "title": "Favorites",
@@ -256,7 +295,10 @@
     "priceOnRequest": "On request",
     "remove": "Remove",
     "clear": "Clear the list",
-    "count": "{count} products"
+    "count": "{count} products",
+    "toastCartAdded": "Added to cart",
+    "toastRemoved": "Removed from favourites",
+    "toastCleared": "Favourites cleared"
   },
   "cart": {
     "title": "Cart",
@@ -275,7 +317,9 @@
     "unpricedNote": "{count} line items are priced on request.",
     "priceOnRequest": "On request",
     "priceNote": "Pricing depends on order volume and delivery terms. Send a request and our manager will confirm the exact amount.",
-    "checkout": "Place an order"
+    "checkout": "Place an order",
+    "toastRemoved": "Removed from cart",
+    "toastCleared": "Cart cleared"
   },
   "compare": {
     "title": "Compare",
@@ -292,7 +336,9 @@
     "rowPrice": "Price",
     "priceOnRequest": "On request",
     "rowStock": "Availability",
-    "rowModels": "Compatible models"
+    "rowModels": "Compatible models",
+    "toastRemoved": "Removed from compare",
+    "toastCleared": "Compare list cleared"
   },
   "account": {
     "loginTitle": "Sign in",
@@ -333,7 +379,9 @@
     "ordersTitle": "Order history",
     "ordersEmpty": "You have no orders yet.",
     "ordersEmptyCta": "Browse the catalog",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "toastSignedIn": "You are signed in",
+    "toastSignedOut": "You are signed out"
   },
   "brandsIndex": {
     "title": "Brands",
@@ -547,5 +595,37 @@
     "errorRequired": "This field is required",
     "errorEmail": "Enter a valid email address",
     "openButton": "Send Inquiry"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "count": "{count} reviews",
+    "empty": "No reviews yet. If you have fitted this part, write the first one.",
+    "signInPrompt": "Sign in to leave a review.",
+    "signInCta": "Sign in",
+    "purchasePrompt": "Buy this part before you review it.",
+    "purchaseNote": "Once your order is delivered, you can write a review here.",
+    "formTitle": "Write a review",
+    "formTitleEditing": "Edit your review",
+    "ratingLabel": "Your rating",
+    "ratingOption": "{n} stars",
+    "nameLabel": "Your name",
+    "namePlaceholder": "For example, Anvar",
+    "bodyLabel": "Your review",
+    "bodyPlaceholder": "What did you fit it to, and how long has it lasted?",
+    "bodyCounter": "{count}/{max}",
+    "submit": "Leave a review",
+    "submitEditing": "Update review",
+    "submitting": "Sending...",
+    "errorRating": "Choose a rating",
+    "errorBodyShort": "Write at least {min} characters",
+    "errorBodyLong": "No more than {max} characters",
+    "errorName": "Enter your name",
+    "errorGeneric": "The review was not saved. Try again.",
+    "toastCreated": "Review posted",
+    "toastUpdated": "Review updated",
+    "mine": "Your review",
+    "showMore": "Show {count} more",
+    "loadError": "Reviews could not be loaded.",
+    "retry": "Try again"
   }
 }

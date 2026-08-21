@@ -22,7 +22,12 @@
     "carouselPrev": "Предыдущие товары",
     "carouselNext": "Следующие товары",
     "carouselPause": "Остановить автопрокрутку",
-    "carouselPlay": "Включить автопрокрутку"
+    "carouselPlay": "Включить автопрокрутку",
+    "productsUnavailable": "Не удалось загрузить товары, попробуйте позже.",
+    "dataUnavailable": "Не удалось загрузить данные, попробуйте позже.",
+    "pageUnavailable": "Страница сейчас недоступна",
+    "breadcrumbLabel": "Навигация по сайту",
+    "carouselSlide": "Слайд {n}"
   },
   "nav": {
     "products": "Продукция",
@@ -38,16 +43,22 @@
     "contact": "Контакты",
     "contacts": "Контакты",
     "requestQuote": "Запросить цену",
-    "menu": "Меню"
+    "menu": "Меню",
+    "home": "Главная"
   },
   "header": {
     "catalog": "Каталог",
     "searchPlaceholder": "Товар, код или бренд...",
     "searchLabel": "Поиск",
+    "searchSuggestions": "Результаты поиска",
+    "searchLoading": "Идёт поиск...",
+    "searchEmpty": "Ничего не найдено",
+    "searchViewAll": "Показать все результаты",
     "compare": "Сравнение",
     "favorites": "Избранное",
     "cart": "Корзина",
     "account": "Кабинет",
+    "accountSignedIn": "Личный кабинет: {phone}",
     "regionLabel": "Выберите область",
     "phoneLabel": "Телефон",
     "languageLabel": "Выберите язык",
@@ -140,7 +151,8 @@
     "ctaBannerTitle": "Нужна запчасть?",
     "ctaBannerText": "Получите бесплатную консультацию — наши специалисты помогут подобрать нужную деталь.",
     "ctaBannerButton": "Связаться",
-    "heroEyebrow": "10 000+ артикулов · OEM качество"
+    "heroEyebrow": "10 000+ артикулов · OEM качество",
+    "heroCarouselLabel": "Слайдер главной страницы"
   },
   "catalog": {
     "title": "Каталог продукции",
@@ -168,7 +180,19 @@
     "nextPage": "Далее",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Страницы каталога",
-    "pageLabel": "Страница {page}"
+    "pageLabel": "Страница {page}",
+    "filtersTitle": "Фильтры",
+    "filtersOpen": "Фильтры",
+    "filtersClose": "Закрыть",
+    "filtersApply": "Показать результаты",
+    "filtersReset": "Сбросить фильтры",
+    "filtersActive": "Фильтров включено: {count}",
+    "filtersActiveTitle": "Применённые фильтры",
+    "filtersClearAll": "Очистить всё",
+    "filterRemove": "Убрать фильтр «{label}: {value}»",
+    "filterGroupToggle": "Развернуть или свернуть раздел «{label}»",
+    "searchLabel": "Поиск",
+    "viewLabel": "Вид"
   },
   "product": {
     "skuLabel": "SKU",
@@ -179,7 +203,14 @@
     "compatibleModelsTitle": "Совместимые модели",
     "specificationsTitle": "Технические характеристики",
     "relatedProductsTitle": "Похожие товары",
-    "galleryAlt": "Изображение товара"
+    "galleryAlt": "Изображение товара",
+    "ratingLabel": "{rating} из 5",
+    "reviewCount": "{count} отзывов",
+    "reviewCountEmpty": "Нет отзывов",
+    "orderedCount": "Заказано {count} раз",
+    "imagePrev": "Предыдущее фото",
+    "imageNext": "Следующее фото",
+    "imageDot": "Фото {n}"
   },
   "categories": {
     "title": "Категория",
@@ -244,7 +275,15 @@
     "compareFull": "Список сравнения заполнен",
     "addToCart": "Добавить в корзину",
     "inCart": "В корзине",
-    "contact": "Связаться"
+    "contact": "Связаться",
+    "toastCartAdded": "Добавлено в корзину",
+    "toastWishlistAdded": "Добавлено в избранное",
+    "toastWishlistRemoved": "Убрано из избранного",
+    "toastCompareAdded": "Добавлено к сравнению",
+    "toastCompareRemoved": "Убрано из сравнения",
+    "quantity": "Количество",
+    "increase": "Увеличить",
+    "decrease": "Уменьшить"
   },
   "wishlist": {
     "title": "Избранное",
@@ -256,7 +295,10 @@
     "priceOnRequest": "По запросу",
     "remove": "Удалить",
     "clear": "Очистить список",
-    "count": "Товаров: {count}"
+    "count": "Товаров: {count}",
+    "toastCartAdded": "Добавлено в корзину",
+    "toastRemoved": "Убрано из избранного",
+    "toastCleared": "Избранное очищено"
   },
   "cart": {
     "title": "Корзина",
@@ -275,7 +317,9 @@
     "unpricedNote": "Цена {count} позиций уточняется по запросу.",
     "priceOnRequest": "По запросу",
     "priceNote": "Цена рассчитывается исходя из объёма заказа и условий доставки. Оставьте запрос — менеджер сообщит точную сумму.",
-    "checkout": "Оформить заказ"
+    "checkout": "Оформить заказ",
+    "toastRemoved": "Убрано из корзины",
+    "toastCleared": "Корзина очищена"
   },
   "compare": {
     "title": "Сравнение",
@@ -292,7 +336,9 @@
     "rowPrice": "Цена",
     "priceOnRequest": "По запросу",
     "rowStock": "Наличие",
-    "rowModels": "Совместимые модели"
+    "rowModels": "Совместимые модели",
+    "toastRemoved": "Убрано из сравнения",
+    "toastCleared": "Список сравнения очищен"
   },
   "account": {
     "loginTitle": "Вход",
@@ -333,7 +379,9 @@
     "ordersTitle": "История заказов",
     "ordersEmpty": "У вас пока нет заказов.",
     "ordersEmptyCta": "Перейти в каталог",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "toastSignedIn": "Вы вошли в систему",
+    "toastSignedOut": "Вы вышли из системы"
   },
   "brandsIndex": {
     "title": "Бренды",
@@ -547,5 +595,37 @@
     "errorRequired": "Это поле обязательно",
     "errorEmail": "Введите корректный email",
     "openButton": "Отправить запрос"
+  },
+  "reviews": {
+    "title": "Отзывы",
+    "count": "Отзывов: {count}",
+    "empty": "Отзывов пока нет. Если вы ставили эту деталь — напишите первым.",
+    "signInPrompt": "Войдите, чтобы оставить отзыв.",
+    "signInCta": "Войти",
+    "purchasePrompt": "Чтобы оставить отзыв, сначала купите этот товар.",
+    "purchaseNote": "Отзыв можно будет написать здесь после того, как заказ будет доставлен.",
+    "formTitle": "Оставьте отзыв",
+    "formTitleEditing": "Изменить отзыв",
+    "ratingLabel": "Ваша оценка",
+    "ratingOption": "{n} звёзд",
+    "nameLabel": "Ваше имя",
+    "namePlaceholder": "Например, Анвар",
+    "bodyLabel": "Ваш отзыв",
+    "bodyPlaceholder": "На какую технику ставили, сколько отходила?",
+    "bodyCounter": "{count}/{max}",
+    "submit": "Оставить отзыв",
+    "submitEditing": "Обновить отзыв",
+    "submitting": "Отправляется...",
+    "errorRating": "Выберите оценку",
+    "errorBodyShort": "Напишите минимум {min} символов",
+    "errorBodyLong": "Не больше {max} символов",
+    "errorName": "Укажите имя",
+    "errorGeneric": "Отзыв не сохранён. Попробуйте ещё раз.",
+    "toastCreated": "Отзыв оставлен",
+    "toastUpdated": "Отзыв обновлён",
+    "mine": "Ваш отзыв",
+    "showMore": "Показать ещё {count}",
+    "loadError": "Не удалось загрузить отзывы.",
+    "retry": "Повторить"
   }
 }

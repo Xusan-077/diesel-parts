@@ -11,6 +11,14 @@ import {
 } from "./cart";
 import { parseIdList, removeId, toggleId } from "./collection";
 import { normalizePersistedValue } from "./persist-storage";
+import {
+  forgetSnapshot,
+  parseSnapshots,
+  recordSnapshots,
+  type SnapshotMap,
+} from "./snapshot";
+import type { Locale } from "@/lib/i18n/locales";
+import type { ResolvedProduct } from "@/lib/product-lookup";
 
 export const MAX_COMPARE_ITEMS = 4;
 
@@ -116,9 +124,45 @@ export const useCartStore = create<CartState>()(
   )
 );
 
+interface SnapshotState {
+  byId: SnapshotMap;
+  record: (entries: readonly ResolvedProduct[], lang: Locale) => void;
+  forget: (productId: string) => void;
+}
+
+type SnapshotSlice = Pick<SnapshotState, "byId">;
+
+/**
+ * The catalog rows behind the id lists, so the cart, wishlist and compare
+ * pages have something to draw before — or without — a network answer.
+ * See lib/store/snapshot.ts for why this is separate from the lists.
+ */
+export const useSnapshotStore = create<SnapshotState>()(
+  persist(
+    (set) => ({
+      byId: {},
+      record: (entries, lang) =>
+        set((state) => ({ byId: recordSnapshots(state.byId, entries, lang) })),
+      forget: (productId) =>
+        set((state) => ({ byId: forgetSnapshot(state.byId, productId) })),
+    }),
+    {
+      ...SKIP_HYDRATION,
+      name: "diesel-parts:snapshots",
+      storage: createStorage<SnapshotSlice>("byId"),
+      partialize: (state): SnapshotSlice => ({ byId: state.byId }),
+      merge: (persisted, current): SnapshotState => ({
+        ...current,
+        byId: parseSnapshots((persisted as SnapshotSlice | undefined)?.byId),
+      }),
+    }
+  )
+);
+
 /** Called once after mount to load persisted state without a render mismatch. */
 export function rehydrateStores(): void {
   void useWishlistStore.persist.rehydrate();
   void useCompareStore.persist.rehydrate();
   void useCartStore.persist.rehydrate();
+  void useSnapshotStore.persist.rehydrate();
 }

@@ -1,5 +1,6 @@
 import type { AvailabilityFilter, SortKey } from "@/lib/filters";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/locales";
+import type { ProductStats } from "@/lib/product-stats";
 
 export const DEFAULT_PAGE_SIZE = 9;
 export const MAX_PAGE_SIZE = 60;
@@ -62,18 +63,41 @@ export interface Page<T> {
   totalPages: number;
 }
 
-/** Slices a list into a page, clamping the page number to what exists. */
-export function paginate<T>(items: readonly T[], page: number, pageSize: number): Page<T> {
-  const total = items.length;
+/**
+ * A page of products plus the rating and sold counts for exactly those rows.
+ *
+ * A sidecar keyed by product id rather than a field on `Product`: `Product` is
+ * the catalog row and is snapshotted into localStorage by the cart, and a
+ * review count is a live figure that has no business being frozen there.
+ */
+export interface ProductPage<T> extends Page<T> {
+  stats: Record<string, ProductStats>;
+}
+
+/**
+ * Assembles a `Page` from a SQL result plus its `count()`, preserving the
+ * page-clamping behaviour the in-memory slice it replaced used to provide.
+ */
+export function buildPage<T>(items: T[], total: number, page: number, pageSize: number): Page<T> {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const current = Math.min(Math.max(1, page), totalPages);
-  const start = (current - 1) * pageSize;
 
   return {
-    items: items.slice(start, start + pageSize),
+    items,
     total,
-    page: current,
+    page: Math.min(Math.max(1, page), totalPages),
     pageSize,
     totalPages,
   };
+}
+
+/**
+ * The `skip` for a page, clamped so a bad page number cannot go negative.
+ *
+ * Callers MUST pass the page number already clamped by `buildPage`, not the raw
+ * request value. This function cannot clamp the upper bound itself — it never
+ * sees `total` — so a raw out-of-range page skips past the end and returns no
+ * rows while the response still claims to be a valid page.
+ */
+export function pageSkip(page: number, pageSize: number): number {
+  return Math.max(0, (Math.max(1, page) - 1) * pageSize);
 }

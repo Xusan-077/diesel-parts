@@ -57,7 +57,8 @@ export function formatCartForQuote(
   return rows.join("\n");
 }
 
-/** Total units, used to prefill the quantity field. */
-export function totalQuantity(lines: readonly CartLine[]): number {
-  return lines.reduce((sum, line) => sum + line.quantity, 0);
-}
+/*
+ * `totalQuantity` used to live here and added the quantities up a second time.
+ * It is `cartUnitCount` in lib/store/cart.ts — the same sum the header badge
+ * shows, which is the point.
+ */

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Scale, X } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCompare } from "@/hooks/use-store";
-import { resolveProducts } from "@/lib/product-lookup";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -19,14 +22,19 @@ interface CompareClientProps {
 
 export function CompareClient({ lang, dict, stock }: CompareClientProps) {
   const compare = useCompare();
-  const items = resolveProducts(compare.ids, lang);
+  const { items, isLoading, isSuccess } = useResolvedProducts(compare.ids, lang);
+  usePruneMissing(compare.ids, items, isSuccess, compare.remove);
+
+  if (isLoading) {
+    return <ResolvedProductsSkeleton count={compare.ids.length} />;
+  }
 
   if (items.length === 0) {
     return (
       <StoreEmpty
         icon={Scale}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -36,7 +44,7 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
     { label: dict.rowBrand, render: (item) => item.brandName },
     { label: dict.rowCategory, render: (item) => item.categoryName },
     { label: dict.rowSku, render: (item) => item.product.sku },
-    { label: dict.rowOem, render: (item) => item.product.oemNumber },
+    { label: dict.rowOem, render: (item) => item.product.oemNumbers.join(", ") },
     {
       label: dict.rowPrice,
       render: (item) => {
@@ -70,7 +78,10 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
         </p>
         <button
           type="button"
-          onClick={compare.clear}
+          onClick={() => {
+            compare.clear();
+            toast.success(dict.toastCleared);
+          }}
           className="text-sm text-muted transition-colors hover:text-accent-strong"
         >
           {dict.clear}
@@ -90,14 +101,17 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <Link
-                      href={`/${lang}/products/${product.slug}`}
+                      href={`/products/${product.slug}`}
                       className="text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
                     >
                       {product.name[lang]}
                     </Link>
                     <button
                       type="button"
-                      onClick={() => compare.remove(product.id)}
+                      onClick={() => {
+                        compare.remove(product.id);
+                        toast.success(dict.toastRemoved);
+                      }}
                       aria-label={dict.remove}
                       title={dict.remove}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:text-accent-strong"

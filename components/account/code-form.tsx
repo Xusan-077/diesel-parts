@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authErrorMessage } from "@/lib/auth/error-message";
+import axios from "axios";
+import { toast } from "sonner";
+import { authErrorMessage, type AuthErrorPayload } from "@/lib/auth/error-message";
+import { refusalPayload } from "@/lib/api/request-error";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +16,6 @@ const CODE_LENGTH = 6;
 const RESEND_COOLDOWN_SECONDS = 60;
 
 interface CodeFormProps {
-  lang: Locale;
   dict: Dictionary["account"];
   /** When given, replaces the navigation to the account page. */
   onSuccess?: () => void;
@@ -22,7 +23,7 @@ interface CodeFormProps {
   onChangePhone?: () => void;
 }
 
-export function CodeForm({ lang, dict, onSuccess, onChangePhone }: CodeFormProps) {
+export function CodeForm({ dict, onSuccess, onChangePhone }: CodeFormProps) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,28 +54,21 @@ export function CodeForm({ lang, dict, onSuccess, onChangePhone }: CodeFormProps
     setNotice(null);
 
     try {
-      const response = await fetch("/api/auth/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        setError(authErrorMessage(dict, payload));
-        setSubmitting(false);
-        return;
-      }
+      await axios.post("/api/auth/verify-code", { code });
+      toast.success(dict.toastSignedIn);
 
       if (onSuccess) {
         onSuccess();
         return;
       }
-      router.push(`/${lang}/account`);
+      router.push("/account");
       // The account page reads the session cookie on the server.
       router.refresh();
-    } catch {
-      setError(dict.errorGeneric);
+    } catch (error) {
+      const payload = refusalPayload<AuthErrorPayload>(error);
+      const message = payload ? authErrorMessage(dict, payload) : dict.errorGeneric;
+      setError(message);
+      toast.error(message);
       setSubmitting(false);
     }
   }
@@ -85,22 +79,24 @@ export function CodeForm({ lang, dict, onSuccess, onChangePhone }: CodeFormProps
 
     try {
       // No body: the server re-reads the phone from its httpOnly cookie.
-      const response = await fetch("/api/auth/resend-code", { method: "POST" });
+      const { data } = await axios.post<{ resendAfterSeconds?: number }>(
+        "/api/auth/resend-code",
+      );
 
-      const payload = await response.json().catch(() => ({}));
+      setNotice(dict.resent);
+      setSecondsLeft(data.resendAfterSeconds ?? RESEND_COOLDOWN_SECONDS);
+    } catch (error) {
+      const payload = refusalPayload<AuthErrorPayload>(error);
 
-      if (!response.ok) {
-        setError(authErrorMessage(dict, payload));
-        if (typeof payload.retryAfterSeconds === "number") {
-          setSecondsLeft(payload.retryAfterSeconds);
-        }
+      if (!payload) {
+        setError(dict.errorGeneric);
         return;
       }
 
-      setNotice(dict.resent);
-      setSecondsLeft(payload.resendAfterSeconds ?? RESEND_COOLDOWN_SECONDS);
-    } catch {
-      setError(dict.errorGeneric);
+      setError(authErrorMessage(dict, payload));
+      if (typeof payload.retryAfterSeconds === "number") {
+        setSecondsLeft(payload.retryAfterSeconds);
+      }
     }
   }
 
@@ -162,7 +158,7 @@ export function CodeForm({ lang, dict, onSuccess, onChangePhone }: CodeFormProps
           </button>
         ) : (
           <Link
-            href={`/${lang}/account/login`}
+            href="/account/login"
             className="text-muted transition-colors hover:text-foreground"
           >
             {dict.changePhone}

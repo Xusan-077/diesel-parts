@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Heart, MessageCircle, Trash2 } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCart, useWishlist } from "@/hooks/use-store";
-import { resolveProducts } from "@/lib/product-lookup";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -20,14 +23,19 @@ interface WishlistClientProps {
 export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
   const wishlist = useWishlist();
   const cart = useCart();
-  const items = resolveProducts(wishlist.ids, lang);
+  const { items, isLoading, isSuccess } = useResolvedProducts(wishlist.ids, lang);
+  usePruneMissing(wishlist.ids, items, isSuccess, wishlist.remove);
+
+  if (isLoading) {
+    return <ResolvedProductsSkeleton count={wishlist.ids.length} />;
+  }
 
   if (items.length === 0) {
     return (
       <StoreEmpty
         icon={Heart}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -41,7 +49,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
         </p>
         <button
           type="button"
-          onClick={wishlist.clear}
+          onClick={() => {
+            wishlist.clear();
+            toast.success(dict.toastCleared);
+          }}
           className="text-sm text-muted transition-colors hover:text-accent-strong"
         >
           {dict.clear}
@@ -64,7 +75,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
                 <StockBadge status={product.stockStatus} stock={stock} />
               </div>
               <Link
-                href={`/${lang}/products/${product.slug}`}
+                href={`/products/${product.slug}`}
                 className="mt-1 block text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
               >
                 {product.name[lang]}
@@ -82,7 +93,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
             <div className="flex items-center gap-2">
               {product.price === null ? (
                 <Link
-                  href={`/${lang}/contact`}
+                  href="/contact"
                   className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/60 hover:text-accent-strong"
                 >
                   <Icon icon={MessageCircle} />
@@ -91,7 +102,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => cart.add(product.id)}
+                  onClick={() => {
+                    cart.add(product.id);
+                    toast.success(dict.toastCartAdded);
+                  }}
                   className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
                 >
                   {dict.addToCart}
@@ -99,7 +113,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
               )}
               <button
                 type="button"
-                onClick={() => wishlist.remove(product.id)}
+                onClick={() => {
+                  wishlist.remove(product.id);
+                  toast.success(dict.toastRemoved);
+                }}
                 aria-label={dict.remove}
                 title={dict.remove}
                 className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/60 hover:text-accent-strong"

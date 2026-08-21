@@ -19,6 +19,8 @@ export interface CarouselLabels {
   pause: string;
   /** Shown while autoplay is stopped — the button starts it. */
   play: string;
+  /** Template for a dot, e.g. "Slide {n}". Only needed where dots are shown. */
+  slide?: string;
 }
 
 interface CarouselContextValue {
@@ -162,7 +164,13 @@ export function CarouselContent({ className, ...props }: React.ComponentProps<"d
   return (
     // `overflow-hidden` clips the track; the negative margin pairs with the
     // padding on each item so the first card still lines up with the gutter.
-    <div ref={carouselRef} className="overflow-hidden">
+    /*
+      `cursor-grab` is the only thing that says the row can be dragged.
+      Embla has taken mouse drags since it was added — the affordance was
+      simply missing, so on a desktop the arrows looked like the only way
+      through a row that is mostly off-screen.
+    */
+    <div ref={carouselRef} className="cursor-grab overflow-hidden active:cursor-grabbing">
       <div className={cn("flex -ml-4", className)} {...props} />
     </div>
   );
@@ -266,6 +274,71 @@ export function CarouselAutoplayToggle({
     >
       <Icon icon={isPlaying ? Pause : Play} size="md" />
     </button>
+  );
+}
+
+/**
+ * One dot per slide, for a carousel whose slides are whole screens rather than
+ * a row of cards.
+ *
+ * A product row does not need these — the half-visible card at the edge
+ * already says the row continues, and eleven dots under four parts is noise.
+ * A hero does: each slide fills the viewport, so without dots there is nothing
+ * on screen to say another one exists.
+ *
+ * Buttons rather than an indicator strip: a reader who can see there are five
+ * slides will try to click the fifth.
+ */
+export function CarouselDots({ className, ...props }: React.ComponentProps<"div">) {
+  const { api, labels } = useCarousel();
+
+  const subscribe = React.useCallback(
+    (onChange: () => void) => {
+      if (!api) return () => {};
+      api.on("select", onChange).on("reInit", onChange);
+      return () => {
+        api.off("select", onChange).off("reInit", onChange);
+      };
+    },
+    [api]
+  );
+
+  const selected = React.useSyncExternalStore(
+    subscribe,
+    () => api?.selectedScrollSnap() ?? 0,
+    () => 0
+  );
+  const count = React.useSyncExternalStore(
+    subscribe,
+    () => api?.scrollSnapList().length ?? 0,
+    () => 0
+  );
+
+  if (count < 2) {
+    return null;
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2", className)} {...props}>
+      {Array.from({ length: count }, (_, index) => {
+        const current = index === selected;
+        return (
+          <button
+            key={index}
+            type="button"
+            aria-label={(labels.slide ?? "{n}").replace("{n}", String(index + 1))}
+            aria-current={current ? "true" : undefined}
+            onClick={() => api?.scrollTo(index)}
+            className={cn(
+              // The active dot stretches rather than swelling, so the row does
+              // not jump a pixel every five seconds.
+              "h-1.5 rounded-full transition-all duration-300",
+              current ? "w-6 bg-accent" : "w-1.5 bg-border-strong hover:bg-muted"
+            )}
+          />
+        );
+      })}
+    </div>
   );
 }
 

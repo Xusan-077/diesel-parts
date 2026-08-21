@@ -83,7 +83,7 @@ export function CatalogMegaMenu({ lang, label, viewAllLabel, className }: Catalo
                   {activeGroup.name[lang]}
                 </h2>
                 <Link
-                  href={`/${lang}/products?group=${activeGroup.slug}`}
+                  href={`/products?group=${activeGroup.slug}`}
                   onClick={() => setOpen(false)}
                   className="shrink-0 text-sm text-accent-strong hover:underline"
                 >
@@ -95,7 +95,7 @@ export function CatalogMegaMenu({ lang, label, viewAllLabel, className }: Catalo
                 {activeGroup.subcategories.map((subcategory) => (
                   <li key={subcategory.id}>
                     <Link
-                      href={`/${lang}/products?category=${subcategory.slug}`}
+                      href={`/products?category=${subcategory.slug}`}
                       onClick={() => setOpen(false)}
                       className="group flex h-full flex-col items-center gap-2 rounded-lg border border-transparent p-3 text-center transition-colors hover:border-border hover:bg-surface-muted"
                     >

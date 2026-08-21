@@ -5,12 +5,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { buildMainNav, isNavItemActive } from "@/lib/nav";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Container } from "@/components/ui/container";
 
-export function HeaderNav({ lang, nav }: { lang: Locale; nav: Dictionary["nav"] }) {
+export function HeaderNav({ nav }: { nav: Dictionary["nav"] }) {
   const pathname = usePathname();
-  const items = buildMainNav(lang, nav);
+  const items = buildMainNav(nav);
 
   return (
     <nav className="hidden border-b border-border bg-surface-muted lg:block">

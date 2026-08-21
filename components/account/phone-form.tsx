@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authErrorMessage } from "@/lib/auth/error-message";
+import axios from "axios";
+import { toast } from "sonner";
+import { authErrorMessage, type AuthErrorPayload } from "@/lib/auth/error-message";
+import { refusalPayload } from "@/lib/api/request-error";
 import {
   formatNationalDigits,
   formatPhone,
@@ -11,30 +14,19 @@ import {
   toCanonicalPhone,
 } from "@/lib/auth/phone";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FlagIcon } from "@/components/layout/flag-icon";
 
 interface PhoneFormProps {
-  lang: Locale;
   dict: Dictionary["account"];
-  /**
-   * `page` renders one field holding the full "+998 ..." value.
-   * `dialog` splits the country code into a static addon beside the field.
-   */
   variant?: "page" | "dialog";
   submitLabel?: string;
-  /**
-   * When given, replaces the navigation to the verify page. Receives the
-   * masked number so the caller can show which phone the code went to.
-   */
   onSuccess?: (maskedPhone: string) => void;
 }
 
 export function PhoneForm({
-  lang,
   dict,
   variant = "page",
   submitLabel,
@@ -53,34 +45,28 @@ export function PhoneForm({
 
     if (!isValidPhone(phone)) {
       setError(dict.errorInvalidPhone);
+      toast.error(dict.errorInvalidPhone);
       return;
     }
 
     setSubmitting(true);
     setError(null);
 
-    try {
-      const response = await fetch("/api/auth/request-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
+    const canonicalPhone = toCanonicalPhone(phone) ?? phone;
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        setError(authErrorMessage(dict, payload));
-        setSubmitting(false);
-        return;
-      }
+    try {
+      await axios.post("/api/auth/request-code", { phone: canonicalPhone });
 
       if (onSuccess) {
-        const canonical = toCanonicalPhone(phone);
-        onSuccess(canonical ? maskPhone(canonical) : "");
+        onSuccess(maskPhone(canonicalPhone));
         return;
       }
-      router.push(`/${lang}/account/verify`);
-    } catch {
-      setError(dict.errorGeneric);
+      router.push("/account/verify");
+    } catch (error) {
+      const payload = refusalPayload<AuthErrorPayload>(error);
+      const message = payload ? authErrorMessage(dict, payload) : dict.errorGeneric;
+      setError(message);
+      toast.error(message);
       setSubmitting(false);
     }
   }

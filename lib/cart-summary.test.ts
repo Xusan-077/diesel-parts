@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { products } from "@/lib/data/products";
-import {
-  formatCartForQuote,
-  toQuoteCartItems,
-  totalQuantity,
-  type CartLine,
-} from "./cart-summary";
+import { products } from "@/prisma/seed-data/products";
+import { cartUnitCount } from "./store/cart";
+import { formatCartForQuote, toQuoteCartItems, type CartLine } from "./cart-summary";
 
 const priced = products.find((product) => product.price !== null)!;
 const unpriced = products.find((product) => product.price === null)!;
@@ -84,17 +80,18 @@ describe("toQuoteCartItems", () => {
   });
 });
 
-describe("totalQuantity", () => {
-  it("sums the quantities", () => {
-    expect(
-      totalQuantity([
-        { product: priced, quantity: 2 },
-        { product: unpriced, quantity: 3 },
-      ])
-    ).toBe(5);
-  });
+/*
+ * Counting units is `cartUnitCount` in lib/store/cart.ts and is tested there.
+ * These check only that a quote line is a shape it accepts — the seam that
+ * would break if either side drifted.
+ */
+describe("cart lines as the unit counter sees them", () => {
+  it("counts a quote's lines the same way the header badge does", () => {
+    const lines: CartLine[] = [
+      { product: priced, quantity: 2 },
+      { product: unpriced, quantity: 3 },
+    ];
 
-  it("is zero for an empty cart", () => {
-    expect(totalQuantity([])).toBe(0);
+    expect(cartUnitCount(lines)).toBe(5);
   });
 });

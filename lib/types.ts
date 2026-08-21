@@ -28,7 +28,11 @@ export interface Product {
   slug: string;
   name: LocalizedText;
   sku: string;
-  oemNumber: string;
+  /**
+   * OEM/aftermarket cross-references. A part commonly carries several; the
+   * first is the primary number shown in compact contexts.
+   */
+  oemNumbers: string[];
   /**
    * Price in UZS, or `null` when it has not been set yet — those products show
    * a "contact us" action instead of an add-to-cart button.

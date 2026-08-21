@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Agent worktrees carry their own node_modules; never lint them.
     ".claude/**",
     "**/node_modules/**",
+    // Generated Prisma client is build output, not authored code.
+    "prisma/generated/**",
   ]),
   {
     rules: {
@@ -26,6 +28,30 @@ const eslintConfig = defineConfig([
         { ignoreRestSiblings: true, argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },
+  },
+  {
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/prisma/seed-data/*", "**/prisma/seed-data/*"],
+              message:
+                "Seed data is database input, not an application data source. " +
+                "Read through lib/api/product-repository.ts instead, or the " +
+                "page will silently bypass the database.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Tests legitimately use the seed arrays as fixtures.
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: { "no-restricted-imports": "off" },
   },
 ]);
 

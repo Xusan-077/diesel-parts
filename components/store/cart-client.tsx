@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCart } from "@/hooks/use-store";
 import { formatPrice, sumPrices } from "@/lib/format-price";
-import { MAX_QUANTITY } from "@/lib/store/cart";
-import { resolveProduct } from "@/lib/product-lookup";
+import { cartLineCount, cartUnitCount, MAX_QUANTITY } from "@/lib/store/cart";
+import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
+import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
@@ -21,24 +24,44 @@ interface CartClientProps {
 export function CartClient({ lang, dict, stock }: CartClientProps) {
   const cart = useCart();
 
+  const ids = cart.items.map((item) => item.productId);
+  const { items: resolved, isLoading, isSuccess } = useResolvedProducts(ids, lang);
+  // A part the director retires stops resolving. Left alone it would keep
+  // padding the header badge with a line this page cannot render or remove.
+  usePruneMissing(ids, resolved, isSuccess, cart.remove);
+
+  const byId = new Map(resolved.map((entry) => [entry.product.id, entry]));
+
   const lines = cart.items
     .map((item) => {
-      const resolved = resolveProduct(item.productId, lang);
-      return resolved ? { ...resolved, quantity: item.quantity } : null;
+      const entry = byId.get(item.productId);
+      return entry ? { ...entry, quantity: item.quantity } : null;
     })
     .filter((line): line is NonNullable<typeof line> => line !== null);
 
   const { total, unpriced } = sumPrices(
     lines.map((line) => ({ price: line.product.price, quantity: line.quantity }))
   );
+  /*
+   * Counted off the rendered lines rather than the store, so the summary can
+   * never disagree with the list above it while a prune is still settling —
+   * but counted by the same function the header badge uses, so the two can
+   * never disagree about what counting means.
+   */
+  const unitCount = cartUnitCount(lines);
+  const lineCount = cartLineCount(lines);
   const totalLabel = formatPrice(total, lang);
+
+  if (isLoading) {
+    return <ResolvedProductsSkeleton count={cart.items.length} />;
+  }
 
   if (lines.length === 0) {
     return (
       <StoreEmpty
         icon={ShoppingCart}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -50,7 +73,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={cart.clear}
+            onClick={() => {
+              cart.clear();
+              toast.success(dict.toastCleared);
+            }}
             className="text-sm text-muted transition-colors hover:text-accent-strong"
           >
             {dict.clear}
@@ -73,7 +99,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
                   <StockBadge status={product.stockStatus} stock={stock} />
                 </div>
                 <Link
-                  href={`/${lang}/products/${product.slug}`}
+                  href={`/products/${product.slug}`}
                   className="mt-1 block text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
                 >
                   {product.name[lang]}
@@ -121,7 +147,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
 
                 <button
                   type="button"
-                  onClick={() => cart.remove(product.id)}
+                  onClick={() => {
+                    cart.remove(product.id);
+                    toast.success(dict.toastRemoved);
+                  }}
                   aria-label={dict.remove}
                   title={dict.remove}
                   className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/60 hover:text-accent-strong"
@@ -140,11 +169,11 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryLines}</dt>
-            <dd className="tabular-nums text-foreground">{cart.lineCount}</dd>
+            <dd className="tabular-nums text-foreground">{lineCount}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryUnits}</dt>
-            <dd className="tabular-nums text-foreground">{cart.unitCount}</dd>
+            <dd className="tabular-nums text-foreground">{unitCount}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-3">
             <dt className="text-muted">{dict.summaryPrice}</dt>
@@ -163,7 +192,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <p className="mt-3 text-xs leading-relaxed text-muted">{dict.priceNote}</p>
 
         <Link
-          href={`/${lang}/request-quote`}
+          href="/request-quote"
           className="mt-6 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
         >
           {dict.checkout}

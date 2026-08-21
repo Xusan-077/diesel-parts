@@ -1,3 +1,5 @@
+import axios from "axios";
+
 const ESKIZ_BASE_URL = "https://notify.eskiz.uz/api";
 /** Eskiz tokens last ~30 days; refresh early so a request never races expiry. */
 const TOKEN_TTL_MS = 25 * 24 * 60 * 60 * 1000;
@@ -20,13 +22,12 @@ async function fetchToken(): Promise<string> {
   body.append("email", process.env.ESKIZ_EMAIL ?? "");
   body.append("password", process.env.ESKIZ_PASSWORD ?? "");
 
-  const response = await fetch(`${ESKIZ_BASE_URL}/auth/login`, { method: "POST", body });
-  if (!response.ok) {
-    throw new Error(`Eskiz auth failed with status ${response.status}`);
-  }
+  const { data } = await axios.post<{ data?: { token?: unknown } }>(
+    `${ESKIZ_BASE_URL}/auth/login`,
+    body,
+  );
 
-  const json: unknown = await response.json();
-  const token = (json as { data?: { token?: unknown } })?.data?.token;
+  const token = data?.data?.token;
   if (typeof token !== "string" || token.length === 0) {
     throw new Error("Eskiz auth response did not contain a token");
   }
@@ -46,16 +47,14 @@ function clearCachedToken(): void {
   cachedToken = null;
 }
 
-async function postSms(token: string, phone: string, message: string): Promise<Response> {
+async function postSms(token: string, phone: string, message: string): Promise<void> {
   const body = new FormData();
   body.append("mobile_phone", phone);
   body.append("message", message);
   body.append("from", process.env.ESKIZ_FROM ?? "4546");
 
-  return fetch(`${ESKIZ_BASE_URL}/message/sms/send`, {
-    method: "POST",
+  await axios.post(`${ESKIZ_BASE_URL}/message/sms/send`, body, {
     headers: { Authorization: `Bearer ${token}` },
-    body,
   });
 }
 
@@ -73,23 +72,26 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
   }
 
   try {
-    let response = await postSms(await getToken(), phone, message);
-
-    if (response.status === 401) {
+    try {
+      await postSms(await getToken(), phone, message);
+    } catch (error) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+        throw error;
+      }
       clearCachedToken();
-      response = await postSms(await getToken(), phone, message);
-    }
-
-    if (!response.ok) {
-      return {
-        delivered: false,
-        reason: "failed",
-        detail: `Eskiz responded with status ${response.status}`,
-      };
+      await postSms(await getToken(), phone, message);
     }
 
     return { delivered: true };
   } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return {
+        delivered: false,
+        reason: "failed",
+        detail: `Eskiz responded with status ${error.response.status}`,
+      };
+    }
+
     return {
       delivered: false,
       reason: "failed",

@@ -2,20 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
 import { LogOut } from "lucide-react";
-import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 
-export function LogoutButton({ lang, label }: { lang: Locale; label: string }) {
+export function LogoutButton({ label, signedOutLabel }: { label: string; signedOutLabel: string }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleLogout() {
     setSubmitting(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await axios.post("/api/auth/logout");
+    } catch {
+      // Swallowed on purpose: the cookie either cleared or it did not, and
+      // either way the visitor is leaving this screen.
     } finally {
-      router.push(`/${lang}/account/login`);
+      toast.success(signedOutLabel);
+      router.push("/account/login");
       router.refresh();
     }
   }
