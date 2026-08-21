@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios, { type Method } from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { CheckboxField } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
@@ -25,23 +28,13 @@ const ROLE_LABEL: Record<StaffView["role"], string> = {
   SELLER: "Sotuvchi",
 };
 
-async function send(url: string, method: string, body: unknown): Promise<string | null> {
+/** Resolves to the message to print, or to null when the write went through. */
+async function send(url: string, method: Method, body: unknown): Promise<string | null> {
   try {
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = (await response.json()) as {
-      success: boolean;
-      errors?: Record<string, string[] | undefined>;
-    };
-    if (data.success) {
-      return null;
-    }
-    return data.errors?._root?.[0] ?? "Saqlanmadi. Maydonlarni tekshiring.";
-  } catch {
-    return "Ulanmadi. Qayta urinib ko'ring.";
+    await axios.request({ url, method, data: body });
+    return null;
+  } catch (error) {
+    return requestErrorMessage(error, "Saqlanmadi. Maydonlarni tekshiring.");
   }
 }
 
@@ -67,16 +60,18 @@ function EditRow({ user, onDone }: { user: StaffView; onDone: () => void }) {
 
     if (message) {
       setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Xodim ma'lumotlari saqlandi");
     onDone();
     router.refresh();
   }
 
   return (
     <tr className="border-b border-border bg-surface-muted">
-      <td colSpan={6} className="px-3 py-5">
-        <div className="grid max-w-3xl gap-5 sm:grid-cols-2">
+      <td colSpan={6} className="px-3 py-4">
+        <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
           <FormField label="Ismi">
             <Input
               value={form.name}
@@ -119,7 +114,7 @@ function EditRow({ user, onDone }: { user: StaffView; onDone: () => void }) {
           hint="Belgi olib tashlansa hisob darhol kira olmaydi — ochiq sessiya ham to'xtaydi."
           checked={form.isActive}
           onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-          fieldClassName="mt-5"
+          fieldClassName="mt-4"
         />
 
         <div aria-live="polite" className="min-h-5">
@@ -171,19 +166,22 @@ function CreateForm({ onDone }: { onDone: () => void }) {
 
     if (message) {
       setError(message);
+      toast.error(message);
       return;
     }
+    toast.success("Xodim qo'shildi");
     onDone();
     router.refresh();
   }
 
   return (
-    <form onSubmit={create} className="mt-6 max-w-3xl rounded-lg border border-border p-6" noValidate>
-      <h2 className="type-eyebrow text-muted">
-        Yangi xodim
-      </h2>
+    /* `panel` rather than a hand-copied border+radius+padding: the container
+       recipe lives in one place, so a card here and a card on the dashboard
+       cannot end up 20px and 24px deep. */
+    <form onSubmit={create} className="panel mt-4 max-w-3xl" noValidate>
+      <h2 className="type-title text-foreground">Yangi xodim</h2>
 
-      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <FormField label="Ismi">
           <Input
             value={form.name}
@@ -281,7 +279,7 @@ export function StaffManager({ users }: { users: StaffView[] }) {
 
       {creating ? <CreateForm onDone={() => setCreating(false)} /> : null}
 
-      <div className="mt-8 overflow-x-auto">
+      <div className="panel mt-4 overflow-x-auto">
         <table className="w-full min-w-3xl text-left text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -301,27 +299,27 @@ export function StaffManager({ users }: { users: StaffView[] }) {
                 <EditRow key={user.id} user={user} onDone={() => setEditing(null)} />
               ) : (
                 <tr key={user.id} className="border-b border-border last:border-0">
-                  <td className="py-2.5 pr-3">
+                  <td className="py-3 pr-3">
                     <span className="text-foreground">{user.name}</span>
                     <span className="ml-2 font-mono text-xs text-muted">{user.email}</span>
                   </td>
-                  <td className="py-2.5 pr-3 text-muted">{ROLE_LABEL[user.role]}</td>
-                  <td className="py-2.5 text-right font-mono tabular-nums text-foreground">
+                  <td className="py-3 pr-3 text-muted">{ROLE_LABEL[user.role]}</td>
+                  <td className="py-3 text-right font-mono tabular-nums text-foreground">
                     {user.discountLimit}%
                   </td>
-                  <td className="py-2.5 pl-3 text-right font-mono tabular-nums text-muted">
+                  <td className="py-3 pl-3 text-right font-mono tabular-nums text-muted">
                     {user.completedOrders}
                   </td>
-                  <td className="py-2.5 pl-3 text-right">
+                  <td className="py-3 pl-3 text-right">
                     {user.isActive ? (
                       <span className="text-xs text-muted">faol</span>
                     ) : (
-                      <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted">
+                      <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">
                         o&apos;chirilgan
                       </span>
                     )}
                   </td>
-                  <td className="py-2.5 pl-3 text-right">
+                  <td className="py-3 pl-3 text-right">
                     <button
                       type="button"
                       onClick={() => setEditing(user.id)}

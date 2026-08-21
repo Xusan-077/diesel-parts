@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Scale, X } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
@@ -77,7 +78,10 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
         </p>
         <button
           type="button"
-          onClick={compare.clear}
+          onClick={() => {
+            compare.clear();
+            toast.success(dict.toastCleared);
+          }}
           className="text-sm text-muted transition-colors hover:text-accent-strong"
         >
           {dict.clear}
@@ -104,7 +108,10 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => compare.remove(product.id)}
+                      onClick={() => {
+                        compare.remove(product.id);
+                        toast.success(dict.toastRemoved);
+                      }}
                       aria-label={dict.remove}
                       title={dict.remove}
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:text-accent-strong"

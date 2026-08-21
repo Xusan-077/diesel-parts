@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import axios from "axios";
+import { toast } from "sonner";
+import { OFFLINE_MESSAGE, refusalPayload } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { CheckboxField } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
@@ -27,6 +30,27 @@ function linesToList(value: string): string[] {
 
 function listToLines(values: readonly string[]): string {
   return values.join("\n");
+}
+
+/**
+ * Unlike the rest of the panel this prints a field-level complaint when there is
+ * no `_root` one, because a rejected product is usually one bad field out of
+ * twenty and "check the fields" would leave the director hunting for it.
+ */
+function saveErrorMessage(error: unknown): string {
+  const data = refusalPayload<{ errors?: Record<string, string[] | undefined> }>(error);
+
+  if (!data) {
+    return OFFLINE_MESSAGE;
+  }
+
+  const first = data.errors?._root?.[0] ?? Object.entries(data.errors ?? {})[0];
+
+  return typeof first === "string"
+    ? first
+    : Array.isArray(first)
+      ? first[0] + ": " + (first[1] as unknown as string[])?.[0]
+      : "Saqlanmadi. Maydonlarni tekshiring.";
 }
 
 const EMPTY: ProductWriteInput = {
@@ -89,48 +113,28 @@ export function ProductForm({
     };
 
     try {
-      const response = await fetch(
-        productId ? "/api/v1/products/" + productId : "/api/v1/products",
-        {
-          method: productId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
+      await (productId
+        ? axios.patch("/api/v1/products/" + productId, payload)
+        : axios.post("/api/v1/products", payload));
 
-      const data = (await response.json()) as {
-        success: boolean;
-        errors?: Record<string, string[] | undefined>;
-      };
-
-      if (!data.success) {
-        const first = data.errors?._root?.[0] ?? Object.entries(data.errors ?? {})[0];
-        setError(
-          typeof first === "string"
-            ? first
-            : Array.isArray(first)
-              ? first[0] + ": " + (first[1] as unknown as string[])?.[0]
-              : "Saqlanmadi. Maydonlarni tekshiring.",
-        );
-        setSaving(false);
-        return;
-      }
-
+      toast.success(productId ? "O'zgarishlar saqlandi" : "Mahsulot qo'shildi");
       router.push("/admin/director/products");
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = saveErrorMessage(error);
+      setError(message);
+      toast.error(message);
       setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={save} className="mt-8 max-w-3xl space-y-10" noValidate>
-      <section className="space-y-5">
+    <form onSubmit={save} className="mt-8 max-w-3xl space-y-8" noValidate>
+      <section className="space-y-4">
         <h2 className="type-eyebrow text-muted">
           Identifikatsiya
         </h2>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="SKU">
             <Input
               value={form.sku}
@@ -151,7 +155,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="space-y-5">
+      <section className="space-y-4">
         <h2 className="type-eyebrow text-muted">
           Nomi
         </h2>
@@ -166,7 +170,7 @@ export function ProductForm({
         ))}
       </section>
 
-      <section className="space-y-5">
+      <section className="space-y-4">
         <h2 className="type-eyebrow text-muted">
           Tavsif
         </h2>
@@ -184,11 +188,11 @@ export function ProductForm({
         ))}
       </section>
 
-      <section className="space-y-5">
+      <section className="space-y-4">
         <h2 className="type-eyebrow text-muted">
           Narx va zaxira
         </h2>
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           {/* No placeholder: the hint below already says what an empty box
               means, and saying it twice in two type sizes is not clearer. */}
           <FormField label="Narx (so'm)" hint={`Bo'sh qoldirilsa — "so'rov bo'yicha"`}>
@@ -218,11 +222,11 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="space-y-5">
+      <section className="space-y-4">
         <h2 className="type-eyebrow text-muted">
           Tasnif
         </h2>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Kategoriya">
             <Select
               value={form.categoryId}

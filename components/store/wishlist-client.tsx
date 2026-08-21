@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Heart, MessageCircle, Trash2 } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
@@ -48,7 +49,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
         </p>
         <button
           type="button"
-          onClick={wishlist.clear}
+          onClick={() => {
+            wishlist.clear();
+            toast.success(dict.toastCleared);
+          }}
           className="text-sm text-muted transition-colors hover:text-accent-strong"
         >
           {dict.clear}
@@ -98,7 +102,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => cart.add(product.id)}
+                  onClick={() => {
+                    cart.add(product.id);
+                    toast.success(dict.toastCartAdded);
+                  }}
                   className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
                 >
                   {dict.addToCart}
@@ -106,7 +113,10 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
               )}
               <button
                 type="button"
-                onClick={() => wishlist.remove(product.id)}
+                onClick={() => {
+                  wishlist.remove(product.id);
+                  toast.success(dict.toastRemoved);
+                }}
                 aria-label={dict.remove}
                 title={dict.remove}
                 className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/60 hover:text-accent-strong"

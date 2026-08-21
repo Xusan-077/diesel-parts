@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -15,7 +17,14 @@ export function RetireProductButton({ productId }: { productId: string }) {
 
   async function retire() {
     setBusy(true);
-    await fetch("/api/v1/products/" + productId, { method: "DELETE" });
+    try {
+      await axios.delete("/api/v1/products/" + productId);
+      toast.success("Mahsulot arxivga olindi");
+    } catch {
+      // The list this navigates to is still the honest answer to whether it
+      // retired; the toast only says the request itself did not land.
+      toast.error("Arxivga olinmadi. Ro'yxatni tekshiring.");
+    }
     router.push("/admin/director/products");
     router.refresh();
   }

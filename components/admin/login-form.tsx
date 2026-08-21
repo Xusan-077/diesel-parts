@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { staffLoginSchema, type StaffLoginInput } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 interface LoginResponse {
   success: boolean;
@@ -16,14 +19,15 @@ interface LoginResponse {
 }
 
 /**
- * Each field sits behind a rule that turns brand orange while the field has
- * focus — the one piece of colour on the screen, marking where you are. It uses
- * `--accent-strong` rather than the fill orange: at 2.56:1 the fill would sit
- * under the 3:1 floor a state indicator has to clear. The compliant focus ring
- * from globals.css is still what marks focus; this only reinforces it.
+ * The panel's front door.
+ *
+ * The fields are plain `FormField`s. This screen used to carry its own copy of
+ * the rail as a local `FIELD` constant, written before the shared field layer
+ * existed; the copy had already fallen behind it — it never went red on a
+ * rejected value, and its error line was a bare `<p>` with no `role="alert"`,
+ * so a screen reader was told nothing when a login failed. Nothing here is
+ * login-specific, so nothing here is styled locally.
  */
-const FIELD = "border-l-2 border-border pl-4 transition-colors focus-within:border-accent-strong";
-
 export function LoginForm({ next }: { next: string | null }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -39,72 +43,52 @@ export function LoginForm({ next }: { next: string | null }) {
 
     let data: LoginResponse;
     try {
-      const response = await fetch("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      data = (await response.json()) as LoginResponse;
-    } catch {
-      setFormError("Ulanmadi. Internetni tekshirib, qayta urinib ko'ring.");
+      const response = await axios.post<LoginResponse>("/api/v1/auth/login", values);
+      data = response.data;
+    } catch (error) {
+      const message = requestErrorMessage(
+        error,
+        "Kirish amalga oshmadi.",
+        "Ulanmadi. Internetni tekshirib, qayta urinib ko'ring.",
+      );
+      setFormError(message);
+      toast.error(message);
       return;
     }
 
-    if (!data.success) {
-      setFormError(data.errors?._root?.[0] ?? "Kirish amalga oshmadi.");
-      return;
-    }
-
+    toast.success("Panelga kirdingiz");
     router.replace(next ?? data.redirectTo ?? "/admin");
     // The panel reads the user on the server, so the cached tree has to go.
     router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-6" noValidate>
-      <div className={FIELD}>
-        <Label htmlFor="email">Email</Label>
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6" noValidate>
+      <FormField
+        label="Email"
+        error={errors.email ? "To'g'ri email kiriting." : null}
+      >
         <Input
-          id="email"
           type="email"
           autoComplete="username"
           autoFocus
-          aria-invalid={errors.email ? true : undefined}
-          aria-describedby={errors.email ? "email-error" : undefined}
-          className="mt-1.5 border-0 px-0 focus:border-0"
           placeholder="direktor@dieselparts.uz"
           {...register("email")}
         />
-        {errors.email ? (
-          <p id="email-error" className="mt-1.5 text-xs text-danger">
-            To&apos;g&apos;ri email kiriting.
-          </p>
-        ) : null}
-      </div>
+      </FormField>
 
-      <div className={FIELD}>
-        <Label htmlFor="password">Parol</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          aria-invalid={errors.password ? true : undefined}
-          aria-describedby={errors.password ? "password-error" : undefined}
-          className="mt-1.5 border-0 px-0 focus:border-0"
-          {...register("password")}
-        />
-        {errors.password ? (
-          <p id="password-error" className="mt-1.5 text-xs text-danger">
-            Parolni kiriting.
-          </p>
-        ) : null}
-      </div>
+      <FormField
+        label="Parol"
+        error={errors.password ? "Parolni kiriting." : null}
+      >
+        <Input type="password" autoComplete="current-password" {...register("password")} />
+      </FormField>
 
       {/* Reserved region rather than a conditional block, so the button does
           not jump down the screen the moment a sign-in fails. */}
       <div aria-live="polite" className="min-h-5">
         {formError ? (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="type-body font-medium text-danger">
             {formError}
           </p>
         ) : null}

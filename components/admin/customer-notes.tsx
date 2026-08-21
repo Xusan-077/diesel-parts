@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -44,26 +47,17 @@ export function CustomerNotes({ customerId, notes, editable }: CustomerNotesProp
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/customers/${customerId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: value.trim() || null }),
+      await axios.patch(`/api/v1/customers/${customerId}`, {
+        notes: value.trim() || null,
       });
 
-      const data = (await response.json()) as {
-        success: boolean;
-        errors?: Record<string, string[] | undefined>;
-      };
-
-      if (!data.success) {
-        setError(data.errors?._root?.[0] ?? "Saqlanmadi.");
-        return;
-      }
-
       setDraft(null);
+      toast.success("Izoh saqlandi");
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = requestErrorMessage(error, "Saqlanmadi.");
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }

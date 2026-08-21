@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { MOTION } from "@/components/providers/motion-provider";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { toast } from "sonner";
 import { X } from "lucide-react";
 import { inquirySchema, type InquiryInput } from "@/lib/schemas";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -54,19 +56,13 @@ export function InquiryDialog({
   async function onSubmit(values: InquiryInput) {
     setStatus("submitting");
     try {
-      const response = await fetch("/api/inquiry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        setStatus("error");
-        return;
-      }
+      await axios.post("/api/inquiry", values);
       setStatus("success");
       reset({ productId, productSlug, name: "", email: "", phone: "", message: "" });
+      toast.success(dict.successTitle, { description: dict.successText });
     } catch {
       setStatus("error");
+      toast.error(dict.errorGeneric);
     }
   }
 

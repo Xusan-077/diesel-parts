@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Check, Heart, MessageCircle, Scale, ShoppingCart, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart, useCompare, useWishlist } from "@/hooks/use-store";
@@ -82,7 +83,12 @@ export function ProductActions({
         label={inWishlist ? dict.removeFromWishlist : dict.addToWishlist}
         icon={Heart}
         active={inWishlist}
-        onClick={() => wishlist.toggle(productId)}
+        onClick={() => {
+          wishlist.toggle(productId);
+          toast.success(
+            inWishlist ? dict.toastWishlistRemoved : dict.toastWishlistAdded
+          );
+        }}
       />
       <IconButton
         label={
@@ -95,7 +101,10 @@ export function ProductActions({
         icon={Scale}
         active={inCompare}
         disabled={compareBlocked}
-        onClick={() => compare.toggle(productId)}
+        onClick={() => {
+          compare.toggle(productId);
+          toast.success(inCompare ? dict.toastCompareRemoved : dict.toastCompareAdded);
+        }}
       />
 
       {price === null ? (
@@ -118,7 +127,10 @@ export function ProductActions({
           icon={inCart ? Check : ShoppingCart}
           active={inCart}
           count={cartQuantity}
-          onClick={() => cart.add(productId)}
+          onClick={() => {
+            cart.add(productId);
+            toast.success(dict.toastCartAdded);
+          }}
         />
       )}
     </div>

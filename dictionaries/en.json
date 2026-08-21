@@ -22,7 +22,10 @@
     "carouselPrev": "Previous products",
     "carouselNext": "Next products",
     "carouselPause": "Stop automatic scrolling",
-    "carouselPlay": "Start automatic scrolling"
+    "carouselPlay": "Start automatic scrolling",
+    "productsUnavailable": "Products could not be loaded right now, please try again later.",
+    "dataUnavailable": "This section could not be loaded right now, please try again later.",
+    "pageUnavailable": "This page is temporarily unavailable"
   },
   "nav": {
     "products": "Products",
@@ -244,7 +247,12 @@
     "compareFull": "The compare list is full",
     "addToCart": "Add to cart",
     "inCart": "In cart",
-    "contact": "Contact us"
+    "contact": "Contact us",
+    "toastCartAdded": "Added to cart",
+    "toastWishlistAdded": "Added to favourites",
+    "toastWishlistRemoved": "Removed from favourites",
+    "toastCompareAdded": "Added to compare",
+    "toastCompareRemoved": "Removed from compare"
   },
   "wishlist": {
     "title": "Favorites",
@@ -256,7 +264,10 @@
     "priceOnRequest": "On request",
     "remove": "Remove",
     "clear": "Clear the list",
-    "count": "{count} products"
+    "count": "{count} products",
+    "toastCartAdded": "Added to cart",
+    "toastRemoved": "Removed from favourites",
+    "toastCleared": "Favourites cleared"
   },
   "cart": {
     "title": "Cart",
@@ -275,7 +286,9 @@
     "unpricedNote": "{count} line items are priced on request.",
     "priceOnRequest": "On request",
     "priceNote": "Pricing depends on order volume and delivery terms. Send a request and our manager will confirm the exact amount.",
-    "checkout": "Place an order"
+    "checkout": "Place an order",
+    "toastRemoved": "Removed from cart",
+    "toastCleared": "Cart cleared"
   },
   "compare": {
     "title": "Compare",
@@ -292,7 +305,9 @@
     "rowPrice": "Price",
     "priceOnRequest": "On request",
     "rowStock": "Availability",
-    "rowModels": "Compatible models"
+    "rowModels": "Compatible models",
+    "toastRemoved": "Removed from compare",
+    "toastCleared": "Compare list cleared"
   },
   "account": {
     "loginTitle": "Sign in",
@@ -333,7 +348,9 @@
     "ordersTitle": "Order history",
     "ordersEmpty": "You have no orders yet.",
     "ordersEmptyCta": "Browse the catalog",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "toastSignedIn": "You are signed in",
+    "toastSignedOut": "You are signed out"
   },
   "brandsIndex": {
     "title": "Brands",

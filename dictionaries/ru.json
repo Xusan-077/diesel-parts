@@ -22,7 +22,10 @@
     "carouselPrev": "Предыдущие товары",
     "carouselNext": "Следующие товары",
     "carouselPause": "Остановить автопрокрутку",
-    "carouselPlay": "Включить автопрокрутку"
+    "carouselPlay": "Включить автопрокрутку",
+    "productsUnavailable": "Не удалось загрузить товары, попробуйте позже.",
+    "dataUnavailable": "Не удалось загрузить данные, попробуйте позже.",
+    "pageUnavailable": "Страница сейчас недоступна"
   },
   "nav": {
     "products": "Продукция",
@@ -244,7 +247,12 @@
     "compareFull": "Список сравнения заполнен",
     "addToCart": "Добавить в корзину",
     "inCart": "В корзине",
-    "contact": "Связаться"
+    "contact": "Связаться",
+    "toastCartAdded": "Добавлено в корзину",
+    "toastWishlistAdded": "Добавлено в избранное",
+    "toastWishlistRemoved": "Убрано из избранного",
+    "toastCompareAdded": "Добавлено к сравнению",
+    "toastCompareRemoved": "Убрано из сравнения"
   },
   "wishlist": {
     "title": "Избранное",
@@ -256,7 +264,10 @@
     "priceOnRequest": "По запросу",
     "remove": "Удалить",
     "clear": "Очистить список",
-    "count": "Товаров: {count}"
+    "count": "Товаров: {count}",
+    "toastCartAdded": "Добавлено в корзину",
+    "toastRemoved": "Убрано из избранного",
+    "toastCleared": "Избранное очищено"
   },
   "cart": {
     "title": "Корзина",
@@ -275,7 +286,9 @@
     "unpricedNote": "Цена {count} позиций уточняется по запросу.",
     "priceOnRequest": "По запросу",
     "priceNote": "Цена рассчитывается исходя из объёма заказа и условий доставки. Оставьте запрос — менеджер сообщит точную сумму.",
-    "checkout": "Оформить заказ"
+    "checkout": "Оформить заказ",
+    "toastRemoved": "Убрано из корзины",
+    "toastCleared": "Корзина очищена"
   },
   "compare": {
     "title": "Сравнение",
@@ -292,7 +305,9 @@
     "rowPrice": "Цена",
     "priceOnRequest": "По запросу",
     "rowStock": "Наличие",
-    "rowModels": "Совместимые модели"
+    "rowModels": "Совместимые модели",
+    "toastRemoved": "Убрано из сравнения",
+    "toastCleared": "Список сравнения очищен"
   },
   "account": {
     "loginTitle": "Вход",
@@ -333,7 +348,9 @@
     "ordersTitle": "История заказов",
     "ordersEmpty": "У вас пока нет заказов.",
     "ordersEmptyCta": "Перейти в каталог",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "toastSignedIn": "Вы вошли в систему",
+    "toastSignedOut": "Вы вышли из системы"
   },
   "brandsIndex": {
     "title": "Бренды",

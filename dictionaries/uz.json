@@ -22,7 +22,10 @@
     "carouselPrev": "Oldingi mahsulotlar",
     "carouselNext": "Keyingi mahsulotlar",
     "carouselPause": "Avtomatik aylanishni to'xtatish",
-    "carouselPlay": "Avtomatik aylanishni yoqish"
+    "carouselPlay": "Avtomatik aylanishni yoqish",
+    "productsUnavailable": "Hozircha mahsulotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
+    "dataUnavailable": "Hozircha ma'lumotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
+    "pageUnavailable": "Sahifani hozircha ko'rsatib bo'lmadi"
   },
   "nav": {
     "products": "Mahsulotlar",
@@ -244,7 +247,12 @@
     "compareFull": "Taqqoslash ro'yxati to'lgan",
     "addToCart": "Savatga qo'shish",
     "inCart": "Savatda",
-    "contact": "Aloqa"
+    "contact": "Aloqa",
+    "toastCartAdded": "Savatga qo'shildi",
+    "toastWishlistAdded": "Saralanganlarga qo'shildi",
+    "toastWishlistRemoved": "Saralanganlardan olib tashlandi",
+    "toastCompareAdded": "Taqqoslashga qo'shildi",
+    "toastCompareRemoved": "Taqqoslashdan olib tashlandi"
   },
   "wishlist": {
     "title": "Saralanganlar",
@@ -256,7 +264,10 @@
     "priceOnRequest": "So'rov bo'yicha",
     "remove": "O'chirish",
     "clear": "Ro'yxatni tozalash",
-    "count": "{count} ta mahsulot"
+    "count": "{count} ta mahsulot",
+    "toastCartAdded": "Savatga qo'shildi",
+    "toastRemoved": "Saralanganlardan olib tashlandi",
+    "toastCleared": "Saralanganlar ro'yxati tozalandi"
   },
   "cart": {
     "title": "Savat",
@@ -275,7 +286,9 @@
     "unpricedNote": "{count} ta pozitsiya narxi so'rov bo'yicha aniqlanadi.",
     "priceOnRequest": "So'rov bo'yicha",
     "priceNote": "Narx buyurtma hajmi va yetkazib berish shartlariga qarab hisoblanadi. So'rov qoldiring — menejerimiz aniq narxni aytadi.",
-    "checkout": "Buyurtma berish"
+    "checkout": "Buyurtma berish",
+    "toastRemoved": "Savatdan olib tashlandi",
+    "toastCleared": "Savat tozalandi"
   },
   "compare": {
     "title": "Taqqoslash",
@@ -292,7 +305,9 @@
     "rowPrice": "Narx",
     "priceOnRequest": "So'rov bo'yicha",
     "rowStock": "Mavjudlik",
-    "rowModels": "Mos keladigan modellar"
+    "rowModels": "Mos keladigan modellar",
+    "toastRemoved": "Taqqoslashdan olib tashlandi",
+    "toastCleared": "Taqqoslash ro'yxati tozalandi"
   },
   "account": {
     "loginTitle": "Kirish",
@@ -333,7 +348,9 @@
     "ordersTitle": "Buyurtmalar tarixi",
     "ordersEmpty": "Hozircha buyurtmalaringiz yo'q.",
     "ordersEmptyCta": "Katalogga o'tish",
-    "logout": "Chiqish"
+    "logout": "Chiqish",
+    "toastSignedIn": "Tizimga kirdingiz",
+    "toastSignedOut": "Tizimdan chiqdingiz"
   },
   "brandsIndex": {
     "title": "Brendlar",

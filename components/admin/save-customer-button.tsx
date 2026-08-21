@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 
 export interface SavedCustomer {
@@ -64,34 +67,28 @@ export function SaveCustomerButton({
     setError(null);
 
     try {
-      const response = await fetch("/api/v1/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: customerName,
-          phone,
-          email,
-          // The first thing the customer said is the most useful opening note,
-          // and it is about to stop being visible from the customer screen.
-          notes: `So'rovdan: ${message}`.slice(0, 2000),
-        }),
+      const { data } = await axios.post<{ id?: string }>("/api/v1/customers", {
+        name: customerName,
+        phone,
+        email,
+        // The first thing the customer said is the most useful opening note,
+        // and it is about to stop being visible from the customer screen.
+        notes: `So'rovdan: ${message}`.slice(0, 2000),
       });
 
-      const data = (await response.json()) as {
-        success: boolean;
-        id?: string;
-        errors?: Record<string, string[] | undefined>;
-      };
-
-      if (!data.success || data.id === undefined) {
-        setError(data.errors?._root?.[0] ?? "Saqlanmadi.");
+      if (data.id === undefined) {
+        setError("Saqlanmadi.");
+        toast.error("Saqlanmadi.");
         return;
       }
 
       setCreated({ id: data.id, name: customerName });
+      toast.success("Mijozlarga qo'shildi");
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = requestErrorMessage(error, "Saqlanmadi.");
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }

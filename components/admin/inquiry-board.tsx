@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { isRefusal, requestErrorMessage } from "@/lib/api/request-error";
 import { INQUIRY_COLUMNS, type InquiryColumn } from "@/lib/api/inquiry-board";
 import { cn } from "@/lib/utils";
 import {
@@ -31,13 +34,6 @@ import { InquiryCard } from "./inquiry-card";
  * loop open.
  */
 const POLL_MS = 90_000;
-
-const OFFLINE_MESSAGE = "Ulanmadi. Qayta urinib ko'ring.";
-
-interface ApiResponse {
-  success: boolean;
-  errors?: { _root?: string[] };
-}
 
 export interface InquiryBoardProps {
   cards: BoardCard[];
@@ -108,7 +104,7 @@ export function InquiryBoard({
    * still refreshes: the board's picture of that card is now known to be stale.
    */
   const send = useCallback(
-    async (id: string, patch: CardPatch, request: () => Promise<Response>) => {
+    async (id: string, patch: CardPatch, request: () => Promise<unknown>) => {
       setOverlay((current) => patchCard(current, id, patch));
       setBusyIds((current) => [...current, id]);
       setErrors((current) => {
@@ -121,21 +117,19 @@ export function InquiryBoard({
       });
 
       try {
-        const response = await request();
-        const data = (await response.json()) as ApiResponse;
-
-        if (!data.success) {
-          setOverlay((current) => dropPatch(current, id));
-          setErrors((current) => ({
-            ...current,
-            [id]: data.errors?._root?.[0] ?? "Saqlanmadi.",
-          }));
-        }
-
+        await request();
         refresh();
-      } catch {
+      } catch (error) {
+        const message = requestErrorMessage(error, "Saqlanmadi.");
         setOverlay((current) => dropPatch(current, id));
-        setErrors((current) => ({ ...current, [id]: OFFLINE_MESSAGE }));
+        setErrors((current) => ({ ...current, [id]: message }));
+        // The card snaps back on its own, which is easy to miss on a long
+        // board; the toast is what makes the reversal noticed.
+        toast.error(message);
+
+        if (isRefusal(error)) {
+          refresh();
+        }
       } finally {
         setBusyIds((current) => current.filter((busy) => busy !== id));
       }
@@ -145,30 +139,31 @@ export function InquiryBoard({
 
   const patchInquiry = useCallback(
     (id: string, body: Record<string, unknown>, patch: CardPatch) =>
-      send(id, patch, () =>
-        fetch(`/api/v1/inquiries/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }),
-      ),
+      send(id, patch, () => axios.patch(`/api/v1/inquiries/${id}`, body)),
     [send],
   );
 
   const onClaim = useCallback(
     (id: string) => {
-      void send(id, { column: "claimed", assignedSellerName: sellerName }, () =>
-        fetch(`/api/v1/inquiries/${id}/claim`, { method: "POST" }),
-      );
+      void send(id, { column: "claimed", assignedSellerName: sellerName }, async () => {
+        await axios.post(`/api/v1/inquiries/${id}/claim`);
+        toast.success("So'rov sizga biriktirildi");
+      });
     },
     [send, sellerName],
   );
 
   const onMove = useCallback(
     (id: string, move: BoardMove) => {
-      void patchInquiry(id, { status: move.status }, { column: move.column });
+      // Goes through `send` rather than `patchInquiry` so the toast fires on
+      // the write itself: `send` swallows failures to roll the card back, so a
+      // `.then` on it would confirm a move that never happened.
+      void send(id, { column: move.column }, async () => {
+        await axios.patch(`/api/v1/inquiries/${id}`, { status: move.status });
+        toast.success(`Ko'chirildi: ${COLUMN_LABELS[move.column]}`);
+      });
     },
-    [patchInquiry],
+    [send],
   );
 
   const onSaveNotes = useCallback(
@@ -222,14 +217,14 @@ export function InquiryBoard({
               aria-pressed={selected}
               onClick={() => setActiveColumn(column)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                "shrink-0 rounded-full border px-3 py-2 text-xs transition-colors",
                 selected
                   ? "border-foreground bg-surface-hover font-medium text-foreground"
                   : "border-border text-muted hover:text-foreground",
               )}
             >
               {COLUMN_LABELS[column]}
-              <span className="ml-1.5 font-mono tabular-nums">{count}</span>
+              <span className="ml-2 font-mono tabular-nums">{count}</span>
             </button>
           );
         })}

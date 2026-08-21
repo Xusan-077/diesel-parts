@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { refusalPayload } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 
 interface ImportReport {
@@ -9,6 +12,48 @@ interface ImportReport {
   created: number;
   updated: number;
   errors: { line: number; message: string }[];
+}
+
+/**
+ * The route answers in two shapes: per-line failures as an array, and a refusal
+ * the whole file never got past (too large, not a CSV, not a director) as the
+ * panel's usual `_root` message. Both arrive here, since a partial write is
+ * reported with a 200 while a rejected file is a 4xx.
+ */
+type ImportBody = Partial<Omit<ImportReport, "errors">> & {
+  errors?: { _root?: string[] } | ImportReport["errors"];
+};
+
+function toReport(data: ImportBody): ImportReport {
+  const errors = data.errors;
+
+  return {
+    success: data.success ?? false,
+    created: data.created ?? 0,
+    updated: data.updated ?? 0,
+    errors: Array.isArray(errors)
+      ? errors
+      : [{ line: 0, message: errors?._root?.[0] ?? "Xatolik" }],
+  };
+}
+
+/**
+ * The headline of an import report. The full per-line breakdown stays on the
+ * page — a toast is the wrong place for forty rejected rows.
+ */
+function announce(report: ImportReport): void {
+  if (report.success) {
+    toast.success(
+      `${report.created} ta qo'shildi, ${report.updated} ta yangilandi`,
+      report.errors.length > 0
+        ? { description: `${report.errors.length} ta qatorda xato bor` }
+        : undefined,
+    );
+    return;
+  }
+  toast.error("Import to'xtatildi — hech narsa o'zgartirilmadi", {
+    description: report.errors[0]?.message,
+  });
 }
 
 /**
@@ -31,25 +76,23 @@ export function CatalogTransfer() {
     body.append("file", file);
 
     try {
-      const response = await fetch("/api/v1/products/import", { method: "POST", body });
-      const data = (await response.json()) as ImportReport & {
-        errors?: { _root?: string[] } | ImportReport["errors"];
-      };
+      const { data } = await axios.post<ImportBody>("/api/v1/products/import", body);
 
-      setReport({
-        success: data.success ?? false,
-        created: data.created ?? 0,
-        updated: data.updated ?? 0,
-        errors: Array.isArray(data.errors)
-          ? data.errors
-          : [{ line: 0, message: (data.errors as { _root?: string[] })?._root?.[0] ?? "Xatolik" }],
-      });
+      const next = toReport(data);
+      setReport(next);
+      announce(next);
 
       if (data.success) {
         router.refresh();
       }
-    } catch {
-      setReport({ success: false, created: 0, updated: 0, errors: [{ line: 0, message: "Ulanmadi." }] });
+    } catch (error) {
+      const payload = refusalPayload<ImportBody>(error);
+
+      const next = payload
+        ? toReport(payload)
+        : { success: false, created: 0, updated: 0, errors: [{ line: 0, message: "Ulanmadi." }] };
+      setReport(next);
+      announce(next);
     } finally {
       setBusy(false);
       if (fileInput.current) {

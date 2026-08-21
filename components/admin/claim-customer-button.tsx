@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { isRefusal, requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -22,21 +25,20 @@ export function ClaimCustomerButton({ customerId }: { customerId: string }) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/customers/${customerId}/claim`, { method: "POST" });
-      const data = (await response.json()) as {
-        success: boolean;
-        errors?: Record<string, string[] | undefined>;
-      };
-
-      if (!data.success) {
-        setError(data.errors?._root?.[0] ?? "Biriktirilmadi.");
-      }
-
-      // Refreshes either way: a refusal means this page's picture of the
-      // account is now known to be out of date.
+      await axios.post(`/api/v1/customers/${customerId}/claim`);
+      toast.success("Mijoz sizga biriktirildi");
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = requestErrorMessage(error, "Biriktirilmadi.");
+      setError(message);
+      toast.error(message);
+
+      // Refreshes after a refusal too: it means this page's picture of the
+      // account is now known to be out of date. A request that never landed
+      // changed nothing, so it leaves the page alone.
+      if (isRefusal(error)) {
+        router.refresh();
+      }
     } finally {
       setBusy(false);
     }

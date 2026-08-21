@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
@@ -67,7 +68,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <div className="flex justify-end">
           <button
             type="button"
-            onClick={cart.clear}
+            onClick={() => {
+              cart.clear();
+              toast.success(dict.toastCleared);
+            }}
             className="text-sm text-muted transition-colors hover:text-accent-strong"
           >
             {dict.clear}
@@ -138,7 +142,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
 
                 <button
                   type="button"
-                  onClick={() => cart.remove(product.id)}
+                  onClick={() => {
+                    cart.remove(product.id);
+                    toast.success(dict.toastRemoved);
+                  }}
                   aria-label={dict.remove}
                   title={dict.remove}
                   className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/60 hover:text-accent-strong"

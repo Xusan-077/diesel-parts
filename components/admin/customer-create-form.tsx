@@ -2,6 +2,9 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,35 +46,24 @@ export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps)
     setError(null);
 
     try {
-      const response = await fetch("/api/v1/customers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          phone: form.phone.trim(),
-          // Blank optional fields are sent as null, not "": the schema takes a
-          // nullable string, and an empty string would be stored as one.
-          email: form.email.trim() || null,
-          company: form.company.trim() || null,
-          notes: form.notes.trim() || null,
-        }),
+      await axios.post("/api/v1/customers", {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        // Blank optional fields are sent as null, not "": the schema takes a
+        // nullable string, and an empty string would be stored as one.
+        email: form.email.trim() || null,
+        company: form.company.trim() || null,
+        notes: form.notes.trim() || null,
       });
 
-      const data = (await response.json()) as {
-        success: boolean;
-        errors?: Record<string, string[] | undefined>;
-      };
-
-      if (!data.success) {
-        setError(data.errors?._root?.[0] ?? "Saqlanmadi. Maydonlarni tekshiring.");
-        return;
-      }
-
       setForm({ ...EMPTY });
+      toast.success("Mijoz qo'shildi");
       onDone();
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = requestErrorMessage(error, "Saqlanmadi. Maydonlarni tekshiring.");
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -83,14 +75,14 @@ export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps)
         Yangi mijoz
       </h2>
 
-      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className={FIELD}>
           <Label htmlFor={id("name")}>Ismi</Label>
           <Input
             id={id("name")}
             value={form.name}
             onChange={(event) => set("name")(event.target.value)}
-            className="mt-1.5 border-0 px-0 focus:border-0"
+            className="mt-2 border-0 px-0 focus:border-0"
             required
           />
         </div>
@@ -102,7 +94,7 @@ export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps)
             type="tel"
             value={form.phone}
             onChange={(event) => set("phone")(event.target.value)}
-            className="mt-1.5 border-0 px-0 font-mono focus:border-0"
+            className="mt-2 border-0 px-0 font-mono focus:border-0"
             placeholder="+998 90 000 00 00"
             required
           />
@@ -114,7 +106,7 @@ export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps)
             id={id("company")}
             value={form.company}
             onChange={(event) => set("company")(event.target.value)}
-            className="mt-1.5 border-0 px-0 focus:border-0"
+            className="mt-2 border-0 px-0 focus:border-0"
             placeholder="Ixtiyoriy"
           />
         </div>
@@ -127,20 +119,20 @@ export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps)
             autoComplete="off"
             value={form.email}
             onChange={(event) => set("email")(event.target.value)}
-            className="mt-1.5 border-0 px-0 focus:border-0"
+            className="mt-2 border-0 px-0 focus:border-0"
             placeholder="Ixtiyoriy"
           />
         </div>
       </div>
 
-      <div className={`mt-5 ${FIELD}`}>
+      <div className={`mt-4 ${FIELD}`}>
         <Label htmlFor={id("notes")}>Izoh</Label>
         <Textarea
           id={id("notes")}
           rows={3}
           value={form.notes}
           onChange={(event) => set("notes")(event.target.value)}
-          className="mt-1.5 min-h-0 border-0 px-0 text-sm focus:border-0"
+          className="mt-2 min-h-0 border-0 px-0 text-sm focus:border-0"
           placeholder="Qanday mijoz, nima bilan shug'ullanadi"
         />
       </div>

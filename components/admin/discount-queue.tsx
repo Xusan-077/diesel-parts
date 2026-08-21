@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatSum } from "@/lib/analytics/format";
@@ -30,25 +33,17 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
     setError(null);
 
     try {
-      const response = await fetch("/api/v1/discount-requests/" + request.id, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approve, note: note.trim() || null }),
+      await axios.post("/api/v1/discount-requests/" + request.id, {
+        approve,
+        note: note.trim() || null,
       });
-      const data = (await response.json()) as {
-        success: boolean;
-        errors?: { _root?: string[] };
-      };
 
-      if (!data.success) {
-        setError(data.errors?._root?.[0] ?? "Saqlanmadi.");
-        setBusy(null);
-        return;
-      }
-
+      toast.success(approve ? "Chegirma tasdiqlandi" : "Chegirma rad etildi");
       router.refresh();
-    } catch {
-      setError("Ulanmadi. Qayta urinib ko'ring.");
+    } catch (error) {
+      const message = requestErrorMessage(error, "Saqlanmadi.");
+      setError(message);
+      toast.error(message);
       setBusy(null);
     }
   }
@@ -57,7 +52,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
   const discountValue = request.subtotal - request.totalIfApproved;
 
   return (
-    <li className="border-l-2 border-border py-5 pl-5">
+    <li className="border-l-2 border-border py-4 pl-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <p className="text-sm text-foreground">
           {request.sellerName}
@@ -78,7 +73,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
           <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
             {request.requestedPercent}%
           </p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted">
             Limiti {request.sellerLimit}% — {overLimit > 0 ? overLimit + "% ortiq" : "limit ichida"}
           </p>
         </div>
@@ -89,7 +84,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
           <p className="mt-1 font-mono text-sm tabular-nums text-foreground">
             {formatSum(request.subtotal)}
           </p>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted">
             Tasdiqlansa: {formatSum(request.totalIfApproved)}
           </p>
         </div>
@@ -118,7 +113,7 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
           value={note}
           onChange={(event) => setNote(event.target.value)}
           rows={2}
-          className="mt-1.5 min-h-0"
+          className="mt-2 min-h-0"
         />
       </div>
 

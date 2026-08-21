@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { toast } from "sonner";
 import {
   quoteRequestSchema,
   type QuoteCartItemInput,
@@ -104,19 +106,15 @@ export function QuoteForm({
   async function onSubmit(values: QuoteRequestInput) {
     setStatus("submitting");
     try {
-      const response = await fetch("/api/quote-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, cartItems }),
-      });
-      if (!response.ok) {
-        setStatus("error");
-        return;
-      }
+      await axios.post("/api/quote-request", { ...values, cartItems });
       setStatus("success");
       reset();
+      toast.success(dict.successTitle, { description: dict.successText });
     } catch {
       setStatus("error");
+      // The inline alert stays: the toast is a nudge, not the only record of
+      // a failure, and it is gone four seconds later.
+      toast.error(dict.errorGeneric);
     }
   }
 
