@@ -598,6 +598,8 @@
     "empty": "Hali sharh yo'q. Bu detalni ishlatgan bo'lsangiz, birinchi bo'lib yozing.",
     "signInPrompt": "Sharh qoldirish uchun tizimga kiring.",
     "signInCta": "Kirish",
+    "purchasePrompt": "Sharh qoldirish uchun avval shu mahsulotni sotib oling.",
+    "purchaseNote": "Buyurtmangiz yetkazib berilgandan so'ng bu yerda sharh yozish mumkin bo'ladi.",
     "formTitle": "Fikringizni yozing",
     "formTitleEditing": "Sharhingizni tahrirlash",
     "ratingLabel": "Bahoyingiz",

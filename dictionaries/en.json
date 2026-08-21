@@ -598,6 +598,8 @@
     "empty": "No reviews yet. If you have fitted this part, write the first one.",
     "signInPrompt": "Sign in to leave a review.",
     "signInCta": "Sign in",
+    "purchasePrompt": "Buy this part before you review it.",
+    "purchaseNote": "Once your order is delivered, you can write a review here.",
     "formTitle": "Write a review",
     "formTitleEditing": "Edit your review",
     "ratingLabel": "Your rating",

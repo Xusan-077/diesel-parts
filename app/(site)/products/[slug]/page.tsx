@@ -21,7 +21,11 @@ import { ProductStatsRow } from "@/components/product/product-stats-row";
 import { getProductStatsFor } from "@/lib/api/product-stats-repository";
 import { EMPTY_STATS } from "@/lib/product-stats";
 import { ProductReviews } from "@/components/product/product-reviews";
-import { getOwnReview, listProductReviews } from "@/lib/api/review-repository";
+import {
+  getOwnReview,
+  hasPurchasedProduct,
+  listProductReviews,
+} from "@/lib/api/review-repository";
 import { getSession } from "@/lib/auth/session";
 import { REVIEWS_PAGE_SIZE, type PublicReview } from "@/lib/reviews";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
@@ -88,7 +92,7 @@ export default async function ProductDetailPage({
    */
   const session = await getSession();
 
-  const [categories, brands, stats, reviewPage, ownReview] = await Promise.all([
+  const [categories, brands, stats, reviewPage, ownReview, purchased] = await Promise.all([
     safeRead("product page categories", listCategories, [] as Category[]),
     safeRead("product page brands", listBrands, [] as Brand[]),
     // A line under the heading; unreadable figures cost that line, not the page.
@@ -104,6 +108,24 @@ export default async function ProductDetailPage({
       "own review",
       () => (session ? getOwnReview(product.id, session.phone) : Promise.resolve(null)),
       null,
+    ),
+    /*
+     * Whether this reader has a completed order for this part, which is what
+     * decides between the form and an explanation.
+     *
+     * `false` when the read fails, and deliberately so: the fallback for a
+     * gate is the closed position. A visitor briefly told to buy the part they
+     * already own is a worse afternoon than nothing; a form that appears
+     * because the database was down and then refuses the submission is a worse
+     * one still, and `POST /api/reviews` would refuse it.
+     */
+    safeRead(
+      "review eligibility",
+      () =>
+        session
+          ? hasPurchasedProduct(product.id, session.phone)
+          : Promise.resolve(false),
+      false,
     ),
   ]);
   const category = categories.data.find((c) => c.id === product.categoryId);
@@ -224,6 +246,7 @@ export default async function ProductDetailPage({
           productId={product.id}
           initialPage={reviewPage.data}
           initialOwn={ownReview.data}
+          canReview={purchased.data}
           dict={dict.reviews}
           productDict={dict.product}
           account={dict.account}

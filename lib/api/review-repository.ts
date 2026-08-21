@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { extractNationalDigits, isValidPhone, phoneTail } from "@/lib/auth/phone";
 import { buildPage, type Page } from "./product-query";
 import type { PublicReview } from "@/lib/reviews";
 
@@ -178,4 +179,65 @@ export async function setReviewApproval(id: string, isApproved: boolean): Promis
 
 export async function deleteReview(id: string): Promise<void> {
   await prisma.review.delete({ where: { id } });
+}
+
+/* ── Who may write ────────────────────────────────────────────────────────── */
+
+/**
+ * How many order lines a purchase check may scan.
+ *
+ * Same reasoning as the customer book's phone matching: `Customer.phone` is
+ * free text typed by a seller, so the match cannot be made in SQL and has to
+ * finish in JS on canonical digits. The `contains` prefilter below narrows the
+ * scan to the lines whose customer's number ends the same way, which for one
+ * product is a handful of rows.
+ */
+const PURCHASE_SCAN_LIMIT = 500;
+
+/**
+ * Whether this person has actually bought this part.
+ *
+ * A review of a fuel injector is worth reading because someone fitted it and
+ * watched it work. Anyone able to sign in with a phone number could otherwise
+ * score a competitor's part one star without ever touching it, and the whole
+ * log would be worth nothing.
+ *
+ * "Bought" means a *completed* order. Orders here move DRAFT → PENDING →
+ * CONFIRMED → COMPLETED, and only the last means the part reached the customer
+ * — a confirmed order is a promise, and someone who has not yet held the part
+ * has nothing to report about it.
+ *
+ * The join is by phone rather than by a key, because there is no key: a visitor
+ * signs in with a number and the session carries that number, while orders
+ * belong to a `Customer` a seller created by hand. The number is the only thing
+ * the two identities share, which is also why the comparison is on canonical
+ * digits — the seller may have typed "+998 90 123-45-67" for a session that
+ * says "998901234567".
+ */
+export async function hasPurchasedProduct(
+  productId: string,
+  phone: string,
+): Promise<boolean> {
+  if (!isValidPhone(phone)) {
+    return false;
+  }
+
+  const national = extractNationalDigits(phone);
+
+  const rows = await prisma.orderItem.findMany({
+    where: {
+      productId,
+      order: {
+        status: "COMPLETED",
+        customer: { phone: { contains: phoneTail(phone) } },
+      },
+    },
+    take: PURCHASE_SCAN_LIMIT,
+    // Only the number, and only to compare it: nothing here reaches a response.
+    select: { order: { select: { customer: { select: { phone: true } } } } },
+  });
+
+  return rows.some(
+    (row) => extractNationalDigits(row.order.customer.phone) === national,
+  );
 }

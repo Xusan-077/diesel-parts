@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { MessageSquareText } from "lucide-react";
+import { MessageSquareText, ShoppingCart } from "lucide-react";
 import { AuthDialog } from "@/components/account/auth-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -29,6 +29,14 @@ interface ProductReviewsProps {
   initialPage: ReviewPage;
   /** This reader's existing review, read on the server by phone. */
   initialOwn: PublicReview | null;
+  /**
+   * Whether this reader has a completed order for this part.
+   *
+   * Read on the server, because it is a fact about orders the browser has no
+   * way to know. It decides what stands in the form's place here; the rule
+   * itself is kept by `POST /api/reviews`, which checks it again.
+   */
+  canReview: boolean;
   dict: Dictionary["reviews"];
   productDict: Dictionary["product"];
   account: Dictionary["account"];
@@ -39,6 +47,7 @@ export function ProductReviews({
   productId,
   initialPage,
   initialOwn,
+  canReview,
   dict,
   productDict,
   account,
@@ -189,7 +198,24 @@ export function ProductReviews({
       )}
 
       <div className="mt-10 border-t border-border pt-8">
-        {signedIn ? (
+        {signedIn && !canReview && own === null ? (
+          /*
+            Signed in, but this part has not been bought. Saying so — and
+            saying when the form will appear — is the difference between a
+            rule and a dead end.
+
+            `own === null` guards it: someone who reviewed a part and then had
+            the order cancelled still owns their words, and must be able to
+            reach the form that edits them.
+          */
+          <div className="flex items-start gap-3">
+            <Icon icon={ShoppingCart} size="md" className="mt-0.5 shrink-0 text-muted" />
+            <div>
+              <p className="text-sm font-medium text-foreground">{dict.purchasePrompt}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted">{dict.purchaseNote}</p>
+            </div>
+          </div>
+        ) : signedIn ? (
           <ReviewForm own={own} dict={dict} submitting={submitting} onSubmit={submit} />
         ) : (
           /*

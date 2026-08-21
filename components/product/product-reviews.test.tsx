@@ -52,6 +52,8 @@ function page(items: PublicReview[], total = items.length) {
 function renderSection(options: {
   initialPage?: ReturnType<typeof page>;
   initialOwn?: PublicReview | null;
+  /** Defaults to true: most of these are about the form, not the gate. */
+  canReview?: boolean;
 } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -63,6 +65,7 @@ function renderSection(options: {
         productId="p-1"
         initialPage={options.initialPage ?? page([])}
         initialOwn={options.initialOwn ?? null}
+        canReview={options.canReview ?? true}
         dict={dict}
         productDict={dictionary.product}
         account={dictionary.account}
@@ -247,5 +250,47 @@ describe("ProductReviews when the write fails", () => {
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     expect((screen.getByLabelText(dict.bodyLabel) as HTMLTextAreaElement).value).toBe(VALID_BODY);
+  });
+});
+
+/*
+ * Only someone who bought the part may review it. The rule is kept by
+ * `POST /api/reviews`; what these cover is the seam either side of it — that
+ * the form is not offered to someone who cannot use it, and that the one
+ * person who *can* still edit theirs is not locked out by the same rule.
+ */
+describe("who is offered the form", () => {
+  it("offers it to a signed-in buyer", () => {
+    renderSection({ canReview: true });
+
+    expect(screen.getByRole("button", { name: dict.submit })).toBeDefined();
+    expect(screen.queryByText(dict.purchasePrompt)).toBeNull();
+  });
+
+  it("explains itself to someone who has not bought the part", () => {
+    renderSection({ canReview: false });
+
+    expect(screen.queryByRole("button", { name: dict.submit })).toBeNull();
+    expect(screen.getByText(dict.purchasePrompt)).toBeDefined();
+    // And says when the form will be there, so it is a rule and not a wall.
+    expect(screen.getByText(dict.purchaseNote)).toBeDefined();
+  });
+
+  it("still lets an existing review be edited if the order went away", () => {
+    // A cancelled order does not take someone's words away from them.
+    renderSection({ canReview: false, initialOwn: review() });
+
+    expect(screen.getByRole("button", { name: dict.submitEditing })).toBeDefined();
+    expect(screen.queryByText(dict.purchasePrompt)).toBeNull();
+  });
+
+  it("asks a signed-out visitor to sign in before anything else", () => {
+    signOut();
+    renderSection({ canReview: false });
+
+    // The number is what the purchase is matched against, so there is nothing
+    // to say about buying until there is a session.
+    expect(screen.getByText(dict.signInPrompt)).toBeDefined();
+    expect(screen.queryByText(dict.purchasePrompt)).toBeNull();
   });
 });

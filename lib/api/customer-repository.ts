@@ -11,7 +11,7 @@ import {
   unclaimedScope,
   type ScopeActor,
 } from "./seller-scope";
-import { extractNationalDigits, isValidPhone } from "@/lib/auth/phone";
+import { extractNationalDigits, isValidPhone, phoneTail } from "@/lib/auth/phone";
 import type { CustomerCreateInput, CustomerListQuery, CustomerUpdateInput } from "@/lib/schemas";
 import type { Prisma } from "@/prisma/generated/prisma/client";
 import type { InquiryStatus } from "@/prisma/generated/prisma/enums";
@@ -269,18 +269,6 @@ export async function claimCustomer(id: string, actor: ScopeActor): Promise<Cust
  * shop's history rather than a limit anyone will meet.
  */
 const PHONE_SCAN_LIMIT = 1000;
-
-/**
- * A SQL prefilter that no plausible formatting can defeat.
- *
- * The last two digits of a number are written together in every form this app
- * produces ("+998 90 123-45-67", "90 123 45 67", "998901234567") and in every
- * form a person types by hand. Anything looser would scan the table; anything
- * tighter would start missing real matches.
- */
-function phoneTail(national: string): string {
-  return national.slice(7);
-}
 
 /** One inquiry from the same number, for the customer's history. */
 export interface CustomerInquiryRow {

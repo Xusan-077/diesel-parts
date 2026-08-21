@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listProductReviews = vi.fn();
 const upsertReview = vi.fn();
+const hasPurchasedProduct = vi.fn();
 const getSession = vi.fn();
 
 vi.mock("@/lib/api/review-repository", () => ({
   listProductReviews: (...args: unknown[]) => listProductReviews(...args),
   upsertReview: (...args: unknown[]) => upsertReview(...args),
+  hasPurchasedProduct: (...args: unknown[]) => hasPurchasedProduct(...args),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -41,8 +43,11 @@ function get(query: string): Request {
 beforeEach(() => {
   listProductReviews.mockReset();
   upsertReview.mockReset();
+  hasPurchasedProduct.mockReset();
   getSession.mockReset();
   getSession.mockResolvedValue(null);
+  // Most POST cases are about validation, not the purchase gate.
+  hasPurchasedProduct.mockResolvedValue(true);
 });
 
 describe("GET /api/reviews", () => {
@@ -88,7 +93,7 @@ describe("POST /api/reviews", () => {
     expect(upsertReview).not.toHaveBeenCalled();
   });
 
-  it("writes the review for a signed-in caller", async () => {
+  it("writes the review for a signed-in caller who bought the part", async () => {
     getSession.mockResolvedValue({ phone: "998901234567" });
     upsertReview.mockResolvedValue({ id: "r-1" });
 
@@ -154,5 +159,45 @@ describe("POST /api/reviews", () => {
     upsertReview.mockRejectedValue(new Error("Foreign key constraint failed"));
 
     expect((await POST(post(VALID))).status).toBe(400);
+  });
+
+  /*
+   * The rule itself. The form is hidden from anyone who has not bought the
+   * part, but a hidden form is a suggestion — a signed-in caller can post this
+   * request by hand for any `productId` in the catalog, which is exactly what
+   * a competitor with a phone number would do.
+   */
+  it("refuses a caller who has not bought the part", async () => {
+    getSession.mockResolvedValue({ phone: "998901234567" });
+    hasPurchasedProduct.mockResolvedValue(false);
+
+    const response = await POST(post(VALID));
+
+    expect(response.status).toBe(403);
+    expect(upsertReview).not.toHaveBeenCalled();
+  });
+
+  it("checks the purchase against the session phone and the named part", async () => {
+    getSession.mockResolvedValue({ phone: "998901234567" });
+    upsertReview.mockResolvedValue({ id: "r-1" });
+
+    await POST(post({ ...VALID, authorPhone: "998900000000" }));
+
+    // The body's phone is ignored here for the same reason it is ignored below.
+    expect(hasPurchasedProduct).toHaveBeenCalledWith(VALID.productId, "998901234567");
+  });
+
+  it("checks the purchase before writing, not after", async () => {
+    getSession.mockResolvedValue({ phone: "998901234567" });
+    hasPurchasedProduct.mockResolvedValue(false);
+
+    await POST(post(VALID));
+
+    expect(upsertReview).not.toHaveBeenCalled();
+  });
+
+  it("does not reach the purchase check for a signed-out caller", async () => {
+    await POST(post(VALID));
+    expect(hasPurchasedProduct).not.toHaveBeenCalled();
   });
 });

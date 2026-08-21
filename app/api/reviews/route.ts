@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { apiError, parseJsonBody, parseQuery } from "@/lib/api/route-auth";
-import { listProductReviews, upsertReview } from "@/lib/api/review-repository";
+import {
+  hasPurchasedProduct,
+  listProductReviews,
+  upsertReview,
+} from "@/lib/api/review-repository";
 import { reviewCreateSchema, reviewListQuerySchema } from "@/lib/schemas";
 
 /**
@@ -32,6 +36,11 @@ export async function GET(request: Request): Promise<NextResponse> {
  * could name their own author would be able to review one part under a hundred
  * identities, and the unique index behind "one review per person" would be
  * decoration.
+ *
+ * And having an identity is not enough: the part has to have been bought. The
+ * form is hidden from everyone else, but a hidden form is a suggestion — this
+ * is where the rule is actually kept, because `productId` arrives from the
+ * browser and the browser is not to be believed about which part it is.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const session = await getSession();
@@ -47,6 +56,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const { productId, rating, body: text, authorName } = body.data;
+
+  if (!(await hasPurchasedProduct(productId, session.phone))) {
+    /*
+     * 403 rather than 404: the part exists and the caller may read every review
+     * on it — what they may not do is add one. Saying so plainly is also the
+     * honest answer, since the form they are looking at already told them why.
+     */
+    return apiError(403, "Sharh qoldirish uchun avval shu mahsulotni sotib oling.");
+  }
 
   try {
     return NextResponse.json(
