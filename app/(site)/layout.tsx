@@ -5,6 +5,7 @@ import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { OG_LOCALES, SITE_URL } from "@/lib/site-config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getLocale } from "@/lib/i18n/server-locale";
+import { getSession } from "@/lib/auth/session";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { RouteBreadcrumb } from "@/components/layout/route-breadcrumb";
@@ -62,6 +63,14 @@ export default async function RootLayout({
 }) {
   const lang = await getLocale();
   const dict = getDictionary(lang);
+  /*
+   * The header shows the signed-in visitor their own number in place of the
+   * account icon, and the session cookie is httpOnly — so it is read here,
+   * where the cookie is readable, rather than guessed at in the browser.
+   * The layout is already dynamic (`getLocale` reads a cookie too), so this
+   * costs nothing it was not already paying.
+   */
+  const session = await getSession();
 
   return (
     <html
@@ -95,6 +104,7 @@ export default async function RootLayout({
                 closeLabel={dict.common.close}
                 viewAllLabel={dict.common.viewAll}
                 account={dict.account}
+                phone={session?.phone ?? null}
               />
               <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
                 {/*

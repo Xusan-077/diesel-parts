@@ -54,6 +54,7 @@
     "favorites": "Favorites",
     "cart": "Cart",
     "account": "Account",
+    "accountSignedIn": "Account: {phone}",
     "regionLabel": "Select region",
     "phoneLabel": "Phone",
     "languageLabel": "Select language",

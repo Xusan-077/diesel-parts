@@ -54,6 +54,7 @@
     "favorites": "Избранное",
     "cart": "Корзина",
     "account": "Кабинет",
+    "accountSignedIn": "Личный кабинет: {phone}",
     "regionLabel": "Выберите область",
     "phoneLabel": "Телефон",
     "languageLabel": "Выберите язык",

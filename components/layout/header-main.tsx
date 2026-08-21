@@ -15,6 +15,7 @@ interface HeaderMainProps {
   closeLabel: string;
   viewAllLabel: string;
   account: Dictionary["account"];
+  phone: string | null;
 }
 
 export function HeaderMain({
@@ -25,6 +26,7 @@ export function HeaderMain({
   closeLabel,
   viewAllLabel,
   account,
+  phone,
 }: HeaderMainProps) {
   return (
     <div className="bg-surface">
@@ -67,12 +69,14 @@ export function HeaderMain({
           header={header}
           account={account}
           closeLabel={closeLabel}
+          phone={phone}
           className="ml-auto hidden lg:flex"
         />
         <HeaderActions
           header={header}
           account={account}
           closeLabel={closeLabel}
+          phone={phone}
           compact
           className="ml-auto lg:hidden"
         />

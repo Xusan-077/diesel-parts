@@ -13,6 +13,8 @@ interface HeaderProps {
   closeLabel: string;
   viewAllLabel: string;
   account: Dictionary["account"];
+  /** The signed-in visitor's number, or null. See `HeaderActions`. */
+  phone: string | null;
 }
 
 export function Header({
@@ -23,6 +25,7 @@ export function Header({
   closeLabel,
   viewAllLabel,
   account,
+  phone,
 }: HeaderProps) {
   return (
     // `HeaderShell` is the only client component here; the rows themselves
@@ -36,6 +39,7 @@ export function Header({
         closeLabel={closeLabel}
         viewAllLabel={viewAllLabel}
         account={account}
+        phone={phone}
       />
       <HeaderNav nav={nav} />
     </HeaderShell>

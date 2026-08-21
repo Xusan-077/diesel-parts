@@ -54,6 +54,7 @@
     "favorites": "Saralanganlar",
     "cart": "Savat",
     "account": "Kabinet",
+    "accountSignedIn": "Kabinet: {phone}",
     "regionLabel": "Viloyatni tanlang",
     "phoneLabel": "Telefon",
     "languageLabel": "Tilni tanlang",

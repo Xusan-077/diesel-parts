@@ -7,6 +7,7 @@ import { ProductActions } from "@/components/product/product-actions";
 import { useCartStore, useSnapshotStore, useWishlistStore } from "@/lib/store/stores";
 import type { Product } from "@/lib/types";
 import { AUTH_HINT_COOKIE } from "@/lib/auth/cookie-names";
+import { formatPhone } from "@/lib/auth/phone";
 import dictionary from "@/dictionaries/uz.json";
 
 const { header, account, common, productActions } = dictionary;
@@ -118,5 +119,58 @@ describe("header cart badge", () => {
 
     act(() => useCartStore.getState().clear());
     expect(cartBadge()).toBe("");
+  });
+});
+
+/*
+ * Signed in, the account entry stops being a fourth icon and becomes the
+ * visitor's own number — but only where there is room for it. The number comes
+ * from the server, because the session cookie is httpOnly and the browser
+ * cannot read it.
+ */
+describe("header account entry", () => {
+  const PHONE = "998901234567";
+  const READABLE = formatPhone(PHONE);
+
+  function renderActions(props: { phone?: string | null; compact?: boolean } = {}) {
+    render(
+      <HeaderActions
+        header={header}
+        account={account}
+        closeLabel={common.close}
+        {...props}
+      />
+    );
+  }
+
+  it("shows the number in place of the icon on a wide screen", () => {
+    renderActions({ phone: PHONE });
+
+    const link = screen.getByRole("link", {
+      name: header.accountSignedIn.replace("{phone}", READABLE),
+    });
+    expect(link).toHaveProperty("href", expect.stringContaining("/account"));
+    expect(link.textContent).toBe(READABLE);
+  });
+
+  it("keeps the icon on a phone, where the number would not fit", () => {
+    renderActions({ phone: PHONE, compact: true });
+
+    expect(screen.getByRole("link", { name: header.account })).toBeTruthy();
+    expect(screen.queryByText(READABLE)).toBeNull();
+  });
+
+  it("falls back to the icon when only the hint cookie says there is a session", () => {
+    // The cookie outlived the session the server would have honoured.
+    renderActions({ phone: null });
+
+    expect(screen.getByRole("link", { name: header.account })).toBeTruthy();
+  });
+
+  it("reads the number rather than spelling it out", () => {
+    renderActions({ phone: PHONE });
+
+    // Grouped for recognition, not stored formatting: the session holds digits.
+    expect(screen.getByText(READABLE).textContent).toBe("+998 90 123-45-67");
   });
 });
