@@ -23,6 +23,8 @@ import { EMPTY_STATS } from "@/lib/product-stats";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
 import { InquiryDialog } from "@/components/forms/inquiry-dialog";
 import { Container } from "@/components/ui/container";
+import { Breadcrumb, BreadcrumbJsonLd } from "@/components/breadcrumb";
+import { finalise, type BreadcrumbItem } from "@/lib/breadcrumb";
 
 export async function generateMetadata({
   params,
@@ -92,8 +94,29 @@ export default async function ProductDetailPage({
     notFound();
   }
 
+  /*
+   * Catalogue, then the part's own two coordinates, then the part. Brand and
+   * category are each dropped when their row could not be read rather than
+   * printing an empty crumb — a trail with a gap in it is worse than a
+   * shorter one.
+   */
+  const trail = finalise(
+    [
+      { label: dict.nav.home, href: "/" },
+      { label: dict.nav.allProducts, href: "/products" },
+      category
+        ? { label: category.name[lang], href: `/categories/${category.slug}` }
+        : null,
+      brand ? { label: brand.name, href: `/brands/${brand.slug}` } : null,
+      { label: product.name[lang] },
+    ].filter((item): item is BreadcrumbItem => item !== null),
+  );
+
   return (
-    <Container as="main" className="pb-24 pt-12">
+    <Container as="main" className="pb-24 pt-6">
+      <Breadcrumb items={trail} label={dict.common.breadcrumbLabel} className="mb-8" />
+      <BreadcrumbJsonLd items={trail} />
+
       {category && brand ? (
         <ProductJsonLd product={product} category={category} brand={brand} lang={lang} />
       ) : null}

@@ -25,7 +25,8 @@
     "carouselPlay": "Start automatic scrolling",
     "productsUnavailable": "Products could not be loaded right now, please try again later.",
     "dataUnavailable": "This section could not be loaded right now, please try again later.",
-    "pageUnavailable": "This page is temporarily unavailable"
+    "pageUnavailable": "This page is temporarily unavailable",
+    "breadcrumbLabel": "Breadcrumb"
   },
   "nav": {
     "products": "Products",
@@ -41,7 +42,8 @@
     "contact": "Contact",
     "contacts": "Contacts",
     "requestQuote": "Request Quote",
-    "menu": "Menu"
+    "menu": "Menu",
+    "home": "Home"
   },
   "header": {
     "catalog": "Catalog",

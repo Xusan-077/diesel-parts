@@ -7,6 +7,8 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getLocale } from "@/lib/i18n/server-locale";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { RouteBreadcrumb } from "@/components/layout/route-breadcrumb";
+import { staticRouteLabels } from "@/lib/breadcrumb";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeScript } from "@/components/theme-script";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -95,6 +97,17 @@ export default async function RootLayout({
                 account={dict.account}
               />
               <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+                {/*
+                  Renders for the routes whose path names itself, and stays
+                  quiet for home and for slug routes — a product, a brand, a
+                  category — which name their own trail from the data they
+                  already loaded. See lib/breadcrumb.ts.
+                */}
+                <RouteBreadcrumb
+                  homeLabel={dict.nav.home}
+                  label={dict.common.breadcrumbLabel}
+                  labels={staticRouteLabels(dict)}
+                />
                 {children}
               </div>
               <Footer

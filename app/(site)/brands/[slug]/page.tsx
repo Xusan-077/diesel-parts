@@ -13,6 +13,8 @@ import type { ProductStats } from "@/lib/product-stats";
 import { canonicalPath } from "@/lib/seo";
 import { ProductCard } from "@/components/marketing/product-card";
 import { Container } from "@/components/ui/container";
+import { Breadcrumb, BreadcrumbJsonLd } from "@/components/breadcrumb";
+import { finalise } from "@/lib/breadcrumb";
 
 export async function generateMetadata({
   params,
@@ -98,8 +100,17 @@ export default async function BrandDetailPage({
     new Map<string, ProductStats>(),
   );
 
+  const trail = finalise([
+    { label: dict.nav.home, href: "/" },
+    { label: dict.nav.brands, href: "/brands" },
+    { label: brand.name },
+  ]);
+
   return (
-    <Container as="main" className="pb-24 pt-12">
+    <Container as="main" className="pb-24 pt-6">
+      <Breadcrumb items={trail} label={dict.common.breadcrumbLabel} className="mb-8" />
+      <BreadcrumbJsonLd items={trail} />
+
       <p className="text-sm text-muted">{dict.brands.title}</p>
       <h1 className="mt-1 text-3xl font-semibold text-foreground">{brand.name}</h1>
       {page.data ? (

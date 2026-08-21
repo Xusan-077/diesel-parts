@@ -25,7 +25,8 @@
     "carouselPlay": "Avtomatik aylanishni yoqish",
     "productsUnavailable": "Hozircha mahsulotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
     "dataUnavailable": "Hozircha ma'lumotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
-    "pageUnavailable": "Sahifani hozircha ko'rsatib bo'lmadi"
+    "pageUnavailable": "Sahifani hozircha ko'rsatib bo'lmadi",
+    "breadcrumbLabel": "Sahifa yo'li"
   },
   "nav": {
     "products": "Mahsulotlar",
@@ -41,7 +42,8 @@
     "contact": "Aloqa",
     "contacts": "Kontaktlar",
     "requestQuote": "Narx so'rash",
-    "menu": "Menyu"
+    "menu": "Menyu",
+    "home": "Bosh sahifa"
   },
   "header": {
     "catalog": "Katalog",

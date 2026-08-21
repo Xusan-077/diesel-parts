@@ -25,7 +25,8 @@
     "carouselPlay": "Включить автопрокрутку",
     "productsUnavailable": "Не удалось загрузить товары, попробуйте позже.",
     "dataUnavailable": "Не удалось загрузить данные, попробуйте позже.",
-    "pageUnavailable": "Страница сейчас недоступна"
+    "pageUnavailable": "Страница сейчас недоступна",
+    "breadcrumbLabel": "Навигация по сайту"
   },
   "nav": {
     "products": "Продукция",
@@ -41,7 +42,8 @@
     "contact": "Контакты",
     "contacts": "Контакты",
     "requestQuote": "Запросить цену",
-    "menu": "Меню"
+    "menu": "Меню",
+    "home": "Главная"
   },
   "header": {
     "catalog": "Каталог",
