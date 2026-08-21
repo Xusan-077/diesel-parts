@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/use-store";
 import { formatPrice, sumPrices } from "@/lib/format-price";
 import { MAX_QUANTITY } from "@/lib/store/cart";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -22,10 +23,12 @@ interface CartClientProps {
 export function CartClient({ lang, dict, stock }: CartClientProps) {
   const cart = useCart();
 
-  const { items: resolved, isLoading } = useResolvedProducts(
-    cart.items.map((item) => item.productId),
-    lang,
-  );
+  const ids = cart.items.map((item) => item.productId);
+  const { items: resolved, isLoading, isSuccess } = useResolvedProducts(ids, lang);
+  // A part the director retires stops resolving. Left alone it would keep
+  // padding the header badge with a line this page cannot render or remove.
+  usePruneMissing(ids, resolved, isSuccess, cart.remove);
+
   const byId = new Map(resolved.map((entry) => [entry.product.id, entry]));
 
   const lines = cart.items
@@ -38,6 +41,9 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
   const { total, unpriced } = sumPrices(
     lines.map((line) => ({ price: line.product.price, quantity: line.quantity }))
   );
+  // Counted off the rendered lines rather than the store, so the summary can
+  // never disagree with the list above it while a prune is still settling.
+  const unitCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const totalLabel = formatPrice(total, lang);
 
   if (isLoading) {
@@ -49,7 +55,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
       <StoreEmpty
         icon={ShoppingCart}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -84,7 +90,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
                   <StockBadge status={product.stockStatus} stock={stock} />
                 </div>
                 <Link
-                  href={`/${lang}/products/${product.slug}`}
+                  href={`/products/${product.slug}`}
                   className="mt-1 block text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
                 >
                   {product.name[lang]}
@@ -151,11 +157,11 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryLines}</dt>
-            <dd className="tabular-nums text-foreground">{cart.lineCount}</dd>
+            <dd className="tabular-nums text-foreground">{lines.length}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryUnits}</dt>
-            <dd className="tabular-nums text-foreground">{cart.unitCount}</dd>
+            <dd className="tabular-nums text-foreground">{unitCount}</dd>
           </div>
           <div className="flex justify-between border-t border-border pt-3">
             <dt className="text-muted">{dict.summaryPrice}</dt>
@@ -174,7 +180,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <p className="mt-3 text-xs leading-relaxed text-muted">{dict.priceNote}</p>
 
         <Link
-          href={`/${lang}/request-quote`}
+          href="/request-quote"
           className="mt-6 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
         >
           {dict.checkout}

@@ -6,6 +6,7 @@ import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCompare } from "@/hooks/use-store";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -20,7 +21,8 @@ interface CompareClientProps {
 
 export function CompareClient({ lang, dict, stock }: CompareClientProps) {
   const compare = useCompare();
-  const { items, isLoading } = useResolvedProducts(compare.ids, lang);
+  const { items, isLoading, isSuccess } = useResolvedProducts(compare.ids, lang);
+  usePruneMissing(compare.ids, items, isSuccess, compare.remove);
 
   if (isLoading) {
     return <ResolvedProductsSkeleton count={compare.ids.length} />;
@@ -31,7 +33,7 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
       <StoreEmpty
         icon={Scale}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -95,7 +97,7 @@ export function CompareClient({ lang, dict, stock }: CompareClientProps) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <Link
-                      href={`/${lang}/products/${product.slug}`}
+                      href={`/products/${product.slug}`}
                       className="text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
                     >
                       {product.name[lang]}

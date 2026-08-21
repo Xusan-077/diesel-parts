@@ -5,7 +5,6 @@ import { Check, Heart, MessageCircle, Scale, ShoppingCart, type LucideIcon } fro
 import { cn } from "@/lib/utils";
 import { useCart, useCompare, useWishlist } from "@/hooks/use-store";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 
 const buttonClass =
@@ -19,10 +18,12 @@ interface IconButtonProps {
   icon: LucideIcon;
   active: boolean;
   disabled?: boolean;
+  /** Drawn in the corner when above 1. See the cart button below. */
+  count?: number;
   onClick: () => void;
 }
 
-function IconButton({ label, icon: glyph, active, disabled, onClick }: IconButtonProps) {
+function IconButton({ label, icon: glyph, active, disabled, count, onClick }: IconButtonProps) {
   return (
     <button
       type="button"
@@ -32,12 +33,21 @@ function IconButton({ label, icon: glyph, active, disabled, onClick }: IconButto
       aria-pressed={active}
       title={label}
       className={cn(
+        "relative",
         buttonClass,
         active ? activeClass : inactiveClass,
         disabled && "cursor-not-allowed opacity-40 hover:border-border hover:text-muted"
       )}
     >
       <Icon icon={glyph} className={cn(active && "fill-current")} />
+      {count !== undefined && count > 1 ? (
+        <span
+          aria-hidden
+          className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-accent-foreground"
+        >
+          {count > 99 ? "99+" : count}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -46,7 +56,6 @@ interface ProductActionsProps {
   productId: string;
   /** `null` swaps the cart button for a contact link. */
   price: number | null;
-  lang: Locale;
   dict: Dictionary["productActions"];
   className?: string;
 }
@@ -54,7 +63,6 @@ interface ProductActionsProps {
 export function ProductActions({
   productId,
   price,
-  lang,
   dict,
   className,
 }: ProductActionsProps) {
@@ -65,6 +73,7 @@ export function ProductActions({
   const inWishlist = wishlist.has(productId);
   const inCompare = compare.has(productId);
   const inCart = cart.has(productId);
+  const cartQuantity = cart.quantityOf(productId);
   const compareBlocked = !inCompare && compare.isFull;
 
   return (
@@ -92,7 +101,7 @@ export function ProductActions({
       {price === null ? (
         // No price set yet, so there is nothing to put in a cart.
         <Link
-          href={`/${lang}/contact`}
+          href="/contact"
           aria-label={dict.contact}
           title={dict.contact}
           className={cn(buttonClass, inactiveClass)}
@@ -101,9 +110,14 @@ export function ProductActions({
         </Link>
       ) : (
         <IconButton
-          label={inCart ? dict.inCart : dict.addToCart}
+          // The checkmark alone made a second click look like a no-op, so the
+          // running quantity is drawn on the button the same way the header
+          // badge draws it. The label carries the number for screen readers,
+          // which is why the badge itself is aria-hidden.
+          label={inCart ? `${dict.inCart} (${cartQuantity})` : dict.addToCart}
           icon={inCart ? Check : ShoppingCart}
           active={inCart}
+          count={cartQuantity}
           onClick={() => cart.add(productId)}
         />
       )}

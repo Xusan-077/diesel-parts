@@ -6,6 +6,7 @@ import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCart, useWishlist } from "@/hooks/use-store";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
+import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -21,7 +22,8 @@ interface WishlistClientProps {
 export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
   const wishlist = useWishlist();
   const cart = useCart();
-  const { items, isLoading } = useResolvedProducts(wishlist.ids, lang);
+  const { items, isLoading, isSuccess } = useResolvedProducts(wishlist.ids, lang);
+  usePruneMissing(wishlist.ids, items, isSuccess, wishlist.remove);
 
   if (isLoading) {
     return <ResolvedProductsSkeleton count={wishlist.ids.length} />;
@@ -32,7 +34,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
       <StoreEmpty
         icon={Heart}
         message={dict.empty}
-        ctaHref={`/${lang}/products`}
+        ctaHref="/products"
         ctaLabel={dict.emptyCta}
       />
     );
@@ -69,7 +71,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
                 <StockBadge status={product.stockStatus} stock={stock} />
               </div>
               <Link
-                href={`/${lang}/products/${product.slug}`}
+                href={`/products/${product.slug}`}
                 className="mt-1 block text-sm font-medium text-foreground transition-colors hover:text-accent-strong"
               >
                 {product.name[lang]}
@@ -87,7 +89,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
             <div className="flex items-center gap-2">
               {product.price === null ? (
                 <Link
-                  href={`/${lang}/contact`}
+                  href="/contact"
                   className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/60 hover:text-accent-strong"
                 >
                   <Icon icon={MessageCircle} />
