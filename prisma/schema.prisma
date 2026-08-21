@@ -41,16 +41,31 @@ model Brand {
   products Product[]
 }
 
+/// A node in the catalog tree. Roots are the mega-menu's columns; their
+/// children are the entries under each column, and a product hangs off a leaf.
 model Category {
-  id       String     @id
-  slug     String     @unique
-  nameUz   String
-  nameRu   String
-  nameEn   String
-  parentId String?
-  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryTree")
-  products Product[]
+  id     String @id
+  slug   String @unique
+  nameUz String
+  nameRu String
+  nameEn String
+  /// The part family this branch belongs to — "engine", "brakes", "filters".
+  ///
+  /// A root and every category under it carry the same value, so the family is
+  /// answerable without walking the tree. Defaulted rather than required so the
+  /// column could be added to a populated table; the seed sets a real value on
+  /// every row it writes.
+  type      String     @default("general")
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  /// Position among siblings. Ties break on name, so an unset order is stable
+  /// rather than arbitrary.
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  products  Product[]
+
+  @@index([parentId, order])
 }
 
 model Product {
