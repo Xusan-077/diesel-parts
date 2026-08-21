@@ -73,18 +73,42 @@ describe("removeFromCart", () => {
   });
 });
 
+/*
+ * These two are the whole cart's arithmetic, and the reason they are worth
+ * their own block is that the sum used to be written out again in the header,
+ * on the cart page and in the quote form. Three copies of "add the quantities
+ * up" is three chances for one screen to say a cart holds two things while the
+ * next says four.
+ */
 describe("counts", () => {
   const cart = [
     { productId: "p1", quantity: 2 },
     { productId: "p2", quantity: 3 },
   ];
 
-  it("counts total units", () => {
+  it("counts parts, not kinds of part", () => {
+    // Two lines, five parts. The distinction the header badge gets wrong when
+    // it reaches for `items.length`.
     expect(cartUnitCount(cart)).toBe(5);
+    expect(cartLineCount(cart)).toBe(2);
   });
 
-  it("counts distinct lines", () => {
-    expect(cartLineCount(cart)).toBe(2);
+  it("agrees with itself when every line holds one", () => {
+    const singles = [
+      { productId: "p1", quantity: 1 },
+      { productId: "p2", quantity: 1 },
+    ];
+    expect(cartUnitCount(singles)).toBe(cartLineCount(singles));
+  });
+
+  it("counts a resolved line the same as a stored one", () => {
+    // The cart page and the quote form hold lines carrying the whole product,
+    // not just its id; both are counted here rather than line by line there.
+    const resolved = [
+      { product: { id: "p1" }, quantity: 2 },
+      { product: { id: "p2" }, quantity: 3 },
+    ];
+    expect(cartUnitCount(resolved)).toBe(cartUnitCount(cart));
   });
 
   it("returns zero for an empty cart", () => {

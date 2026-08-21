@@ -7,7 +7,7 @@ import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
 import { useCart } from "@/hooks/use-store";
 import { formatPrice, sumPrices } from "@/lib/format-price";
-import { MAX_QUANTITY } from "@/lib/store/cart";
+import { cartLineCount, cartUnitCount, MAX_QUANTITY } from "@/lib/store/cart";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
 import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
@@ -42,9 +42,14 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
   const { total, unpriced } = sumPrices(
     lines.map((line) => ({ price: line.product.price, quantity: line.quantity }))
   );
-  // Counted off the rendered lines rather than the store, so the summary can
-  // never disagree with the list above it while a prune is still settling.
-  const unitCount = lines.reduce((sum, line) => sum + line.quantity, 0);
+  /*
+   * Counted off the rendered lines rather than the store, so the summary can
+   * never disagree with the list above it while a prune is still settling —
+   * but counted by the same function the header badge uses, so the two can
+   * never disagree about what counting means.
+   */
+  const unitCount = cartUnitCount(lines);
+  const lineCount = cartLineCount(lines);
   const totalLabel = formatPrice(total, lang);
 
   if (isLoading) {
@@ -164,7 +169,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryLines}</dt>
-            <dd className="tabular-nums text-foreground">{lines.length}</dd>
+            <dd className="tabular-nums text-foreground">{lineCount}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">{dict.summaryUnits}</dt>

@@ -7,9 +7,9 @@ import { useCart } from "@/hooks/use-store";
 import {
   formatCartForQuote,
   toQuoteCartItems,
-  totalQuantity,
   type CartLine,
 } from "@/lib/cart-summary";
+import { cartUnitCount } from "@/lib/store/cart";
 import { formatPrice, sumPrices } from "@/lib/format-price";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
@@ -103,7 +103,7 @@ export function QuoteFormWithCart({ lang, dict, cartDict }: QuoteFormWithCartPro
       <QuoteForm
         dict={dict}
         initialProducts={summaryText}
-        initialQuantity={lines.length > 0 ? String(totalQuantity(lines)) : ""}
+        initialQuantity={lines.length > 0 ? String(cartUnitCount(lines)) : ""}
         cartItems={lines.length > 0 ? toQuoteCartItems(lines, lang) : undefined}
       />
     </div>
