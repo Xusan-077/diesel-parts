@@ -21,6 +21,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: "/admin/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
   { href: "/admin/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
   { href: "/admin/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },
+  { href: "/admin/director/reviews", label: "Sharhlar", roles: ["DIRECTOR"] },
   { href: "/admin/director/audit", label: "Amallar tarixi", roles: ["DIRECTOR"] },
   { href: "/admin/seller/inquiries", label: "So'rovlar", roles: SELLER_ROLES },
   { href: "/admin/seller/customers", label: "Mijozlar", roles: SELLER_ROLES },
