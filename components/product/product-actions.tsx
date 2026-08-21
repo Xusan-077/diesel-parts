@@ -5,7 +5,10 @@ import { toast } from "sonner";
 import { Check, Heart, MessageCircle, Scale, ShoppingCart, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart, useCompare, useWishlist } from "@/hooks/use-store";
+import { useSnapshotStore } from "@/lib/store/stores";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/locales";
+import type { Product } from "@/lib/types";
 import { Icon } from "@/components/ui/icon";
 
 const buttonClass =
@@ -54,22 +57,41 @@ function IconButton({ label, icon: glyph, active, disabled, count, onClick }: Ic
 }
 
 interface ProductActionsProps {
-  productId: string;
-  /** `null` swaps the cart button for a contact link. */
-  price: number | null;
+  product: Product;
+  /** Localised captions, snapshotted alongside the row. */
+  brandName: string;
+  categoryName: string;
+  lang: Locale;
   dict: Dictionary["productActions"];
   className?: string;
 }
 
 export function ProductActions({
-  productId,
-  price,
+  product,
+  brandName,
+  categoryName,
+  lang,
   dict,
   className,
 }: ProductActionsProps) {
   const wishlist = useWishlist();
   const compare = useCompare();
   const cart = useCart();
+  const { record } = useSnapshotStore.getState();
+
+  const productId = product.id;
+  // `null` swaps the cart button for a contact link.
+  const price = product.price;
+
+  /**
+   * Every list holds ids, and every list has a page that has to draw rows.
+   * Snapshotting here — at the only point where the whole row is in hand —
+   * is what lets those pages paint from localStorage instead of waiting on
+   * `/api/products/by-ids` the first time they are opened.
+   */
+  function remember() {
+    record([{ product, brandName, categoryName }], lang);
+  }
 
   const inWishlist = wishlist.has(productId);
   const inCompare = compare.has(productId);
@@ -84,6 +106,7 @@ export function ProductActions({
         icon={Heart}
         active={inWishlist}
         onClick={() => {
+          remember();
           wishlist.toggle(productId);
           toast.success(
             inWishlist ? dict.toastWishlistRemoved : dict.toastWishlistAdded
@@ -102,6 +125,7 @@ export function ProductActions({
         active={inCompare}
         disabled={compareBlocked}
         onClick={() => {
+          remember();
           compare.toggle(productId);
           toast.success(inCompare ? dict.toastCompareRemoved : dict.toastCompareAdded);
         }}
@@ -128,6 +152,7 @@ export function ProductActions({
           active={inCart}
           count={cartQuantity}
           onClick={() => {
+            remember();
             cart.add(productId);
             toast.success(dict.toastCartAdded);
           }}

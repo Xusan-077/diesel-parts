@@ -4,11 +4,32 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeaderActions } from "./header-actions";
 import { ProductActions } from "@/components/product/product-actions";
-import { useCartStore, useWishlistStore } from "@/lib/store/stores";
+import { useCartStore, useSnapshotStore, useWishlistStore } from "@/lib/store/stores";
+import type { Product } from "@/lib/types";
 import { AUTH_HINT_COOKIE } from "@/lib/auth/cookie-names";
 import dictionary from "@/dictionaries/uz.json";
 
 const { header, account, common, productActions } = dictionary;
+
+/** A catalog row is now the unit `ProductActions` works on, not a bare id. */
+function fixture(id: string): Product {
+  return {
+    id,
+    slug: id,
+    name: { uz: id, ru: id, en: id },
+    sku: id.toUpperCase(),
+    oemNumbers: [],
+    price: 1000,
+    categoryId: "injector",
+    brandId: "cat",
+    description: { uz: "", ru: "", en: "" },
+    compatibleModels: [],
+    stockStatus: "available",
+    specs: [],
+    imageLabels: ["Front"],
+  };
+}
+
 
 /**
  * The badge and the card button are separate subscribers to the same store,
@@ -19,7 +40,13 @@ function renderBoth(productId = "p-1") {
   return render(
     <>
       <HeaderActions header={header} account={account} closeLabel={common.close} />
-      <ProductActions productId={productId} price={1000} dict={productActions} />
+      <ProductActions
+        product={fixture(productId)}
+        brandName="CAT"
+        categoryName="Forsunka"
+        lang="uz"
+        dict={productActions}
+      />
     </>
   );
 }
@@ -38,6 +65,7 @@ beforeEach(() => {
   localStorage.clear();
   useCartStore.setState({ items: [] });
   useWishlistStore.setState({ ids: [] });
+  useSnapshotStore.setState({ byId: {} });
   localStorage.clear();
 });
 

@@ -52,7 +52,7 @@ export function ProductCard({
 
         <h3 className="text-sm font-medium text-foreground">
           <Link
-            href={`/${lang}/products/${product.slug}`}
+            href={`/products/${product.slug}`}
             className="transition-colors after:absolute after:inset-0 group-hover:text-accent-strong"
           >
             {product.name[lang]}
@@ -68,8 +68,9 @@ export function ProductCard({
             <p className="text-sm font-medium text-accent-strong">{requestPriceLabel}</p>
           )}
           <ProductActions
-            productId={product.id}
-            price={product.price}
+            product={product}
+            brandName={brandName}
+            categoryName={categoryName}
             lang={lang}
             dict={actions}
             className="relative z-10"
