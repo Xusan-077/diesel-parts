@@ -12,6 +12,7 @@ import { BrandGrid } from "@/components/marketing/brand-grid";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { ProductRow } from "@/components/marketing/product-row";
 import { CtaBanner } from "@/components/marketing/cta-banner";
+import { Reveal } from "@/components/marketing/reveal";
 import { Container } from "@/components/ui/container";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -60,12 +61,25 @@ export default async function HomePage() {
     },
   };
 
+  /*
+   * Every section below the hero rises into place the first time it is scrolled
+   * to. Eight stacked sections read as one long static document otherwise, and
+   * the reveal is what acknowledges the scroll.
+   *
+   * The hero is deliberately not wrapped: it is on screen before anyone can
+   * scroll, so it has no entrance to make, and it already runs its own staged
+   * one. The product rows are not wrapped either — the carousel inside them
+   * measures its track on mount, and an ancestor mid-transform when it measures
+   * gets the wrong number.
+   */
   return (
     <main>
       <Hero home={dict.home} common={dict.common} lang={lang} />
 
       <Container as="section" className="py-20">
-        <TrustBadges items={dict.home.trustBadges} />
+        <Reveal>
+          <TrustBadges items={dict.home.trustBadges} />
+        </Reveal>
       </Container>
 
       {/* Only the lead row advances on its own — three self-scrolling rows on
@@ -78,11 +92,13 @@ export default async function HomePage() {
       />
 
       <Container as="section" className="py-16">
-        <h2 className="text-2xl font-semibold text-foreground">{dict.home.categoriesTitle}</h2>
-        <p className="mt-2 text-sm text-muted">{dict.home.categoriesSubtitle}</p>
-        <div className="mt-8">
+        <Reveal>
+          <h2 className="text-2xl font-semibold text-foreground">{dict.home.categoriesTitle}</h2>
+          <p className="mt-2 text-sm text-muted">{dict.home.categoriesSubtitle}</p>
+        </Reveal>
+        <Reveal late className="mt-8">
           <CategoryGrid lang={lang} unavailableLabel={dict.common.dataUnavailable} />
-        </div>
+        </Reveal>
       </Container>
 
       <ProductRow
@@ -94,9 +110,13 @@ export default async function HomePage() {
 
       <section className="border-y border-border bg-surface-muted">
         <Container className="py-16">
-          <h2 className="text-2xl font-semibold text-foreground">{dict.home.whyUsTitle}</h2>
-          <p className="mt-2 text-sm text-muted">{dict.home.whyUsSubtitle}</p>
-          <FeatureGrid items={dict.home.whyUs} className="mt-8" />
+          <Reveal>
+            <h2 className="text-2xl font-semibold text-foreground">{dict.home.whyUsTitle}</h2>
+            <p className="mt-2 text-sm text-muted">{dict.home.whyUsSubtitle}</p>
+          </Reveal>
+          <Reveal late>
+            <FeatureGrid items={dict.home.whyUs} className="mt-8" />
+          </Reveal>
         </Container>
       </section>
 
@@ -107,19 +127,25 @@ export default async function HomePage() {
       />
 
       <Container as="section" className="py-16">
-        <h2 className="text-2xl font-semibold text-foreground">{dict.home.brandsTitle}</h2>
-        <div className="mt-8">
+        <Reveal>
+          <h2 className="text-2xl font-semibold text-foreground">{dict.home.brandsTitle}</h2>
+        </Reveal>
+        <Reveal late className="mt-8">
           <BrandGrid unavailableLabel={dict.common.dataUnavailable} />
-        </div>
+        </Reveal>
       </Container>
 
       <Container as="section" className="py-16">
-        <h2 className="text-2xl font-semibold text-foreground">{dict.home.aboutTitle}</h2>
-        <p className="mt-4 max-w-2xl text-muted">{dict.home.aboutText}</p>
+        <Reveal>
+          <h2 className="text-2xl font-semibold text-foreground">{dict.home.aboutTitle}</h2>
+          <p className="mt-4 max-w-2xl text-muted">{dict.home.aboutText}</p>
+        </Reveal>
       </Container>
 
       <Container as="section" className="pb-24">
-        <CtaBanner home={dict.home} />
+        <Reveal>
+          <CtaBanner home={dict.home} />
+        </Reveal>
       </Container>
     </main>
   );

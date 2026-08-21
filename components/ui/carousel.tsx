@@ -164,7 +164,13 @@ export function CarouselContent({ className, ...props }: React.ComponentProps<"d
   return (
     // `overflow-hidden` clips the track; the negative margin pairs with the
     // padding on each item so the first card still lines up with the gutter.
-    <div ref={carouselRef} className="overflow-hidden">
+    /*
+      `cursor-grab` is the only thing that says the row can be dragged.
+      Embla has taken mouse drags since it was added — the affordance was
+      simply missing, so on a desktop the arrows looked like the only way
+      through a row that is mostly off-screen.
+    */
+    <div ref={carouselRef} className="cursor-grab overflow-hidden active:cursor-grabbing">
       <div className={cn("flex -ml-4", className)} {...props} />
     </div>
   );

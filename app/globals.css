@@ -456,6 +456,57 @@
   animation: hero-rise 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/*
+ * Sections rising into place as they are scrolled to.
+ *
+ * Driven by a scroll timeline rather than an IntersectionObserver, and the
+ * reason is a failure mode rather than a preference. A JS reveal has to hide
+ * the section first and un-hide it when told; if the visitor *jumps* — a
+ * restored scroll position, ctrl+End, a link to an anchor — the sections
+ * skipped over never intersect, are never told, and stay invisible for the life
+ * of the page. Measured: nine sections, all still transparent after a jump to
+ * the foot of the page and back.
+ *
+ * A timeline cannot do that. The hidden state exists only inside the
+ * `@supports`, and the same declaration that hides an element below the fold is
+ * what shows it once past — an element above the viewport is beyond the range
+ * and takes the `to` state whether anyone watched it arrive or not. A browser
+ * without view timelines never sees the `from` state at all and renders the
+ * page exactly as it did before, which is the correct fallback for something
+ * whose entire job is decoration.
+ *
+ * `.reveal-late` is the same animation over a slightly later range, for the
+ * second half of a heading-plus-grid pair.
+ */
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal,
+    .reveal-late {
+      animation: reveal-rise linear both;
+      animation-timeline: view();
+    }
+
+    .reveal {
+      animation-range: entry 8% cover 26%;
+    }
+
+    .reveal-late {
+      animation-range: entry 14% cover 34%;
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
