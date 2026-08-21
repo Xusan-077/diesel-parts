@@ -47,3 +47,7 @@ next-env.d.ts
 
 # stale Claude Code worktree checkouts (each carries its own .git pointer)
 /.claude/worktrees/
+
+# SSH keypairs left behind by `railway connect Postgres --tunnel-only`, which
+# names its key after the command. Private material; never commit it.
+/railway connect Postgres*
