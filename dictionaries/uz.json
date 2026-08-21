@@ -187,6 +187,10 @@
     "filtersApply": "Natijalarni ko'rish",
     "filtersReset": "Filtrlarni tozalash",
     "filtersActive": "{count} ta filtr yoqilgan",
+    "filtersActiveTitle": "Qo'llangan filtrlar",
+    "filtersClearAll": "Hammasini tozalash",
+    "filterRemove": "{label}: {value} filtrini olib tashlash",
+    "filterGroupToggle": "{label} bo'limini ochish yoki yopish",
     "searchLabel": "Qidiruv",
     "viewLabel": "Ko'rinish"
   },

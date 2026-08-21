@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import type { SortKey } from "@/lib/filters";
 import { fetchProducts, productsQueryKey, type ProductListParams } from "@/lib/api/products";
 import { DEFAULT_PAGE_SIZE, type ProductPage } from "@/lib/api/product-query";
 import {
   activeFilterCount,
+  clearedValue,
   clearFilters,
   DEFAULT_FILTERS,
+  describeActiveFilters,
   type CatalogFilters,
 } from "@/lib/catalog-filters";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -18,11 +18,11 @@ import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Brand, Category, Product } from "@/lib/types";
 import { ProductFilters } from "./product-filters";
+import { FilterChips } from "./filter-chips";
 import { FilterDrawer } from "./filter-drawer";
 import { CatalogToolbar } from "./catalog-toolbar";
 import { ProductCard } from "@/components/marketing/product-card";
 import { Pagination } from "@/components/ui/pagination";
-import { Icon } from "@/components/ui/icon";
 
 interface ProductCatalogClientProps {
   lang: Locale;
@@ -124,6 +124,28 @@ export function ProductCatalogClient({
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ?? page;
 
+  /*
+   * Described from the state the panel edits and the reference data the grid
+   * already holds, so a chip cannot drift from the control behind it — the two
+   * are the same value read twice, not two copies.
+   */
+  const chips = describeActiveFilters(filters, {
+    search: dict.searchLabel,
+    brand: dict.filterBrandLabel,
+    category: dict.filterCategoryLabel,
+    availability: dict.filterAvailabilityLabel,
+    brandName: (id) => brands.find((brand) => brand.id === id)?.name ?? "",
+    categoryName: (id) => categories.find((c) => c.id === id)?.name[lang] ?? "",
+    // `all` never reaches here — it is the value that means "no chip" — but the
+    // type includes it, and naming that explicitly beats an index signature.
+    availabilityName: (value) =>
+      value === "out_of_stock"
+        ? stockDict.outOfStock
+        : value === "all"
+          ? dict.allAvailability
+          : stockDict[value],
+  });
+
   const panel = (
     <ProductFilters
       dict={dict}
@@ -152,21 +174,18 @@ export function ProductCatalogClient({
       </aside>
 
       <div className="min-w-0">
-        {scopeLabel ? (
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 py-1 pl-3 pr-1 text-sm text-accent-strong">
-              {scopeLabel}
-              <Link
-                href="/products"
-                aria-label={clearScopeLabel}
-                title={clearScopeLabel}
-                className="flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-accent/20"
-              >
-                <Icon icon={X} size="xs" />
-              </Link>
-            </span>
-          </div>
-        ) : null}
+        <FilterChips
+          className="mb-4"
+          chips={chips}
+          dict={dict}
+          onRemove={(key) => changeFilter(key, clearedValue(key))}
+          onClearAll={resetFilters}
+          scope={
+            scopeLabel
+              ? { label: scopeLabel, clearLabel: clearScopeLabel ?? "" }
+              : undefined
+          }
+        />
 
         <CatalogToolbar
           total={data?.total ?? 0}

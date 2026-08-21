@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import type { Brand, Category } from "@/lib/types";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { AvailabilityFilter } from "@/lib/filters";
@@ -12,18 +14,50 @@ import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 /**
- * One filter group: an eyebrow and its control.
+ * One filter group: a heading that opens and closes, and its control.
+ *
+ * `<details>` rather than a state hook and a div. It is the element that means
+ * this, it is keyboard-operable and announced correctly without a line of ARIA,
+ * and — the reason that matters here — its contents are findable by the
+ * browser's own find-in-page even while collapsed.
+ *
+ * Every group opens by default. A panel that arrives shut hides the fact that
+ * there are filters at all, which is the opposite of the problem the sidebar
+ * exists to solve; being able to shut the ones you are done with is what the
+ * accordion buys, on a rail where the brand list runs long.
  *
  * The eyebrow is the panel's own kicker — mono, uppercase, wide-tracked — and
- * it earns its place here because a sidebar of six stacked controls with no
- * hierarchy is a wall. Each group is a scannable heading, not decoration.
+ * it earns its place because a stack of six controls with no hierarchy is a
+ * wall.
  */
-function Group({ label, children }: { label: string; children: ReactNode }) {
+function Group({
+  label,
+  toggleLabel,
+  children,
+}: {
+  label: string;
+  /** Sentence for the summary, e.g. "Expand or collapse Brand". */
+  toggleLabel: string;
+  children: ReactNode;
+}) {
   return (
-    <div>
-      <h3 className="type-eyebrow text-muted">{label}</h3>
+    <details open className="group/filter border-b border-border pb-4 last:border-b-0">
+      <summary
+        title={toggleLabel}
+        className="flex cursor-pointer list-none items-center justify-between rounded-sm py-1 [&::-webkit-details-marker]:hidden"
+      >
+        <h3 className="type-eyebrow text-muted transition-colors group-open/filter:text-foreground">
+          {label}
+        </h3>
+        <Icon
+          icon={ChevronDown}
+          size="xs"
+          aria-hidden
+          className="text-muted transition-transform duration-200 group-open/filter:rotate-180"
+        />
+      </summary>
       <div className="mt-3">{children}</div>
-    </div>
+    </details>
   );
 }
 
@@ -114,8 +148,11 @@ export function ProductFilters({
   className,
 }: ProductFiltersProps) {
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
-      <Group label={dict.searchLabel}>
+    <div className={cn("flex flex-col gap-4", className)}>
+      <Group
+        label={dict.searchLabel}
+        toggleLabel={dict.filterGroupToggle.replace("{label}", dict.searchLabel)}
+      >
         <Input
           value={filters.search}
           onChange={(event) => onChange("search", event.target.value)}
@@ -124,7 +161,10 @@ export function ProductFilters({
         />
       </Group>
 
-      <Group label={dict.filterBrandLabel}>
+      <Group
+        label={dict.filterBrandLabel}
+        toggleLabel={dict.filterGroupToggle.replace("{label}", dict.filterBrandLabel)}
+      >
         <Select
           value={filters.brandId}
           onChange={(event) => onChange("brandId", event.target.value)}
@@ -139,7 +179,10 @@ export function ProductFilters({
         </Select>
       </Group>
 
-      <Group label={dict.filterCategoryLabel}>
+      <Group
+        label={dict.filterCategoryLabel}
+        toggleLabel={dict.filterGroupToggle.replace("{label}", dict.filterCategoryLabel)}
+      >
         <Select
           value={filters.categoryId}
           onChange={(event) => onChange("categoryId", event.target.value)}
@@ -154,7 +197,10 @@ export function ProductFilters({
         </Select>
       </Group>
 
-      <Group label={dict.filterAvailabilityLabel}>
+      <Group
+        label={dict.filterAvailabilityLabel}
+        toggleLabel={dict.filterGroupToggle.replace("{label}", dict.filterAvailabilityLabel)}
+      >
         <AvailabilityChoice
           value={filters.availability}
           onChange={(value) => onChange("availability", value)}
@@ -163,6 +209,12 @@ export function ProductFilters({
         />
       </Group>
 
+      {/*
+        The reset lives here as well as in the chip row above the grid, because
+        the drawer on a phone covers that row completely: a visitor who has just
+        set four filters in the drawer must be able to undo them without
+        dismissing it first.
+      */}
       {hasActiveFilters(filters) ? (
         <button
           type="button"

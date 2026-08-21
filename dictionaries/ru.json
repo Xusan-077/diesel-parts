@@ -187,6 +187,10 @@
     "filtersApply": "Показать результаты",
     "filtersReset": "Сбросить фильтры",
     "filtersActive": "Фильтров включено: {count}",
+    "filtersActiveTitle": "Применённые фильтры",
+    "filtersClearAll": "Очистить всё",
+    "filterRemove": "Убрать фильтр «{label}: {value}»",
+    "filterGroupToggle": "Развернуть или свернуть раздел «{label}»",
     "searchLabel": "Поиск",
     "viewLabel": "Вид"
   },

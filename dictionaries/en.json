@@ -187,6 +187,10 @@
     "filtersApply": "Show results",
     "filtersReset": "Clear filters",
     "filtersActive": "{count} filters on",
+    "filtersActiveTitle": "Applied filters",
+    "filtersClearAll": "Clear all",
+    "filterRemove": "Remove the {label}: {value} filter",
+    "filterGroupToggle": "Expand or collapse {label}",
     "searchLabel": "Search",
     "viewLabel": "View"
   },
