@@ -95,25 +95,42 @@ model Product {
 /// A buyer's rating of a part they bought.
 ///
 /// Kept as rows rather than as an average on Product: a stored average cannot
-/// be recomputed when a review is withdrawn or unapproved, and the catalog
-/// needs the count beside it anyway. Aggregated per page, not per row.
+/// be recomputed when a review is hidden or deleted, and the catalog needs the
+/// count beside it anyway. Aggregated per page, not per row.
 model Review {
-  id         String   @id @default(cuid())
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   /// Whole stars, 1 to 5. A CHECK constraint in the migration enforces the
   /// range in the database, which Prisma's schema language cannot express.
-  rating     Int
-  /// The reviewer's own words. Optional — a rating with no text is still a
-  /// rating, and asking for prose is how you get no ratings at all.
-  body       String?
-  authorName String
-  /// Nothing is public until a director has read it. The catalog aggregates
-  /// approved rows only, so an unapproved review moves no average.
-  isApproved Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  rating      Int
+  /// The reviewer's own words. Nullable so a rating can stand on its own, but
+  /// the public endpoint requires text today: a parts review with no words
+  /// tells the next buyer nothing.
+  body        String?
+  /// What the reviewer asked to be called. Not an identity — see authorPhone.
+  authorName  String
+  /// The verified phone from the session, and the identity behind
+  /// `@@unique([productId, authorPhone])`.
+  ///
+  /// MUST NEVER reach a public payload. The site has no user table for
+  /// customers — a session carries a phone number and nothing else — so this
+  /// is the only thing that can hold one person to one review per part, and it
+  /// is also a personal detail sitting next to a public opinion. Every read
+  /// path selects columns explicitly for that reason.
+  authorPhone String
+  /// Visible on the site. Reviews publish on submission — the phone was
+  /// already verified by SMS, which is the spam gate — and a director clears
+  /// this to take one down. The catalog aggregates visible rows only, so a
+  /// hidden review moves no average.
+  isApproved  Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  @@index([productId, isApproved])
+  /// One review per person per part. A second submission updates the first
+  /// rather than being refused, so changing your mind is editing, not a dead
+  /// end.
+  @@unique([productId, authorPhone])
+  @@index([productId, isApproved, createdAt])
   @@index([isApproved, createdAt])
 }
 

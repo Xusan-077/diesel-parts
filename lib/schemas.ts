@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { isValidPhone } from "@/lib/auth/phone";
 import { PRODUCT_SEARCH_MIN_LENGTH } from "@/lib/api/product-search";
+import {
+  REVIEW_AUTHOR_MAX,
+  REVIEW_BODY_MAX,
+  REVIEW_BODY_MIN,
+  REVIEWS_PAGE_SIZE,
+} from "@/lib/reviews";
 
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
@@ -38,6 +44,48 @@ export const inquirySchema = z.object({
 });
 
 export type InquiryInput = z.infer<typeof inquirySchema>;
+
+/* ── Product reviews ──────────────────────────────────────────────────────── */
+
+/**
+ * A review as the public site submits it.
+ *
+ * The author's phone is deliberately not a field. It comes from the session
+ * cookie on the server, exactly as the OTP flow reads the pending phone — a
+ * caller who could name their own identity could review the same part under a
+ * hundred of them, and the unique index would be decoration.
+ *
+ * The bounds are imported rather than repeated so the browser's own check in
+ * `validateReviewDraft` and this one cannot drift apart.
+ */
+export const reviewCreateSchema = z.object({
+  productId: z.string().min(1),
+  rating: z.number().int().min(1).max(5),
+  body: z.string().trim().min(REVIEW_BODY_MIN).max(REVIEW_BODY_MAX),
+  authorName: z.string().trim().min(1).max(REVIEW_AUTHOR_MAX),
+});
+
+export type ReviewCreateInput = z.infer<typeof reviewCreateSchema>;
+
+export const reviewListQuerySchema = z.object({
+  productId: z.string().min(1),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(REVIEWS_PAGE_SIZE * 4)
+    .default(REVIEWS_PAGE_SIZE),
+});
+
+export type ReviewListQuery = z.infer<typeof reviewListQuerySchema>;
+
+/** A director taking a review down, or putting one back. */
+export const reviewModerateSchema = z.object({
+  isApproved: z.boolean(),
+});
+
+export type ReviewModerateInput = z.infer<typeof reviewModerateSchema>;
 
 export const requestCodeSchema = z.object({
   phone: z.string().refine(isValidPhone, "invalid_phone"),
