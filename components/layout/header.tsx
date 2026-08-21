@@ -2,6 +2,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeaderMain } from "./header-main";
 import { HeaderNav } from "./header-nav";
+import { HeaderShell } from "./header-shell";
 import { HeaderTopbar } from "./header-topbar";
 
 interface HeaderProps {
@@ -24,8 +25,9 @@ export function Header({
   account,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <HeaderTopbar lang={lang} header={header} />
+    // `HeaderShell` is the only client component here; the rows themselves
+    // are still rendered on the server and passed through as children.
+    <HeaderShell topbar={<HeaderTopbar lang={lang} header={header} />}>
       <HeaderMain
         lang={lang}
         siteName={siteName}
@@ -35,7 +37,7 @@ export function Header({
         viewAllLabel={viewAllLabel}
         account={account}
       />
-      <HeaderNav lang={lang} nav={nav} />
-    </header>
+      <HeaderNav nav={nav} />
+    </HeaderShell>
   );
 }

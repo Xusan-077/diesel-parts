@@ -28,7 +28,12 @@ export function HeaderMain({
 }: HeaderMainProps) {
   return (
     <div className="bg-surface">
-      <Container className="flex items-center gap-3 py-2.5 lg:gap-4 lg:py-3">
+      {/*
+        The condensed padding is a single utility on purpose: the attribute
+        selector `group-data-*` compiles to outranks the plain `lg:py-3`
+        above it, so one rule covers both breakpoints.
+      */}
+      <Container className="flex items-center gap-3 py-2.5 transition-[padding] duration-300 ease-out group-data-[condensed]/header:py-1.5 lg:gap-4 lg:py-3">
         <MobileMenu
           lang={lang}
           siteName={siteName}
@@ -38,7 +43,7 @@ export function HeaderMain({
           className="lg:hidden"
         />
 
-        <Logo lang={lang} siteName={siteName} />
+        <Logo siteName={siteName} />
 
         <CatalogMegaMenu
           lang={lang}
@@ -48,21 +53,18 @@ export function HeaderMain({
         />
 
         <HeaderSearch
-          lang={lang}
           placeholder={header.searchPlaceholder}
           label={header.searchLabel}
           className="hidden min-w-0 flex-1 lg:block"
         />
 
         <HeaderActions
-          lang={lang}
           header={header}
           account={account}
           closeLabel={closeLabel}
           className="ml-auto hidden lg:flex"
         />
         <HeaderActions
-          lang={lang}
           header={header}
           account={account}
           closeLabel={closeLabel}
@@ -71,13 +73,18 @@ export function HeaderMain({
         />
       </Container>
 
-      <Container className="pb-3 lg:hidden">
-        <HeaderSearch
-          lang={lang}
-          placeholder={header.searchPlaceholder}
-          label={header.searchLabel}
-        />
-      </Container>
+      {/* A phone has the least room to spare, so its search row collapses
+          with the top bar and comes back on the way up. */}
+      <div className="grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out group-data-[condensed]/header:grid-rows-[0fr] lg:hidden">
+        <div className="overflow-hidden">
+          <Container className="pb-3">
+            <HeaderSearch
+              placeholder={header.searchPlaceholder}
+              label={header.searchLabel}
+            />
+          </Container>
+        </div>
+      </div>
     </div>
   );
 }
