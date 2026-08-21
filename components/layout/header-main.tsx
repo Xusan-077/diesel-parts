@@ -3,6 +3,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeaderActions } from "./header-actions";
 import { HeaderSearch } from "./header-search";
+import { HeaderSearchDialog } from "./header-search-dialog";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-nav";
 import { Container } from "@/components/ui/container";
@@ -14,6 +15,8 @@ interface HeaderMainProps {
   header: Dictionary["header"];
   closeLabel: string;
   viewAllLabel: string;
+  /** Shown in a suggestion row whose part has no price yet. */
+  requestPriceLabel: string;
   account: Dictionary["account"];
   phone: string | null;
 }
@@ -25,6 +28,7 @@ export function HeaderMain({
   header,
   closeLabel,
   viewAllLabel,
+  requestPriceLabel,
   account,
   phone,
 }: HeaderMainProps) {
@@ -59,9 +63,12 @@ export function HeaderMain({
           className="hidden lg:inline-flex"
         />
 
+        {/* Wide enough for the field, and it is the first thing most visitors
+            here are looking for, so it stays open rather than behind an icon. */}
         <HeaderSearch
-          placeholder={header.searchPlaceholder}
-          label={header.searchLabel}
+          lang={lang}
+          header={header}
+          requestPriceLabel={requestPriceLabel}
           className="hidden min-w-0 flex-1 lg:block"
         />
 
@@ -72,31 +79,28 @@ export function HeaderMain({
           phone={phone}
           className="ml-auto hidden lg:flex"
         />
+
+        {/*
+          A phone gets the icon instead. The field used to have a row of its
+          own under this one, which cost the header a third of its height on
+          every page whether anyone was searching or not — and that row could
+          not collapse away, because shrinking the sticky header is what
+          header-shell.tsx exists to prevent.
+        */}
+        <HeaderSearchDialog
+          lang={lang}
+          header={header}
+          requestPriceLabel={requestPriceLabel}
+          closeLabel={closeLabel}
+          className="ml-auto lg:hidden"
+        />
         <HeaderActions
           header={header}
           account={account}
           closeLabel={closeLabel}
           phone={phone}
           compact
-          className="ml-auto lg:hidden"
-        />
-      </Container>
-
-      {/*
-        A phone has no room for the search field beside the logo, so it gets
-        its own row underneath.
-
-        The row used to collapse on the way down. It cannot: it is the last row
-        in the header, so collapsing it shortens the header itself, and a
-        sticky header that changes height in response to scrolling is the
-        oscillation header-shell.tsx exists to avoid. Sliding is not available
-        to it either — it sits below the row that has to stay on screen, and
-        only the top of the header can leave the top of the viewport.
-      */}
-      <Container className="pb-3 lg:hidden">
-        <HeaderSearch
-          placeholder={header.searchPlaceholder}
-          label={header.searchLabel}
+          className="lg:hidden"
         />
       </Container>
     </div>

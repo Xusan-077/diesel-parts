@@ -12,6 +12,8 @@ interface HeaderProps {
   header: Dictionary["header"];
   closeLabel: string;
   viewAllLabel: string;
+  /** Shown in a search suggestion whose part has no price yet. */
+  requestPriceLabel: string;
   account: Dictionary["account"];
   /** The signed-in visitor's number, or null. See `HeaderActions`. */
   phone: string | null;
@@ -24,6 +26,7 @@ export function Header({
   header,
   closeLabel,
   viewAllLabel,
+  requestPriceLabel,
   account,
   phone,
 }: HeaderProps) {
@@ -38,6 +41,7 @@ export function Header({
         header={header}
         closeLabel={closeLabel}
         viewAllLabel={viewAllLabel}
+        requestPriceLabel={requestPriceLabel}
         account={account}
         phone={phone}
       />

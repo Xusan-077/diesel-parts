@@ -103,6 +103,7 @@ export default async function RootLayout({
                 header={dict.header}
                 closeLabel={dict.common.close}
                 viewAllLabel={dict.common.viewAll}
+                requestPriceLabel={dict.common.requestPrice}
                 account={dict.account}
                 phone={session?.phone ?? null}
               />
