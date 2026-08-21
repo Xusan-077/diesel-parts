@@ -11,10 +11,17 @@ const STOCK_VARIANT: Record<Product["stockStatus"], "success" | "warning" | "dan
 export function StockBadge({
   status,
   stock,
+  className,
 }: {
   status: Product["stockStatus"];
   stock: Dictionary["common"]["stock"];
+  /** Lets a caller place the badge — the catalog card corners it on the picture. */
+  className?: string;
 }) {
   const label = status === "out_of_stock" ? stock.outOfStock : stock[status];
-  return <Badge variant={STOCK_VARIANT[status]}>{label}</Badge>;
+  return (
+    <Badge variant={STOCK_VARIANT[status]} className={className}>
+      {label}
+    </Badge>
+  );
 }

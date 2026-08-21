@@ -30,7 +30,7 @@ describe("ProductStatsRow", () => {
     renderRow({ soldCount: 12 });
 
     expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.getByText(dict.soldCount.replace("{count}", "12"))).toBeDefined();
+    expect(screen.getByText(dict.orderedCount.replace("{count}", "12"))).toBeDefined();
   });
 
   it("shows the rating, the review count and the sold count together", () => {
@@ -41,7 +41,7 @@ describe("ProductStatsRow", () => {
     );
     expect(screen.getByText("4.5")).toBeDefined();
     expect(screen.getByText(dict.reviewCount.replace("{count}", "24"))).toBeDefined();
-    expect(screen.getByText(dict.soldCount.replace("{count}", "156"))).toBeDefined();
+    expect(screen.getByText(dict.orderedCount.replace("{count}", "156"))).toBeDefined();
   });
 
   it("prints a whole rating to one decimal, so cards align", () => {
@@ -51,7 +51,7 @@ describe("ProductStatsRow", () => {
 
   it("omits the sold count for a part that has been reviewed but never sold", () => {
     renderRow({ rating: 4, reviewCount: 2 });
-    expect(screen.queryByText(/sotilgan/)).toBeNull();
+    expect(screen.queryByText(/buyurtma qilingan/)).toBeNull();
   });
 
   it("groups a four-figure sold count", () => {
@@ -64,7 +64,7 @@ describe("ProductStatsRow", () => {
      * the assertion is written against the normalised text and the raw
      * separator is checked directly below.
      */
-    const line = screen.getByText(dict.soldCount.replace("{count}", "1 240"));
+    const line = screen.getByText(dict.orderedCount.replace("{count}", "1 240"));
     expect(line.textContent).toContain("1 240");
   });
 

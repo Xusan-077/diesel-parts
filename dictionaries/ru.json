@@ -203,7 +203,10 @@
     "ratingLabel": "{rating} из 5",
     "reviewCount": "{count} отзывов",
     "reviewCountEmpty": "Нет отзывов",
-    "soldCount": "Продано {count} раз"
+    "orderedCount": "Заказано {count} раз",
+    "imagePrev": "Предыдущее фото",
+    "imageNext": "Следующее фото",
+    "imageDot": "Фото {n}"
   },
   "categories": {
     "title": "Категория",
@@ -273,7 +276,10 @@
     "toastWishlistAdded": "Добавлено в избранное",
     "toastWishlistRemoved": "Убрано из избранного",
     "toastCompareAdded": "Добавлено к сравнению",
-    "toastCompareRemoved": "Убрано из сравнения"
+    "toastCompareRemoved": "Убрано из сравнения",
+    "quantity": "Количество",
+    "increase": "Увеличить",
+    "decrease": "Уменьшить"
   },
   "wishlist": {
     "title": "Избранное",

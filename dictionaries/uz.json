@@ -203,7 +203,10 @@
     "ratingLabel": "5 tadan {rating}",
     "reviewCount": "{count} ta sharh",
     "reviewCountEmpty": "Sharh yo'q",
-    "soldCount": "{count} marta sotilgan"
+    "orderedCount": "{count} marta buyurtma qilingan",
+    "imagePrev": "Oldingi rasm",
+    "imageNext": "Keyingi rasm",
+    "imageDot": "{n}-rasm"
   },
   "categories": {
     "title": "Kategoriya",
@@ -273,7 +276,10 @@
     "toastWishlistAdded": "Saralanganlarga qo'shildi",
     "toastWishlistRemoved": "Saralanganlardan olib tashlandi",
     "toastCompareAdded": "Taqqoslashga qo'shildi",
-    "toastCompareRemoved": "Taqqoslashdan olib tashlandi"
+    "toastCompareRemoved": "Taqqoslashdan olib tashlandi",
+    "quantity": "Miqdor",
+    "increase": "Ko'paytirish",
+    "decrease": "Kamaytirish"
   },
   "wishlist": {
     "title": "Saralanganlar",
