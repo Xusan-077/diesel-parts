@@ -20,6 +20,10 @@ import { RelatedProducts } from "@/components/product/related-products";
 import { ProductStatsRow } from "@/components/product/product-stats-row";
 import { getProductStatsFor } from "@/lib/api/product-stats-repository";
 import { EMPTY_STATS } from "@/lib/product-stats";
+import { ProductReviews } from "@/components/product/product-reviews";
+import { getOwnReview, listProductReviews } from "@/lib/api/review-repository";
+import { getSession } from "@/lib/auth/session";
+import { REVIEWS_PAGE_SIZE, type PublicReview } from "@/lib/reviews";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
 import { InquiryDialog } from "@/components/forms/inquiry-dialog";
 import { Container } from "@/components/ui/container";
@@ -76,11 +80,31 @@ export default async function ProductDetailPage({
 
   // Names for the breadcrumb line and the structured data. Losing them costs
   // a label and the JSON-LD block, not the page.
-  const [categories, brands, stats] = await Promise.all([
+  /*
+   * The log's first page and this reader's own entry, both server-read so the
+   * section is in the HTML and the form seeds without a round trip. `getOwnReview`
+   * is an indexed lookup by (product, phone) rather than a scan of the loaded
+   * page, so it finds their review even when it sits on page four.
+   */
+  const session = await getSession();
+
+  const [categories, brands, stats, reviewPage, ownReview] = await Promise.all([
     safeRead("product page categories", listCategories, [] as Category[]),
     safeRead("product page brands", listBrands, [] as Brand[]),
     // A line under the heading; unreadable figures cost that line, not the page.
     safeRead("product page stats", () => getProductStatsFor(product.id), EMPTY_STATS),
+    // Reviews are worth a section, not the page. An unreadable log renders as
+    // an empty one with a working form, exactly as a part with no reviews does.
+    safeRead(
+      "product reviews",
+      () => listProductReviews(product.id, 1, REVIEWS_PAGE_SIZE, session?.phone),
+      { items: [] as PublicReview[], total: 0, page: 1, pageSize: REVIEWS_PAGE_SIZE, totalPages: 1 },
+    ),
+    safeRead(
+      "own review",
+      () => (session ? getOwnReview(product.id, session.phone) : Promise.resolve(null)),
+      null,
+    ),
   ]);
   const category = categories.data.find((c) => c.id === product.categoryId);
   const brand = brands.data.find((b) => b.id === product.brandId);
@@ -193,6 +217,18 @@ export default async function ProductDetailPage({
 
       <div className="mt-16">
         <SpecsTable specs={product.specs} lang={lang} title={dict.product.specificationsTitle} />
+      </div>
+
+      <div className="mt-16">
+        <ProductReviews
+          productId={product.id}
+          initialPage={reviewPage.data}
+          initialOwn={ownReview.data}
+          dict={dict.reviews}
+          productDict={dict.product}
+          account={dict.account}
+          closeLabel={dict.common.close}
+        />
       </div>
 
       <div className="mt-16">
