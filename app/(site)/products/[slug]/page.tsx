@@ -17,6 +17,9 @@ import { ProductActions } from "@/components/product/product-actions";
 import { formatPrice } from "@/lib/format-price";
 import { canonicalPath } from "@/lib/seo";
 import { RelatedProducts } from "@/components/product/related-products";
+import { ProductStatsRow } from "@/components/product/product-stats-row";
+import { getProductStatsFor } from "@/lib/api/product-stats-repository";
+import { EMPTY_STATS } from "@/lib/product-stats";
 import { ProductJsonLd } from "@/components/product/product-json-ld";
 import { InquiryDialog } from "@/components/forms/inquiry-dialog";
 import { Container } from "@/components/ui/container";
@@ -71,9 +74,11 @@ export default async function ProductDetailPage({
 
   // Names for the breadcrumb line and the structured data. Losing them costs
   // a label and the JSON-LD block, not the page.
-  const [categories, brands] = await Promise.all([
+  const [categories, brands, stats] = await Promise.all([
     safeRead("product page categories", listCategories, [] as Category[]),
     safeRead("product page brands", listBrands, [] as Brand[]),
+    // A line under the heading; unreadable figures cost that line, not the page.
+    safeRead("product page stats", () => getProductStatsFor(product.id), EMPTY_STATS),
   ]);
   const category = categories.data.find((c) => c.id === product.categoryId);
   const brand = brands.data.find((b) => b.id === product.brandId);
@@ -109,6 +114,13 @@ export default async function ProductDetailPage({
             </span>
             <StockBadge status={product.stockStatus} stock={dict.common.stock} />
           </div>
+
+          <ProductStatsRow
+            stats={stats.data}
+            lang={lang}
+            dict={dict.product}
+            className="mt-3"
+          />
 
           <p className="mt-6 text-foreground">{product.description[lang]}</p>
 
@@ -168,6 +180,7 @@ export default async function ProductDetailPage({
           stock={dict.common.stock}
           requestPriceLabel={dict.common.requestPrice}
           actions={dict.productActions}
+          productDict={dict.product}
         />
       </div>
     </Container>

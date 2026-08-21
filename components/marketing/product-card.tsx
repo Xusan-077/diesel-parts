@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ProductActions } from "@/components/product/product-actions";
+import { ProductStatsRow } from "@/components/product/product-stats-row";
 import { StockBadge } from "@/components/product/stock-badge";
+import type { ProductStats } from "@/lib/product-stats";
 import { formatPrice } from "@/lib/format-price";
 import type { Product } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/locales";
@@ -15,6 +17,13 @@ interface ProductCardProps {
   /** Shown in place of a price when the product has none yet. */
   requestPriceLabel: string;
   actions: Dictionary["productActions"];
+  /** Strings for the rating and count line. */
+  productDict: Dictionary["product"];
+  /**
+   * Rating, review count and units sold. Omitted where the caller has no
+   * cheap way to read them — the line then simply does not appear.
+   */
+  stats?: ProductStats;
   /** Optional corner label, e.g. "New" on the newest-products row. */
   ribbon?: string;
 }
@@ -27,6 +36,8 @@ export function ProductCard({
   stock,
   requestPriceLabel,
   actions,
+  productDict,
+  stats,
   ribbon,
 }: ProductCardProps) {
   const price = formatPrice(product.price, lang);
@@ -60,6 +71,8 @@ export function ProductCard({
         </h3>
 
         <p className="text-xs text-muted">{categoryName}</p>
+
+        {stats ? <ProductStatsRow stats={stats} lang={lang} dict={productDict} /> : null}
 
         <div className="mt-auto flex items-end justify-between gap-2 pt-3">
           {price ? (

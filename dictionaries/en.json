@@ -171,7 +171,15 @@
     "nextPage": "Next",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Catalog pages",
-    "pageLabel": "Page {page}"
+    "pageLabel": "Page {page}",
+    "filtersTitle": "Filters",
+    "filtersOpen": "Filters",
+    "filtersClose": "Close",
+    "filtersApply": "Show results",
+    "filtersReset": "Clear filters",
+    "filtersActive": "{count} filters on",
+    "searchLabel": "Search",
+    "viewLabel": "View"
   },
   "product": {
     "skuLabel": "SKU",
@@ -182,7 +190,11 @@
     "compatibleModelsTitle": "Compatible Models",
     "specificationsTitle": "Specifications",
     "relatedProductsTitle": "Related Products",
-    "galleryAlt": "Product image"
+    "galleryAlt": "Product image",
+    "ratingLabel": "{rating} out of 5",
+    "reviewCount": "{count} reviews",
+    "reviewCountEmpty": "No reviews yet",
+    "soldCount": "{count} sold"
   },
   "categories": {
     "title": "Category",

@@ -3,7 +3,13 @@ import type { Locale } from "@/lib/i18n/locales";
 import type { ResolvedProduct } from "@/lib/product-lookup";
 import type { Brand, Category, Product } from "@/lib/types";
 import { toBrand, toCategory, toProduct } from "./product-mapper";
-import { buildPage, pageSkip, type Page, type ProductQuery } from "./product-query";
+import {
+  buildPage,
+  pageSkip,
+  type ProductPage,
+  type ProductQuery,
+} from "./product-query";
+import { getProductStats } from "./product-stats-repository";
 import { buildProductWhere } from "./product-where";
 
 /**
@@ -13,7 +19,7 @@ import { buildProductWhere } from "./product-where";
  * never issues an HTTP request to its own API. The browser reaches the same
  * data through `/api/products` and `/api/products/by-ids`.
  */
-export async function queryProducts(query: ProductQuery): Promise<Page<Product>> {
+export async function queryProducts(query: ProductQuery): Promise<ProductPage<Product>> {
   const { where, orderBy } = buildProductWhere(query);
 
   /*
@@ -33,7 +39,10 @@ export async function queryProducts(query: ProductQuery): Promise<Page<Product>>
     take: query.pageSize,
   });
 
-  return buildPage(rows.map(toProduct), total, clampedPage, query.pageSize);
+  const page = buildPage(rows.map(toProduct), total, clampedPage, query.pageSize);
+  const stats = await getProductStats(page.items.map((product) => product.id));
+
+  return { ...page, stats: Object.fromEntries(stats) };
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

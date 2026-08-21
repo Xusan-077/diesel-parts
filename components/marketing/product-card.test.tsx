@@ -16,7 +16,7 @@ import dictionary from "@/dictionaries/uz.json";
  */
 
 const product = products.find((entry) => entry.price !== null)!;
-const { productActions, common } = dictionary;
+const { productActions, common, product: productDict } = dictionary;
 
 const cleanups: (() => void)[] = [];
 
@@ -66,6 +66,7 @@ function renderCard() {
       stock={common.stock}
       requestPriceLabel={common.requestPrice}
       actions={productActions}
+      productDict={productDict}
     />
   );
 }

@@ -1,6 +1,6 @@
 import type { Product } from "@/lib/types";
 import { apiClient } from "./client";
-import type { Page, ProductQuery } from "./product-query";
+import type { ProductPage, ProductQuery } from "./product-query";
 
 export type ProductListParams = Partial<ProductQuery>;
 
@@ -40,8 +40,8 @@ export function toSearchParams(params: ProductListParams): URLSearchParams {
   return search;
 }
 
-export async function fetchProducts(params: ProductListParams): Promise<Page<Product>> {
-  const response = await apiClient.get<Page<Product>>("/products", {
+export async function fetchProducts(params: ProductListParams): Promise<ProductPage<Product>> {
+  const response = await apiClient.get<ProductPage<Product>>("/products", {
     params: toSearchParams(params),
   });
   return response.data;

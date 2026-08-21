@@ -171,7 +171,15 @@
     "nextPage": "Далее",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Страницы каталога",
-    "pageLabel": "Страница {page}"
+    "pageLabel": "Страница {page}",
+    "filtersTitle": "Фильтры",
+    "filtersOpen": "Фильтры",
+    "filtersClose": "Закрыть",
+    "filtersApply": "Показать результаты",
+    "filtersReset": "Сбросить фильтры",
+    "filtersActive": "Фильтров включено: {count}",
+    "searchLabel": "Поиск",
+    "viewLabel": "Вид"
   },
   "product": {
     "skuLabel": "SKU",
@@ -182,7 +190,11 @@
     "compatibleModelsTitle": "Совместимые модели",
     "specificationsTitle": "Технические характеристики",
     "relatedProductsTitle": "Похожие товары",
-    "galleryAlt": "Изображение товара"
+    "galleryAlt": "Изображение товара",
+    "ratingLabel": "{rating} из 5",
+    "reviewCount": "{count} отзывов",
+    "reviewCountEmpty": "Нет отзывов",
+    "soldCount": "Продано {count} раз"
   },
   "categories": {
     "title": "Категория",

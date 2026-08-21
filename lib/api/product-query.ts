@@ -1,5 +1,6 @@
 import type { AvailabilityFilter, SortKey } from "@/lib/filters";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/locales";
+import type { ProductStats } from "@/lib/product-stats";
 
 export const DEFAULT_PAGE_SIZE = 9;
 export const MAX_PAGE_SIZE = 60;
@@ -60,6 +61,17 @@ export interface Page<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+/**
+ * A page of products plus the rating and sold counts for exactly those rows.
+ *
+ * A sidecar keyed by product id rather than a field on `Product`: `Product` is
+ * the catalog row and is snapshotted into localStorage by the cart, and a
+ * review count is a live figure that has no business being frozen there.
+ */
+export interface ProductPage<T> extends Page<T> {
+  stats: Record<string, ProductStats>;
 }
 
 /**

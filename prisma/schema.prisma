@@ -83,12 +83,38 @@ model Product {
   updatedAt        DateTime    @updatedAt
   inquiries        Inquiry[]
   orderItems       OrderItem[]
+  reviews          Review[]
 
   @@index([categoryId])
   @@index([brandId])
   @@index([stockStatus])
   @@index([stock])
   @@index([isActive, createdAt])
+}
+
+/// A buyer's rating of a part they bought.
+///
+/// Kept as rows rather than as an average on Product: a stored average cannot
+/// be recomputed when a review is withdrawn or unapproved, and the catalog
+/// needs the count beside it anyway. Aggregated per page, not per row.
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Whole stars, 1 to 5. A CHECK constraint in the migration enforces the
+  /// range in the database, which Prisma's schema language cannot express.
+  rating     Int
+  /// The reviewer's own words. Optional — a rating with no text is still a
+  /// rating, and asking for prose is how you get no ratings at all.
+  body       String?
+  authorName String
+  /// Nothing is public until a director has read it. The catalog aggregates
+  /// approved rows only, so an unapproved review moves no average.
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([productId, isApproved])
+  @@index([isApproved, createdAt])
 }
 
 model User {

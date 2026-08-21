@@ -1,5 +1,9 @@
 import { DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { listBrands, listCategories, queryProducts } from "@/lib/api/product-repository";
+import { safeRead } from "@/lib/api/safe-read";
+import { getProductStats } from "@/lib/api/product-stats-repository";
+import type { ProductStats } from "@/lib/product-stats";
+import type { Brand, Category } from "@/lib/types";
 import type { Product } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -14,6 +18,7 @@ export async function RelatedProducts({
   stock,
   requestPriceLabel,
   actions,
+  productDict,
 }: {
   product: Product;
   lang: Locale;
@@ -21,26 +26,42 @@ export async function RelatedProducts({
   stock: Dictionary["common"]["stock"];
   requestPriceLabel: string;
   actions: Dictionary["productActions"];
+  productDict: Dictionary["product"];
 }) {
+  /*
+   * A suggestion strip at the bottom of the page. If it cannot be read there is
+   * nothing to tell the visitor — the product they came for is already above
+   * it — so the whole block simply does not appear, exactly as it does for a
+   * category with no siblings.
+   */
   const [page, brands, categories] = await Promise.all([
-    queryProducts({
-      q: "",
-      brandId: "all",
-      categoryId: product.categoryId,
-      categoryIds: undefined,
-      availability: "all",
-      sort: "newest",
-      page: 1,
-      // One extra, because the product being viewed is in its own category and
-      // queryProducts has no "exclude this id" parameter.
-      pageSize: RELATED_COUNT + 1,
-      lang: lang ?? DEFAULT_LOCALE,
-    }),
-    listBrands(),
-    listCategories(),
+    safeRead(
+      "related products",
+      () =>
+        queryProducts({
+          q: "",
+          brandId: "all",
+          categoryId: product.categoryId,
+          categoryIds: undefined,
+          availability: "all",
+          sort: "newest",
+          page: 1,
+          // One extra, because the product being viewed is in its own category
+          // and queryProducts has no "exclude this id" parameter.
+          pageSize: RELATED_COUNT + 1,
+          lang: lang ?? DEFAULT_LOCALE,
+        }),
+      null,
+    ),
+    safeRead("related product brands", listBrands, [] as Brand[]),
+    safeRead("related product categories", listCategories, [] as Category[]),
   ]);
 
-  const related = page.items
+  if (page.data === null) {
+    return null;
+  }
+
+  const related = page.data.items
     .filter((candidate) => candidate.id !== product.id)
     .slice(0, RELATED_COUNT);
 
@@ -48,8 +69,16 @@ export async function RelatedProducts({
     return null;
   }
 
-  const brandNameById = new Map(brands.map((brand) => [brand.id, brand.name]));
-  const categoryNameById = new Map(categories.map((category) => [category.id, category.name[lang]]));
+  const stats = await safeRead(
+    "related product stats",
+    () => getProductStats(related.map((item) => item.id)),
+    new Map<string, ProductStats>(),
+  );
+
+  const brandNameById = new Map(brands.data.map((brand) => [brand.id, brand.name]));
+  const categoryNameById = new Map(
+    categories.data.map((category) => [category.id, category.name[lang]]),
+  );
 
   return (
     <div>
@@ -65,6 +94,8 @@ export async function RelatedProducts({
             stock={stock}
             requestPriceLabel={requestPriceLabel}
             actions={actions}
+            productDict={productDict}
+            stats={stats.data.get(item.id)}
           />
         ))}
       </div>

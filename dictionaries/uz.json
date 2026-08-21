@@ -171,7 +171,15 @@
     "nextPage": "Keyingi",
     "pageIndicator": "{current} / {total}",
     "paginationLabel": "Katalog sahifalari",
-    "pageLabel": "{page}-sahifa"
+    "pageLabel": "{page}-sahifa",
+    "filtersTitle": "Filtrlar",
+    "filtersOpen": "Filtrlar",
+    "filtersClose": "Yopish",
+    "filtersApply": "Natijalarni ko'rish",
+    "filtersReset": "Filtrlarni tozalash",
+    "filtersActive": "{count} ta filtr yoqilgan",
+    "searchLabel": "Qidiruv",
+    "viewLabel": "Ko'rinish"
   },
   "product": {
     "skuLabel": "SKU",
@@ -182,7 +190,11 @@
     "compatibleModelsTitle": "Mos keladigan modellar",
     "specificationsTitle": "Texnik xususiyatlari",
     "relatedProductsTitle": "O'xshash mahsulotlar",
-    "galleryAlt": "Mahsulot rasmi"
+    "galleryAlt": "Mahsulot rasmi",
+    "ratingLabel": "5 tadan {rating}",
+    "reviewCount": "{count} ta sharh",
+    "reviewCountEmpty": "Sharh yo'q",
+    "soldCount": "{count} marta sotilgan"
   },
   "categories": {
     "title": "Kategoriya",
