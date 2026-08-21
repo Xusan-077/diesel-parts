@@ -8,6 +8,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Brand, Category, Product } from "@/lib/types";
 import { ProductCarousel } from "./product-carousel";
+import { SectionMarker } from "./section-marker";
 
 interface ProductRowProps {
   lang: Locale;
@@ -121,6 +122,7 @@ export async function ProductRow({
         ribbon={ribbon}
         autoplay={autoplay}
       />
+      <SectionMarker label={title} href={viewAllHref} />
     </Container>
   );
 }

@@ -26,7 +26,8 @@
     "productsUnavailable": "Hozircha mahsulotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
     "dataUnavailable": "Hozircha ma'lumotlarni yuklab bo'lmadi, keyinroq urinib ko'ring.",
     "pageUnavailable": "Sahifani hozircha ko'rsatib bo'lmadi",
-    "breadcrumbLabel": "Sahifa yo'li"
+    "breadcrumbLabel": "Sahifa yo'li",
+    "carouselSlide": "{n}-slayd"
   },
   "nav": {
     "products": "Mahsulotlar",
@@ -145,7 +146,8 @@
     "ctaBannerTitle": "Ehtiyot qism kerakmi?",
     "ctaBannerText": "Bepul konsultatsiya oling — mutaxassislarimiz sizga mos qismni topishga yordam beradi.",
     "ctaBannerButton": "Bog'lanish",
-    "heroEyebrow": "10 000+ artikul · OEM sifat"
+    "heroEyebrow": "10 000+ artikul · OEM sifat",
+    "heroCarouselLabel": "Bosh sahifa slayderi"
   },
   "catalog": {
     "title": "Mahsulotlar katalogi",

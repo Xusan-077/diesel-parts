@@ -26,7 +26,8 @@
     "productsUnavailable": "Не удалось загрузить товары, попробуйте позже.",
     "dataUnavailable": "Не удалось загрузить данные, попробуйте позже.",
     "pageUnavailable": "Страница сейчас недоступна",
-    "breadcrumbLabel": "Навигация по сайту"
+    "breadcrumbLabel": "Навигация по сайту",
+    "carouselSlide": "Слайд {n}"
   },
   "nav": {
     "products": "Продукция",
@@ -145,7 +146,8 @@
     "ctaBannerTitle": "Нужна запчасть?",
     "ctaBannerText": "Получите бесплатную консультацию — наши специалисты помогут подобрать нужную деталь.",
     "ctaBannerButton": "Связаться",
-    "heroEyebrow": "10 000+ артикулов · OEM качество"
+    "heroEyebrow": "10 000+ артикулов · OEM качество",
+    "heroCarouselLabel": "Слайдер главной страницы"
   },
   "catalog": {
     "title": "Каталог продукции",

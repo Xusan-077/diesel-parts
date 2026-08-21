@@ -62,7 +62,7 @@ export default async function HomePage() {
 
   return (
     <main>
-      <Hero home={dict.home} />
+      <Hero home={dict.home} common={dict.common} lang={lang} />
 
       <Container as="section" className="py-20">
         <TrustBadges items={dict.home.trustBadges} />
