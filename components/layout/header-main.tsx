@@ -29,11 +29,16 @@ export function HeaderMain({
   return (
     <div className="bg-surface">
       {/*
-        The condensed padding is a single utility on purpose: the attribute
-        selector `group-data-*` compiles to outranks the plain `lg:py-3`
-        above it, so one rule covers both breakpoints.
+        This row's height is fixed at every breakpoint, and the condensed state
+        deliberately does not touch it. It used to tighten its padding by 8px
+        on the way down, which resized the sticky header and fed the scroll
+        oscillation described in header-shell.tsx — the same bug as the top
+        bar's old collapse, eight pixels at a time instead of thirty-seven.
+        The header already gets shorter on screen by sliding the row above this
+        one out of view; taking the padding with it is not worth reopening the
+        loop for.
       */}
-      <Container className="flex items-center gap-3 py-2.5 transition-[padding] duration-300 ease-out group-data-[condensed]/header:py-1.5 lg:gap-4 lg:py-3">
+      <Container className="flex items-center gap-3 py-2.5 lg:gap-4 lg:py-3">
         <MobileMenu
           lang={lang}
           siteName={siteName}
@@ -73,18 +78,23 @@ export function HeaderMain({
         />
       </Container>
 
-      {/* A phone has the least room to spare, so its search row collapses
-          with the top bar and comes back on the way up. */}
-      <div className="grid grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out group-data-[condensed]/header:grid-rows-[0fr] lg:hidden">
-        <div className="overflow-hidden">
-          <Container className="pb-3">
-            <HeaderSearch
-              placeholder={header.searchPlaceholder}
-              label={header.searchLabel}
-            />
-          </Container>
-        </div>
-      </div>
+      {/*
+        A phone has no room for the search field beside the logo, so it gets
+        its own row underneath.
+
+        The row used to collapse on the way down. It cannot: it is the last row
+        in the header, so collapsing it shortens the header itself, and a
+        sticky header that changes height in response to scrolling is the
+        oscillation header-shell.tsx exists to avoid. Sliding is not available
+        to it either — it sits below the row that has to stay on screen, and
+        only the top of the header can leave the top of the viewport.
+      */}
+      <Container className="pb-3 lg:hidden">
+        <HeaderSearch
+          placeholder={header.searchPlaceholder}
+          label={header.searchLabel}
+        />
+      </Container>
     </div>
   );
 }
