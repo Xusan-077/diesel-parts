@@ -7,12 +7,13 @@ import { fetchProducts, productsQueryKey, type ProductListParams } from "@/lib/a
 import { DEFAULT_PAGE_SIZE, type ProductPage } from "@/lib/api/product-query";
 import {
   activeFilterCount,
-  clearedValue,
   clearFilters,
   DEFAULT_FILTERS,
   describeActiveFilters,
+  removeFilter,
   type CatalogFilters,
 } from "@/lib/catalog-filters";
+import { formatPrice } from "@/lib/format-price";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -21,6 +22,7 @@ import { ProductFilters } from "./product-filters";
 import { FilterChips } from "./filter-chips";
 import { FilterDrawer } from "./filter-drawer";
 import { CatalogToolbar } from "./catalog-toolbar";
+import type { PriceBounds } from "./price-filter";
 import { ProductCard } from "@/components/marketing/product-card";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -34,6 +36,8 @@ interface ProductCatalogClientProps {
   /** Filter reference data, read from the database by the server page. */
   categories: Category[];
   brands: Brand[];
+  /** The catalog's real price range, for the sidebar slider's two ends. */
+  priceBounds: PriceBounds | null;
   /** Seeded from the `?q=` param so the header search lands on real results. */
   initialSearch?: string;
   /**
@@ -64,6 +68,7 @@ export function ProductCatalogClient({
   productDict,
   categories,
   brands,
+  priceBounds,
   initialSearch = "",
   scopeCategoryIds,
   scopeLabel,
@@ -78,14 +83,26 @@ export function ProductCatalogClient({
   const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
 
-  const debouncedSearch = useDebouncedValue(filters.search);
+  /*
+   * The whole filter set is debounced, not just the search box.
+   *
+   * Every control now writes straight to the state — there is no "search"
+   * button to press — and several of them fire continuously: a slider thumb
+   * emits a value per pixel dragged, and ticking three brands is three
+   * changes in about a second. One 300ms settle in front of the query covers
+   * all of them, and `keepPreviousData` below means the grid holds the last
+   * result while the next is in flight rather than blanking between them.
+   */
+  const settled = useDebouncedValue(filters);
 
   const params: ProductListParams = {
-    q: debouncedSearch,
-    brandId: filters.brandId,
-    categoryId: filters.categoryId,
+    q: settled.search.trim(),
+    brandIds: settled.brandIds,
+    categoryId: settled.categoryId,
     categoryIds: scopeCategoryIds,
-    availability: filters.availability,
+    availability: settled.availability,
+    priceMin: settled.priceMin,
+    priceMax: settled.priceMax,
     sort: sortKey,
     page,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -94,10 +111,12 @@ export function ProductCatalogClient({
 
   // Only the untouched first render matches what the server already computed.
   const isInitialParams =
-    debouncedSearch === initialSearch &&
-    filters.brandId === "all" &&
-    filters.categoryId === "all" &&
-    filters.availability === "all" &&
+    settled.search === initialSearch &&
+    settled.brandIds.length === 0 &&
+    settled.categoryId === "all" &&
+    settled.availability === "all" &&
+    settled.priceMin === null &&
+    settled.priceMax === null &&
     sortKey === "newest" &&
     page === 1;
 
@@ -134,8 +153,21 @@ export function ProductCatalogClient({
     brand: dict.filterBrandLabel,
     category: dict.filterCategoryLabel,
     availability: dict.filterAvailabilityLabel,
+    price: dict.filterPriceLabel,
     brandName: (id) => brands.find((brand) => brand.id === id)?.name ?? "",
     categoryName: (id) => categories.find((c) => c.id === id)?.name[lang] ?? "",
+    // An open end reads as "from X" or "up to Y" rather than as a range with a
+    // blank in it, which the reader would have to decode.
+    priceRange: (min, max) => {
+      const low = formatPrice(min, lang);
+      const high = formatPrice(max, lang);
+      if (low !== null && high !== null) {
+        return dict.priceRange.replace("{min}", low).replace("{max}", high);
+      }
+      return low !== null
+        ? dict.priceFromOnly.replace("{min}", low)
+        : dict.priceToOnly.replace("{max}", high ?? "");
+    },
     // `all` never reaches here — it is the value that means "no chip" — but the
     // type includes it, and naming that explicitly beats an index signature.
     availabilityName: (value) =>
@@ -146,12 +178,37 @@ export function ProductCatalogClient({
           : stockDict[value],
   });
 
+  /*
+   * Built once and handed to whichever container the view switch chose. The
+   * two layouts differ in how the cards are arranged, never in which cards
+   * they are.
+   */
+  const cards = items.map((product) => {
+    const category = categories.find((c) => c.id === product.categoryId);
+    const brand = brands.find((b) => b.id === product.brandId);
+    return (
+      <ProductCard
+        key={product.id}
+        product={product}
+        lang={lang}
+        categoryName={category?.name[lang] ?? ""}
+        brandName={brand?.name ?? ""}
+        stock={stockDict}
+        requestPriceLabel={requestPriceLabel}
+        actions={actions}
+        productDict={productDict}
+        stats={stats?.[product.id]}
+      />
+    );
+  });
+
   const panel = (
     <ProductFilters
       dict={dict}
       stockDict={stockDict}
       brands={brands}
       categories={categories}
+      priceBounds={priceBounds}
       lang={lang}
       filters={filters}
       onChange={changeFilter}
@@ -178,7 +235,10 @@ export function ProductCatalogClient({
           className="mb-4"
           chips={chips}
           dict={dict}
-          onRemove={(key) => changeFilter(key, clearedValue(key))}
+          onRemove={(chip) => {
+            setFilters((current) => removeFilter(current, chip));
+            setPage(1);
+          }}
           onClearAll={resetFilters}
           scope={
             scopeLabel
@@ -224,33 +284,19 @@ export function ProductCatalogClient({
           <p className="mt-12 text-center text-muted">{dict.loading}</p>
         ) : items.length === 0 ? (
           <p className="mt-12 text-center text-muted">{dict.noResults}</p>
+        ) : view === "grid" ? (
+          /*
+            The one product surface that stays a grid all the way down.
+            Everywhere else a set of cards is a row to glance along, so it
+            becomes a horizontal track on a phone — see `ProductGrid`. This is
+            the catalog: it is what the filters filter and what the pagination
+            pages, and a page of results a reader has to swipe sideways through
+            hides most of its own answer. Two columns is the smaller card, and
+            here that is the right trade.
+          */
+          <div className="mt-6 grid grid-cols-2 gap-6 xl:grid-cols-3">{cards}</div>
         ) : (
-          <div
-            className={
-              view === "grid"
-                ? "mt-6 grid grid-cols-2 gap-6 xl:grid-cols-3"
-                : "mt-6 flex flex-col gap-4"
-            }
-          >
-            {items.map((product) => {
-              const category = categories.find((c) => c.id === product.categoryId);
-              const brand = brands.find((b) => b.id === product.brandId);
-              return (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  lang={lang}
-                  categoryName={category?.name[lang] ?? ""}
-                  brandName={brand?.name ?? ""}
-                  stock={stockDict}
-                  requestPriceLabel={requestPriceLabel}
-                  actions={actions}
-                  productDict={productDict}
-                  stats={stats?.[product.id]}
-                />
-              );
-            })}
-          </div>
+          <div className="mt-6 flex flex-col gap-4">{cards}</div>
         )}
 
         <Pagination

@@ -3,8 +3,13 @@ import { safeRead } from "@/lib/api/safe-read";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Category } from "@/lib/types";
-import { CategoryCard } from "./category-card";
+import { CategoryMarquee } from "./category-marquee";
 
+/**
+ * Stays a server component: the read happens here, and only the belt below
+ * reaches the browser. See `CategoryMarquee` for why a phone gets a travelling
+ * row where a desktop gets the grid.
+ */
 export async function CategoryGrid({
   lang,
   unavailableLabel,
@@ -18,11 +23,5 @@ export async function CategoryGrid({
     return <DataUnavailable message={unavailableLabel} />;
   }
 
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      {categories.data.map((category) => (
-        <CategoryCard key={category.id} category={category} lang={lang} />
-      ))}
-    </div>
-  );
+  return <CategoryMarquee categories={categories.data} lang={lang} />;
 }

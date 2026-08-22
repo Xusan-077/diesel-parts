@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SiteError from "./error";
 import { ProductRow } from "@/components/marketing/product-row";
 import { BrandGrid } from "@/components/marketing/brand-grid";
 import { CategoryGrid } from "@/components/marketing/category-grid";
+import { stubObservers } from "@/lib/test/stub-observers";
 import uz from "@/dictionaries/uz.json";
 
 /*
@@ -34,6 +35,8 @@ vi.mock("@/lib/api/product-stats-repository", () => ({
   getProductStats: () => Promise.reject(new Error("Server has closed the connection")),
 }));
 
+beforeAll(stubObservers);
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -42,8 +45,6 @@ afterEach(() => {
 const carousel = {
   prev: uz.common.carouselPrev,
   next: uz.common.carouselNext,
-  pause: uz.common.carouselPause,
-  play: uz.common.carouselPlay,
 };
 
 function rowProps() {

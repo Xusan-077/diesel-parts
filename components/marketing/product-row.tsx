@@ -23,13 +23,9 @@ interface ProductRowProps {
   carousel: {
     prev: string;
     next: string;
-    pause: string;
-    play: string;
   };
   /** Corner label applied to every card in this row. */
   ribbon?: string;
-  /** Advance on a timer. Reserved for the one lead row, never all of them. */
-  autoplay?: boolean;
   /**
    * The read that was supposed to fill this row failed.
    *
@@ -61,7 +57,6 @@ export async function ProductRow({
   productDict,
   carousel,
   ribbon,
-  autoplay,
   unavailable = false,
   unavailableLabel,
 }: ProductRowProps) {
@@ -120,7 +115,6 @@ export async function ProductRow({
         meta={meta}
         stats={Object.fromEntries(stats.data)}
         ribbon={ribbon}
-        autoplay={autoplay}
       />
       <SectionMarker label={title} href={viewAllHref} />
     </Container>

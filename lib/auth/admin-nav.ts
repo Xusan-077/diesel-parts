@@ -19,6 +19,7 @@ const SELLER_ROLES: readonly StaffRole[] = ["SELLER", "DIRECTOR"];
 export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: "/admin/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
   { href: "/admin/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
+  { href: "/admin/director/categories", label: "Kategoriyalar", roles: ["DIRECTOR"] },
   { href: "/admin/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
   { href: "/admin/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },
   { href: "/admin/director/reviews", label: "Sharhlar", roles: ["DIRECTOR"] },

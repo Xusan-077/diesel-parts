@@ -22,10 +22,15 @@ export async function POST() {
     );
   }
 
-  const { delivered } = await deliverOtp(phone, issued.code);
+  const { delivered, devCode } = await deliverOtp(phone, issued.code);
   if (!delivered) {
     return NextResponse.json({ success: false, error: "delivery_failed" }, { status: 502 });
   }
 
-  return NextResponse.json({ success: true, resendAfterSeconds: issued.resendAfterSeconds });
+  // `devCode` is undefined in production, so the field is absent there.
+  return NextResponse.json({
+    success: true,
+    resendAfterSeconds: issued.resendAfterSeconds,
+    devCode,
+  });
 }

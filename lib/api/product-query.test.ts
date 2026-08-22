@@ -15,10 +15,12 @@ describe("parseProductQuery", () => {
   it("applies defaults for an empty query string", () => {
     expect(query("")).toEqual({
       q: "",
-      brandId: "all",
+      brandIds: [],
       categoryId: "all",
       categoryIds: undefined,
       availability: "all",
+      priceMin: null,
+      priceMax: null,
       sort: "newest",
       page: 1,
       pageSize: DEFAULT_PAGE_SIZE,
@@ -30,13 +32,43 @@ describe("parseProductQuery", () => {
     const result = query("q=turbo&brand=cat&category=injector&availability=limited&sort=name-asc&page=3&pageSize=20&lang=en");
     expect(result).toMatchObject({
       q: "turbo",
-      brandId: "cat",
+      brandIds: ["cat"],
       categoryId: "injector",
       availability: "limited",
       sort: "name-asc",
       page: 3,
       pageSize: 20,
       lang: "en",
+    });
+  });
+
+  it("reads every ticked brand", () => {
+    expect(query("brand=cat&brand=volvo").brandIds).toEqual(["cat", "volvo"]);
+  });
+
+  it("treats the old single-select sentinel as no brand filter", () => {
+    // The sidebar used to send `brand=all` from a <select>. A bookmark from
+    // then must still mean "every brand", not a brand with the id "all".
+    expect(query("brand=all").brandIds).toEqual([]);
+  });
+
+  it("reads the price bounds", () => {
+    expect(query("priceMin=500000&priceMax=2000000")).toMatchObject({
+      priceMin: 500_000,
+      priceMax: 2_000_000,
+    });
+  });
+
+  it("drops a price bound nobody could have meant", () => {
+    // Widening back out beats clamping to zero: a bound that cannot be read is
+    // not a narrowing the reader asked for.
+    expect(query("priceMin=abc&priceMax=-5")).toMatchObject({ priceMin: null, priceMax: null });
+  });
+
+  it("reads a hand-reversed price range the way it was meant", () => {
+    expect(query("priceMin=2000000&priceMax=500000")).toMatchObject({
+      priceMin: 500_000,
+      priceMax: 2_000_000,
     });
   });
 

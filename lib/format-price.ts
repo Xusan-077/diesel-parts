@@ -21,10 +21,30 @@ const SUFFIX: Record<Locale, string> = {
   en: "",
 };
 
-function formatAmount(amount: number, locale: Locale): string {
+/**
+ * The grouped digits alone, with no currency after them.
+ *
+ * The catalog's price filter needs this: its heading already says "so'm", and
+ * repeating the unit inside both ends of the range would double the width of a
+ * control that has to fit a sidebar.
+ */
+export function formatNumber(amount: number, locale: Locale): string {
   return Math.round(amount)
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, GROUP_SEPARATOR[locale]);
+}
+
+/**
+ * Reads a grouped amount back, whichever separator was typed.
+ *
+ * Everything that is not a digit is dropped rather than rejected: the reader
+ * pastes "3 450 000", "3,450,000" or "3450000 so'm" and all three mean the same
+ * number. An entry with no digits at all is `null` — an empty end of the range,
+ * not zero.
+ */
+export function parseAmount(input: string): number | null {
+  const digits = input.replace(/\D/g, "");
+  return digits === "" ? null : Number(digits);
 }
 
 /**
@@ -36,7 +56,7 @@ export function formatPrice(amount: number | null, locale: Locale): string | nul
     return null;
   }
 
-  const formatted = formatAmount(amount, locale);
+  const formatted = formatNumber(amount, locale);
   return locale === "en" ? `${CURRENCY} ${formatted}` : `${formatted} ${SUFFIX[locale]}`;
 }
 

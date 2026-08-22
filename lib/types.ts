@@ -10,12 +10,24 @@ export interface Brand {
   id: string;
   slug: string;
   name: string;
+  /**
+   * Mark shown beside the brand in the catalog filter. Optional because most
+   * rows have none yet; the filter draws a monogram tile in its place rather
+   * than a gap, so the list keeps one rhythm either way.
+   */
+  logoUrl?: string | null;
 }
 
 export interface Category {
   id: string;
   slug: string;
   name: LocalizedText;
+  /**
+   * Parent column in the catalog tree, or null/absent for a root. The filter
+   * sidebar nests its rows from this; the seed data omits it, which reads the
+   * same as a flat list of roots.
+   */
+  parentId?: string | null;
 }
 
 export interface ProductSpec {

@@ -7,13 +7,22 @@ function asString(params: Parameters<typeof toSearchParams>[0]): string {
 
 describe("toSearchParams", () => {
   it("omits empty and default values", () => {
-    expect(asString({ q: "", brandId: "all", categoryId: "all", availability: "all" })).toBe("");
+    expect(
+      asString({
+        q: "",
+        brandIds: [],
+        categoryId: "all",
+        availability: "all",
+        priceMin: null,
+        priceMax: null,
+      }),
+    ).toBe("");
   });
 
   it("serialises the real filters", () => {
     const result = toSearchParams({
       q: "turbo",
-      brandId: "cat",
+      brandIds: ["cat"],
       categoryId: "injector",
       availability: "limited",
       sort: "name-asc",
@@ -29,6 +38,26 @@ describe("toSearchParams", () => {
     expect(result.get("page")).toBe("2");
     expect(result.get("pageSize")).toBe("12");
     expect(result.get("lang")).toBe("ru");
+  });
+
+  it("repeats brand once per ticked box", () => {
+    expect(toSearchParams({ brandIds: ["cat", "volvo"] }).getAll("brand")).toEqual([
+      "cat",
+      "volvo",
+    ]);
+  });
+
+  it("sends the price bounds the reader set, and only those", () => {
+    expect(toSearchParams({ priceMin: 500_000, priceMax: null }).toString()).toBe(
+      "priceMin=500000",
+    );
+    expect(toSearchParams({ priceMin: null, priceMax: 2_000_000 }).toString()).toBe(
+      "priceMax=2000000",
+    );
+  });
+
+  it("keeps a zero lower bound, which is not the same as no bound", () => {
+    expect(toSearchParams({ priceMin: 0 }).get("priceMin")).toBe("0");
   });
 
   it("repeats categoryIds for a multi-category scope", () => {

@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { GENDERS, isIsoDate } from "@/lib/account/profile";
 import { isValidPhone } from "@/lib/auth/phone";
+import { CATALOG_ICON_KEYS } from "@/lib/data/catalog-menu";
 import { PRODUCT_SEARCH_MIN_LENGTH } from "@/lib/api/product-search";
 import {
   REVIEW_AUTHOR_MAX,
@@ -323,3 +325,71 @@ export const discountRequestSchema = z.object({
 });
 
 export type DiscountRequestInput = z.infer<typeof discountRequestSchema>;
+
+/* ── Director panel: catalog structure ───────────────────────────────── */
+
+/**
+ * One node of the catalog menu.
+ *
+ * `parentId` is nullable rather than optional: a category is either a column of
+ * the menu or an entry inside one, and the form has to be able to say "move
+ * this back to the top level" as well as "leave it where it is". The repository
+ * refuses a parent that is not itself a top-level category, which is what keeps
+ * the menu two levels deep.
+ */
+export const categoryWriteSchema = z.object({
+  name: localizedSchema,
+  slug: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug_format"),
+  /** Part family shared by a column and everything in it — "engine", "filters". */
+  type: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "type_format"),
+  parentId: z.string().min(1).nullable(),
+  order: z.number().int().min(0).max(9_999),
+  icon: z.enum(CATALOG_ICON_KEYS).nullable(),
+});
+
+export type CategoryWriteInput = z.infer<typeof categoryWriteSchema>;
+
+
+/* ── Customer profile ─────────────────────────────────────────────────────── */
+
+/**
+ * The account panel's forms.
+ *
+ * Every message here is a *code*, not a sentence. The panel is rendered in
+ * three languages and the schema has no dictionary, so it names the fault and
+ * the form looks the wording up — the same split the rest of the site uses
+ * between `authErrorMessage` and the API's error strings.
+ */
+
+const NAME_MIN = 2;
+const NAME_MAX = 40;
+
+/** Today in the visitor's own timezone: a birthday is a calendar date, not an instant. */
+function todayIso(): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
+}
+
+export const profileDetailsSchema = z.object({
+  firstName: z.string().trim().min(NAME_MIN, "tooShort").max(NAME_MAX, "tooLong"),
+  lastName: z.string().trim().min(NAME_MIN, "tooShort").max(NAME_MAX, "tooLong"),
+  // Optional, and stays optional: a shop has no business refusing to save a
+  // name because the visitor would rather not give a birthday.
+  birthDate: z
+    .string()
+    .refine((value) => value === "" || isIsoDate(value), "invalidDate")
+    // ISO dates sort lexicographically, so this is the whole comparison.
+    .refine((value) => value === "" || value <= todayIso(), "futureDate"),
+  gender: z.union([z.enum(GENDERS), z.literal("")]),
+});
+
+export type ProfileDetailsInput = z.infer<typeof profileDetailsSchema>;

@@ -1,3 +1,5 @@
+import type { GeoPoint } from "./map-links";
+
 /**
  * Canonical origin, used for metadata, the sitemap and robots.txt. Set
  * NEXT_PUBLIC_SITE_URL per environment so preview deploys do not emit
@@ -31,3 +33,10 @@ export const SITE_PHONES: SitePhone[] = [
   { display: "+998 90 000-00-00", tel: "+998900000000" },
   { display: "+998 91 000-00-00", tel: "+998910000000" },
 ];
+
+/**
+ * The office pin, shared by the footer's location card and its map embed so
+ * the coordinates on screen and the ones behind the links can never drift.
+ * Taken from the Yandex Maps share link for the showroom.
+ */
+export const SITE_LOCATION: GeoPoint = { lat: 41.186136, lon: 69.196655 };

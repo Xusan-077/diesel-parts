@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { authErrorMessage, type AuthErrorPayload } from "@/lib/auth/error-message";
+import { notifyDevCode } from "@/lib/auth/dev-code-notice";
 import { refusalPayload } from "@/lib/api/request-error";
 import {
   formatNationalDigits,
@@ -55,7 +56,10 @@ export function PhoneForm({
     const canonicalPhone = toCanonicalPhone(phone) ?? phone;
 
     try {
-      await axios.post("/api/auth/request-code", { phone: canonicalPhone });
+      const { data } = await axios.post<{ devCode?: string }>("/api/auth/request-code", {
+        phone: canonicalPhone,
+      });
+      notifyDevCode(data.devCode);
 
       if (onSuccess) {
         onSuccess(maskPhone(canonicalPhone));

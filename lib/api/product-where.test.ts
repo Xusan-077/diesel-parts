@@ -5,10 +5,12 @@ import type { ProductQuery } from "./product-query";
 function query(overrides: Partial<ProductQuery> = {}): ProductQuery {
   return {
     q: "",
-    brandId: "all",
+    brandIds: [],
     categoryId: "all",
     categoryIds: undefined,
     availability: "all",
+    priceMin: null,
+    priceMax: null,
     sort: "newest",
     page: 1,
     pageSize: 9,
@@ -31,7 +33,36 @@ describe("buildProductWhere", () => {
   });
 
   it("filters by brand", () => {
-    expect(buildProductWhere(query({ brandId: "cat" })).where.brandId).toBe("cat");
+    expect(buildProductWhere(query({ brandIds: ["cat"] })).where.brandId).toEqual({ in: ["cat"] });
+  });
+
+  it("filters by several brands at once", () => {
+    const { where } = buildProductWhere(query({ brandIds: ["cat", "komatsu"] }));
+    expect(where.brandId).toEqual({ in: ["cat", "komatsu"] });
+  });
+
+  it("omits the price clause when neither end is set", () => {
+    expect(buildProductWhere(query()).where.price).toBeUndefined();
+  });
+
+  it("filters on one end of the price range at a time", () => {
+    expect(buildProductWhere(query({ priceMin: 500_000 })).where.price).toEqual({ gte: 500_000 });
+    expect(buildProductWhere(query({ priceMax: 2_000_000 })).where.price).toEqual({
+      lte: 2_000_000,
+    });
+  });
+
+  it("filters on both ends of the price range", () => {
+    const { where } = buildProductWhere(query({ priceMin: 500_000, priceMax: 2_000_000 }));
+    expect(where.price).toEqual({ gte: 500_000, lte: 2_000_000 });
+  });
+
+  it("a price bound also excludes the products that have no price", () => {
+    // Prisma reads `{ gte }` on a nullable column as "has a value, and it is at
+    // least this" — the unpriced rows fall out without a second clause. This
+    // asserts the behaviour the filter depends on rather than the syntax.
+    const { where } = buildProductWhere(query({ priceMin: 0 }));
+    expect(where.price).toEqual({ gte: 0 });
   });
 
   it("filters by a single category", () => {

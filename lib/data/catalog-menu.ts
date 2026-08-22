@@ -1,54 +1,67 @@
 import type { LocalizedText } from "@/lib/types";
 
 /**
+ * Every pictogram the catalog menu can draw, as a value rather than only a
+ * type: the director panel offers this list in a select and the write API
+ * validates against it, so a category cannot be saved with an icon key that has
+ * no component behind it.
+ */
+export const CATALOG_ICON_KEYS = [
+  "antifreeze",
+  "engine",
+  "gasket",
+  "bushing",
+  "injector",
+  "timing",
+  "crank",
+  "pump",
+  "piston",
+  "turbo",
+  "undercarriage",
+  "track",
+  "wheel",
+  "suspension",
+  "bearing",
+  "brake-pad",
+  "brake-disc",
+  "fluid",
+  "hose",
+  "sensor",
+  "cylinder",
+  "valve",
+  "seal",
+  "glass",
+  "seat",
+  "door",
+  "mirror",
+  "climate",
+  "oil-filter",
+  "fuel-filter",
+  "air-filter",
+  "cabin-filter",
+  "adblue",
+  "oil",
+  "battery",
+  "starter",
+  "alternator",
+  "light",
+  "wiring",
+  "gearbox",
+  "clutch",
+  "driveshaft",
+  "reducer",
+] as const;
+
+/**
  * Icon identifier resolved to a component by `components/catalog/catalog-icon.tsx`.
  * Kept as a plain string so this whole module stays serializable and can be
  * swapped for a CMS/API response without touching the rendering code.
  */
-export type CatalogIconKey =
-  | "antifreeze"
-  | "engine"
-  | "gasket"
-  | "bushing"
-  | "injector"
-  | "timing"
-  | "crank"
-  | "pump"
-  | "piston"
-  | "turbo"
-  | "undercarriage"
-  | "track"
-  | "wheel"
-  | "suspension"
-  | "bearing"
-  | "brake-pad"
-  | "brake-disc"
-  | "fluid"
-  | "hose"
-  | "sensor"
-  | "cylinder"
-  | "valve"
-  | "seal"
-  | "glass"
-  | "seat"
-  | "door"
-  | "mirror"
-  | "climate"
-  | "oil-filter"
-  | "fuel-filter"
-  | "air-filter"
-  | "cabin-filter"
-  | "adblue"
-  | "oil"
-  | "battery"
-  | "starter"
-  | "alternator"
-  | "light"
-  | "wiring"
-  | "gearbox"
-  | "clutch"
-  | "driveshaft"
-  | "reducer";
+export type CatalogIconKey = (typeof CATALOG_ICON_KEYS)[number];
+
+export function isCatalogIconKey(value: unknown): value is CatalogIconKey {
+  return typeof value === "string" && (CATALOG_ICON_KEYS as readonly string[]).includes(value);
+}
 
 export interface CatalogSubcategory {
   id: string;
@@ -66,14 +79,27 @@ export interface CatalogGroup {
   id: string;
   slug: string;
   name: LocalizedText;
+  /** Drawn beside the column heading in the menu — one landmark per column. */
+  icon: CatalogIconKey;
   subcategories: CatalogSubcategory[];
 }
 
+/**
+ * The catalog menu as first written by hand — now the *seed* for the Category
+ * table rather than what the header renders.
+ *
+ * `prisma/seed.ts` writes these groups as root categories and their
+ * subcategories as children, and the header reads the table through
+ * `/api/catalog`. Editing this file therefore changes what a fresh database
+ * starts with; it does not change a running site, where the director panel is
+ * what edits the menu.
+ */
 export const catalogGroups: CatalogGroup[] = [
   {
     id: "undercarriage",
     slug: "yurish-qismi",
     name: { uz: "Yurish qismi", ru: "Ходовая часть", en: "Undercarriage" },
+    icon: "undercarriage",
     subcategories: [
       {
         id: "undercarriage-parts",
@@ -113,6 +139,7 @@ export const catalogGroups: CatalogGroup[] = [
     id: "brakes",
     slug: "tormoz-tizimi",
     name: { uz: "Tormoz tizimi", ru: "Тормозная система", en: "Brake system" },
+    icon: "brake-disc",
     subcategories: [
       {
         id: "brake-pads",
@@ -150,6 +177,7 @@ export const catalogGroups: CatalogGroup[] = [
     id: "hydraulics",
     slug: "gidravlik-sistema",
     name: { uz: "Gidravlik sistema", ru: "Гидравлическая система", en: "Hydraulic system" },
+    icon: "cylinder",
     subcategories: [
       {
         id: "hydraulic-pump",
@@ -196,6 +224,7 @@ export const catalogGroups: CatalogGroup[] = [
     id: "cabin",
     slug: "kabina-va-kuzov",
     name: { uz: "Kabina va kuzov", ru: "Кабина и кузов", en: "Cabin and body" },
+    icon: "seat",
     subcategories: [
       {
         id: "cabin-glass",
@@ -241,6 +270,7 @@ export const catalogGroups: CatalogGroup[] = [
       ru: "Масляные фильтры и AdBlue",
       en: "Oil filters and AdBlue",
     },
+    icon: "oil-filter",
     subcategories: [
       {
         id: "oil-filter",
@@ -288,6 +318,7 @@ export const catalogGroups: CatalogGroup[] = [
       ru: "Электрооборудование и аксессуары",
       en: "Electrical equipment and accessories",
     },
+    icon: "battery",
     subcategories: [
       {
         id: "battery",
@@ -331,6 +362,7 @@ export const catalogGroups: CatalogGroup[] = [
     id: "transmission",
     slug: "transmissiya-kpp",
     name: { uz: "Transmissiya KPP", ru: "Трансмиссия КПП", en: "Transmission" },
+    icon: "gearbox",
     subcategories: [
       {
         id: "gearbox",
@@ -373,6 +405,7 @@ export const catalogGroups: CatalogGroup[] = [
       ru: "Двигатель и его компоненты",
       en: "Engine and its components",
     },
+    icon: "engine",
     subcategories: [
       {
         id: "antifreeze",

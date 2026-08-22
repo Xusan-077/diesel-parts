@@ -8,6 +8,7 @@ import type { Product } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { ProductCard } from "@/components/marketing/product-card";
+import { ProductGrid } from "@/components/product/product-grid";
 
 const RELATED_COUNT = 4;
 
@@ -40,10 +41,12 @@ export async function RelatedProducts({
       () =>
         queryProducts({
           q: "",
-          brandId: "all",
+          brandIds: [],
           categoryId: product.categoryId,
           categoryIds: undefined,
           availability: "all",
+          priceMin: null,
+          priceMax: null,
           sort: "newest",
           page: 1,
           // One extra, because the product being viewed is in its own category
@@ -83,7 +86,7 @@ export async function RelatedProducts({
   return (
     <div>
       <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-      <div className="mt-6 grid grid-cols-2 gap-6 lg:grid-cols-4">
+      <ProductGrid className="mt-6 grid-cols-2 lg:grid-cols-4">
         {related.map((item) => (
           <ProductCard
             key={item.id}
@@ -98,7 +101,7 @@ export async function RelatedProducts({
             stats={stats.data.get(item.id)}
           />
         ))}
-      </div>
+      </ProductGrid>
     </div>
   );
 }

@@ -78,36 +78,45 @@ describe("header cart badge", () => {
     expect(cartBadge()).toBe("");
   });
 
-  it("counts units, not lines, as the card button is clicked", async () => {
+  /*
+   * The badge counts parts, not units — the same thing the two badges beside
+   * it count. Compare and favourites are both "how many have you collected",
+   * and a cart that answered "seven" to one screwdriver ordered seven times
+   * made the row of three numbers mean two different things.
+   *
+   * The units figure is not lost: the cart page prints both, each against its
+   * own label, which is the one place the distinction is worth the words.
+   */
+  it("counts parts, not units, as the card button is clicked", async () => {
     renderBoth();
 
     await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
     expect(cartBadge()).toBe("1");
 
+    // Topping the same part up is still one part in the cart.
     await userEvent.click(
       screen.getByRole("button", { name: `${productActions.inCart} (1)` })
     );
-    expect(cartBadge()).toBe("2");
+    expect(cartBadge()).toBe("1");
 
-    await userEvent.click(
-      screen.getByRole("button", { name: `${productActions.inCart} (2)` })
-    );
-    expect(cartBadge()).toBe("3");
+    act(() => useCartStore.getState().add("p-2"));
+    expect(cartBadge()).toBe("2");
   });
 
-  it("follows a quantity set from elsewhere, e.g. the cart page", async () => {
+  it("does not move when a quantity is set from elsewhere, e.g. the cart page", async () => {
     renderBoth();
     await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
 
     act(() => useCartStore.getState().setQuantity("p-1", 7));
-    expect(cartBadge()).toBe("7");
+    expect(cartBadge()).toBe("1");
   });
 
   it("caps the badge at 99+", () => {
     renderBoth();
     act(() => {
-      useCartStore.getState().add("p-1", 99);
-      useCartStore.getState().add("p-2", 5);
+      for (let index = 0; index < 100; index += 1) {
+        useCartStore.getState().add(`p-${index}`);
+      }
     });
 
     expect(cartBadge()).toBe("99+");

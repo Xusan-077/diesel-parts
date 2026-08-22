@@ -112,5 +112,3 @@ export const heroSlides: HeroSlide[] = [
   },
 ];
 
-/** Milliseconds a hero slide holds before the next one. */
-export const HERO_AUTOPLAY_DELAY = 6000;

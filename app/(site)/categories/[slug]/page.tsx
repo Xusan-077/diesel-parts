@@ -12,6 +12,7 @@ import type { Brand, Category } from "@/lib/types";
 import type { ProductStats } from "@/lib/product-stats";
 import { canonicalPath } from "@/lib/seo";
 import { ProductCard } from "@/components/marketing/product-card";
+import { ProductGrid } from "@/components/product/product-grid";
 import { Container } from "@/components/ui/container";
 import { Breadcrumb, BreadcrumbJsonLd } from "@/components/breadcrumb";
 import { finalise } from "@/lib/breadcrumb";
@@ -74,10 +75,12 @@ export default async function CategoryDetailPage({
       () =>
         queryProducts({
           q: "",
-          brandId: "all",
+          brandIds: [],
           categoryId: category.id,
           categoryIds: undefined,
           availability: "all",
+          priceMin: null,
+          priceMax: null,
           sort: "newest",
           page: 1,
           pageSize: DEFAULT_PAGE_SIZE,
@@ -124,7 +127,7 @@ export default async function CategoryDetailPage({
       {page.data === null ? (
         <DataUnavailable className="mt-10" message={dict.common.productsUnavailable} />
       ) : (
-        <div className="mt-10 grid grid-cols-2 gap-6 lg:grid-cols-3">
+        <ProductGrid className="mt-10 grid-cols-2 lg:grid-cols-3">
           {page.data.items.map((product) => (
             <ProductCard
               key={product.id}
@@ -141,7 +144,7 @@ export default async function CategoryDetailPage({
               stats={stats.data.get(product.id)}
             />
           ))}
-        </div>
+        </ProductGrid>
       )}
     </Container>
   );

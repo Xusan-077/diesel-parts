@@ -3,6 +3,8 @@ import axios from "axios";
 const ESKIZ_BASE_URL = "https://notify.eskiz.uz/api";
 /** Eskiz tokens last ~30 days; refresh early so a request never races expiry. */
 const TOKEN_TTL_MS = 25 * 24 * 60 * 60 * 1000;
+/** Enough of a response body to name the cause without flooding the log. */
+const DETAIL_LIMIT = 300;
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
@@ -17,19 +19,69 @@ export function buildOtpMessage(code: string): string {
   return template.replace("{code}", code);
 }
 
+/** Drops the cached token, so a test starts from a cold login. */
+export function resetEskizTokenCache(): void {
+  cachedToken = null;
+}
+
+function truncate(text: string): string {
+  return text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text;
+}
+
+/**
+ * Every Eskiz rejection is explained in the response body and nowhere else: an
+ * unapproved message text, a sender id that is not ours, a number the operator
+ * refused, an account still in test mode. The status code names none of those,
+ * so the body is what gets carried out to the log.
+ */
+function summarize(data: unknown): string {
+  if (data === null || data === undefined || data === "") {
+    return "<empty body>";
+  }
+  if (typeof data === "string") {
+    return truncate(data);
+  }
+  if (typeof data === "object") {
+    const { message } = data as { message?: unknown };
+    if (typeof message === "string" && message.length > 0) {
+      return truncate(message);
+    }
+  }
+  try {
+    return truncate(JSON.stringify(data));
+  } catch {
+    return "<unserializable body>";
+  }
+}
+
+function describeError(error: unknown, stage: "login" | "send"): string {
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      return `Eskiz ${stage} failed with status ${error.response.status}: ${summarize(error.response.data)}`;
+    }
+    return `Eskiz ${stage} request never completed: ${error.code ?? error.message}`;
+  }
+  return error instanceof Error ? error.message : `Unknown Eskiz ${stage} error`;
+}
+
 async function fetchToken(): Promise<string> {
   const body = new FormData();
   body.append("email", process.env.ESKIZ_EMAIL ?? "");
   body.append("password", process.env.ESKIZ_PASSWORD ?? "");
 
-  const { data } = await axios.post<{ data?: { token?: unknown } }>(
-    `${ESKIZ_BASE_URL}/auth/login`,
-    body,
-  );
+  let data: { data?: { token?: unknown } } | undefined;
+  try {
+    ({ data } = await axios.post<{ data?: { token?: unknown } }>(
+      `${ESKIZ_BASE_URL}/auth/login`,
+      body,
+    ));
+  } catch (error) {
+    throw new Error(describeError(error, "login"));
+  }
 
   const token = data?.data?.token;
   if (typeof token !== "string" || token.length === 0) {
-    throw new Error("Eskiz auth response did not contain a token");
+    throw new Error(`Eskiz login returned no token: ${summarize(data)}`);
   }
   return token;
 }
@@ -53,9 +105,15 @@ async function postSms(token: string, phone: string, message: string): Promise<v
   body.append("message", message);
   body.append("from", process.env.ESKIZ_FROM ?? "4546");
 
-  await axios.post(`${ESKIZ_BASE_URL}/message/sms/send`, body, {
+  const { data } = await axios.post<unknown>(`${ESKIZ_BASE_URL}/message/sms/send`, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+  // A refused message comes back as HTTP 200 with an error payload just as
+  // often as it comes back as a 4xx, so the body decides, not the status.
+  if (data && typeof data === "object" && (data as { status?: unknown }).status === "error") {
+    throw new Error(`Eskiz rejected the message: ${summarize(data)}`);
+  }
 }
 
 export type SmsResult =
@@ -84,18 +142,6 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
 
     return { delivered: true };
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      return {
-        delivered: false,
-        reason: "failed",
-        detail: `Eskiz responded with status ${error.response.status}`,
-      };
-    }
-
-    return {
-      delivered: false,
-      reason: "failed",
-      detail: error instanceof Error ? error.message : "Unknown Eskiz error",
-    };
+    return { delivered: false, reason: "failed", detail: describeError(error, "send") };
   }
 }

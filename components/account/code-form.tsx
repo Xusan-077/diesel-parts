@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { authErrorMessage, type AuthErrorPayload } from "@/lib/auth/error-message";
+import { notifyDevCode } from "@/lib/auth/dev-code-notice";
 import { refusalPayload } from "@/lib/api/request-error";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { Button } from "@/components/ui/button";
@@ -79,9 +80,10 @@ export function CodeForm({ dict, onSuccess, onChangePhone }: CodeFormProps) {
 
     try {
       // No body: the server re-reads the phone from its httpOnly cookie.
-      const { data } = await axios.post<{ resendAfterSeconds?: number }>(
+      const { data } = await axios.post<{ resendAfterSeconds?: number; devCode?: string }>(
         "/api/auth/resend-code",
       );
+      notifyDevCode(data.devCode);
 
       setNotice(dict.resent);
       setSecondsLeft(data.resendAfterSeconds ?? RESEND_COOLDOWN_SECONDS);

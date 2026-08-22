@@ -4,7 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import type { CatalogFilters, FilterChip } from "@/lib/catalog-filters";
+import type { FilterChip } from "@/lib/catalog-filters";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 /**
@@ -37,7 +37,7 @@ export function FilterChips({
 }: {
   chips: FilterChip[];
   dict: Dictionary["catalog"];
-  onRemove: (key: keyof CatalogFilters) => void;
+  onRemove: (chip: FilterChip) => void;
   onClearAll: () => void;
   scope?: { label: string; clearLabel: string };
   className?: string;
@@ -85,12 +85,15 @@ export function FilterChips({
           .replace("{value}", chip.value);
 
         return (
-          <span key={chip.key} className={chipClass}>
+          // Keyed on the value it drops, not on the filter: brands produce one
+          // chip each, and keying them all "brandIds" would make React reuse
+          // the wrong node when the middle one is removed.
+          <span key={chip.id ?? chip.key} className={chipClass}>
             <span className="text-muted">{chip.label}:</span>
             {chip.value}
             <button
               type="button"
-              onClick={() => onRemove(chip.key)}
+              onClick={() => onRemove(chip)}
               aria-label={remove}
               title={remove}
               className={removeClass}

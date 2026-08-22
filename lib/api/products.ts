@@ -13,7 +13,13 @@ export function toSearchParams(params: ProductListParams): URLSearchParams {
   const search = new URLSearchParams();
 
   if (params.q) search.set("q", params.q);
-  if (params.brandId && params.brandId !== "all") search.set("brand", params.brandId);
+  // One `brand` per ticked box. An empty list is "every brand", so unlike the
+  // category scope below there is nothing to send for it.
+  for (const id of params.brandIds ?? []) {
+    search.append("brand", id);
+  }
+  if (params.priceMin != null) search.set("priceMin", String(params.priceMin));
+  if (params.priceMax != null) search.set("priceMax", String(params.priceMax));
   if (params.categoryId && params.categoryId !== "all") {
     search.set("category", params.categoryId);
   }

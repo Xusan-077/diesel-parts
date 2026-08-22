@@ -1,6 +1,5 @@
 import {
   Carousel,
-  CarouselAutoplayToggle,
   CarouselContent,
   CarouselDots,
   CarouselItem,
@@ -8,7 +7,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Container } from "@/components/ui/container";
-import { HERO_AUTOPLAY_DELAY, heroSlides } from "@/lib/data/hero-slides";
+import { heroSlides } from "@/lib/data/hero-slides";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeroSlide } from "./hero-slide";
@@ -50,12 +49,8 @@ export function Hero({
         region: home.heroCarouselLabel,
         prev: common.carouselPrev,
         next: common.carouselNext,
-        pause: common.carouselPause,
-        play: common.carouselPlay,
         slide: common.carouselSlide,
       }}
-      autoplay
-      autoplayDelay={HERO_AUTOPLAY_DELAY}
       opts={{ loop: true, align: "start" }}
       className="border-b border-border"
     >
@@ -72,14 +67,14 @@ export function Hero({
       {/*
         Controls sit inside the hero on its bottom edge rather than floating
         over the middle of the picture, where they would land on the headline
-        at some viewport width. Dots lead, because on a phone they are the only
-        control that says how many slides there are; the arrows and the stop
-        button are for pointer and keyboard users and appear from `sm` up.
+        at some viewport width. The markers lead, because on a phone they are
+        both the only control that says how many slides there are and the only
+        way to reach one directly; the arrows are for pointer and keyboard
+        users and appear from `sm` up.
       */}
       <Container className="pointer-events-none absolute inset-x-0 bottom-6 flex items-center justify-between gap-4">
         <CarouselDots className="pointer-events-auto" />
         <div className="pointer-events-auto hidden items-center gap-2 sm:flex">
-          <CarouselAutoplayToggle />
           <CarouselPrevious />
           <CarouselNext />
         </div>

@@ -136,11 +136,21 @@ describe("Hero with several photographs", () => {
     expect(headings.map((heading) => heading.textContent)).toEqual(["Birinchi", "Ikkinchi"]);
   });
 
-  it("offers the manual controls a self-advancing carousel owes the reader", () => {
+  it("offers the arrows, which are now the only way through it", () => {
     renderHero();
 
     expect(screen.getByRole("button", { name: uz.common.carouselPrev })).toBeDefined();
     expect(screen.getByRole("button", { name: uz.common.carouselNext })).toBeDefined();
-    expect(screen.getByRole("button", { name: uz.common.carouselPause })).toBeDefined();
+  });
+
+  // Nothing advances on its own any more, so there is no timer to stop and no
+  // stop button to offer. This pins that down: a pause control reappearing
+  // means autoplay came back with it.
+  it("offers no play or pause control, because nothing moves on its own", () => {
+    renderHero();
+
+    const buttons = screen.getAllByRole("button").map((button) => button.getAttribute("aria-label"));
+    expect(buttons).not.toContain("Avtomatik aylanishni to'xtatish");
+    expect(buttons).not.toContain("Avtomatik aylanishni yoqish");
   });
 });

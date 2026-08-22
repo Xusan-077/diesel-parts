@@ -316,6 +316,80 @@
  * chart panel used bg-surface with a different padding — the same object,
  * built twice. Anything that is a raised box uses this.
  */
+/*
+ * One thumb of the price slider.
+ *
+ * The dual-range control is two native `<input type="range">` stacked over a
+ * single drawn track. Native because the platform brings keyboard stepping,
+ * the value announcement and forced-colors rendering; a div-and-pointer
+ * reimplementation has to win all three back before it has broken even.
+ *
+ * The input itself is transparent and ignores the pointer, so a click on the
+ * track reaches whichever thumb is nearer rather than being swallowed by the
+ * upper of the two inputs. Only the thumbs take events back.
+ */
+@utility range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset-inline: 0;
+  width: 100%;
+  height: 1rem;
+  margin: 0;
+  background: transparent;
+  pointer-events: none;
+
+  /* Firefox paints its own track behind the drawn one unless told not to. */
+  &::-moz-range-track {
+    background: transparent;
+    border: none;
+  }
+
+  &::-webkit-slider-runnable-track {
+    background: transparent;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    pointer-events: auto;
+    height: 1rem;
+    width: 1rem;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-edge);
+    background: var(--surface);
+    box-shadow: var(--elevation-1);
+    cursor: grab;
+  }
+
+  &::-moz-range-thumb {
+    pointer-events: auto;
+    height: 1rem;
+    width: 1rem;
+    box-sizing: border-box;
+    border-radius: 9999px;
+    border: 2px solid var(--accent-edge);
+    background: var(--surface);
+    box-shadow: var(--elevation-1);
+    cursor: grab;
+  }
+
+  /* The global ring would draw around the full-width input, which is the
+     invisible part. Moved onto the thumb, which is what the reader is moving. */
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+
+  &:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+}
+
 @utility panel {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
