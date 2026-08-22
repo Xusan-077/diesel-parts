@@ -1,45 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import axios, { type Method } from "axios";
 import { toast } from "sonner";
+import { Pencil, Power } from "lucide-react";
+import {
+  useAdminStaff,
+  useCreateStaff,
+  useSetStaffActive,
+  useUpdateStaff,
+} from "@/hooks/admin/use-admin-staff";
+import type { StaffListRow } from "@/lib/api/admin/resources";
 import { requestErrorMessage } from "@/lib/api/request-error";
+import { useFieldErrors } from "@/lib/forms/use-field-errors";
+import { userCreateSchema, userUpdateSchema } from "@/lib/schemas";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckboxField } from "@/components/ui/checkbox";
+import { ConfirmModal, FormModal } from "@/components/ui/form-modal";
 import { FormField } from "@/components/ui/form-field";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
-export interface StaffView {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: "DIRECTOR" | "SELLER";
-  isActive: boolean;
-  discountLimit: number;
-  completedOrders: number;
-  createdAt: string;
-}
+/**
+ * One staff account as this screen sees it — which is the row the API sends,
+ * not the row the repository reads: the timestamp has been through JSON.
+ */
+export type StaffView = StaffListRow;
 
 const ROLE_LABEL: Record<StaffView["role"], string> = {
   DIRECTOR: "Direktor",
   SELLER: "Sotuvchi",
 };
 
-/** Resolves to the message to print, or to null when the write went through. */
-async function send(url: string, method: Method, body: unknown): Promise<string | null> {
-  try {
-    await axios.request({ url, method, data: body });
-    return null;
-  } catch (error) {
-    return requestErrorMessage(error, "Saqlanmadi. Maydonlarni tekshiring.");
-  }
+/** The two fields both forms share, so the pair cannot drift apart. */
+function RoleAndLimit({
+  role,
+  discountLimit,
+  onRole,
+  onLimit,
+  onBlurLimit,
+  limitError,
+}: {
+  role: StaffView["role"];
+  discountLimit: number;
+  onRole: (role: StaffView["role"]) => void;
+  onLimit: (limit: number) => void;
+  onBlurLimit: () => void;
+  limitError?: string;
+}) {
+  return (
+    <>
+      <FormField label="Rol" required>
+        <Select value={role} onChange={(e) => onRole(e.target.value as StaffView["role"])}>
+          <option value="SELLER">Sotuvchi</option>
+          <option value="DIRECTOR">Direktor</option>
+        </Select>
+      </FormField>
+      <FormField
+        label="Chegirma limiti"
+        required
+        suffix="%"
+        hint="Shu foizdan yuqorisi direktor tasdig'ini talab qiladi"
+        error={limitError}
+      >
+        <Input
+          inputMode="numeric"
+          min={0}
+          max={100}
+          value={String(discountLimit)}
+          onChange={(e) => onLimit(Number(e.target.value) || 0)}
+          onBlur={onBlurLimit}
+          className="font-mono tabular-nums"
+          placeholder="5"
+        />
+      </FormField>
+    </>
+  );
 }
 
-function EditRow({ user, onDone }: { user: StaffView; onDone: () => void }) {
-  const router = useRouter();
+function EditModal({
+  user,
+  open,
+  onOpenChange,
+}: {
+  user: StaffView;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [form, setForm] = useState({
     name: user.name,
     phone: user.phone ?? "",
@@ -48,102 +96,86 @@ function EditRow({ user, onDone }: { user: StaffView; onDone: () => void }) {
     isActive: user.isActive,
   });
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+
+  const update = useUpdateStaff();
+
+  // An empty phone box is "no number on file", which the schema spells `null`.
+  const payload = { ...form, phone: form.phone.trim() || null };
+  const field = useFieldErrors(userUpdateSchema, payload);
 
   async function save() {
-    setBusy(true);
-    const message = await send("/api/v1/users/" + user.id, "PATCH", {
-      ...form,
-      phone: form.phone.trim() || null,
-    });
-    setBusy(false);
-
-    if (message) {
-      setError(message);
-      toast.error(message);
+    if (!field.touchAll()) {
       return;
     }
-    toast.success("Xodim ma'lumotlari saqlandi");
-    onDone();
-    router.refresh();
+
+    try {
+      await update.mutateAsync({ id: user.id, values: payload });
+      toast.success("Xodim ma'lumotlari saqlandi");
+      onOpenChange(false);
+    } catch (cause) {
+      // Kept in the dialog as well as toasted: the director is still looking at
+      // the form they were told to check.
+      const message = requestErrorMessage(cause, "Saqlanmadi. Maydonlarni tekshiring.");
+      setError(message);
+      toast.error(message);
+    }
   }
 
   return (
-    <tr className="border-b border-border bg-surface-muted">
-      <td colSpan={6} className="px-3 py-4">
-        <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
-          <FormField label="Ismi">
-            <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </FormField>
-          <FormField label="Telefon">
-            <Input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="font-mono"
-              placeholder="+998 90 000 00 00"
-            />
-          </FormField>
-          <FormField label="Rol">
-            <Select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as StaffView["role"] })}
-            >
-              <option value="SELLER">Sotuvchi</option>
-              <option value="DIRECTOR">Direktor</option>
-            </Select>
-          </FormField>
-          <FormField
-            label="Chegirma limiti (%)"
-            hint="Shu foizdan yuqorisi direktor tasdig'ini talab qiladi"
-          >
-            <Input
-              inputMode="numeric"
-              value={String(form.discountLimit)}
-              onChange={(e) => setForm({ ...form, discountLimit: Number(e.target.value) || 0 })}
-              className="font-mono tabular-nums"
-            />
-          </FormField>
-        </div>
-
-        <CheckboxField
-          label="Hisob faol"
-          hint="Belgi olib tashlansa hisob darhol kira olmaydi — ochiq sessiya ham to'xtaydi."
-          checked={form.isActive}
-          onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-          fieldClassName="mt-4"
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Xodimni tahrirlash"
+      /* The email is the login and cannot be changed here, so it is shown as
+         context rather than as a disabled field a director would try to type
+         in and then wonder about. */
+      description={user.email}
+      submitLabel="O'zgarishlarni saqlash"
+      onSubmit={save}
+      busy={update.isPending}
+      error={error}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Ismi" required error={field.errorFor("name")}>
+          <Input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onBlur={() => field.touch("name")}
+            placeholder="Alisher Karimov"
+          />
+        </FormField>
+        <FormField label="Telefon" error={field.errorFor("phone")}>
+          <Input
+            type="tel"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onBlur={() => field.touch("phone")}
+            className="font-mono"
+            placeholder="+998 90 000 00 00"
+          />
+        </FormField>
+        <RoleAndLimit
+          role={form.role}
+          discountLimit={form.discountLimit}
+          onRole={(role) => setForm({ ...form, role })}
+          onLimit={(discountLimit) => setForm({ ...form, discountLimit })}
+          onBlurLimit={() => field.touch("discountLimit")}
+          limitError={field.errorFor("discountLimit")}
         />
+      </div>
 
-        <div aria-live="polite" className="min-h-5">
-          {error ? (
-            <p role="alert" className="mt-3 text-sm text-danger">
-              {error}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-4 flex items-center gap-3">
-          <Button type="button" size="sm" onClick={save} disabled={busy}>
-            {busy ? "Saqlanmoqda…" : "Saqlash"}
-          </Button>
-          <button
-            type="button"
-            onClick={onDone}
-            className="text-xs text-muted transition-colors hover:text-foreground"
-          >
-            Bekor qilish
-          </button>
-        </div>
-      </td>
-    </tr>
+      <CheckboxField
+        label="Hisob faol"
+        hint="Belgi olib tashlansa hisob darhol kira olmaydi — ochiq sessiya ham to'xtaydi."
+        checked={form.isActive}
+        onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+      />
+    </FormModal>
   );
 }
 
-function CreateForm({ onDone }: { onDone: () => void }) {
-  const router = useRouter();
+function CreateModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -153,131 +185,156 @@ function CreateForm({ onDone }: { onDone: () => void }) {
     discountLimit: 5,
   });
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  async function create(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    const message = await send("/api/v1/users", "POST", {
-      ...form,
-      phone: form.phone.trim() || null,
-    });
-    setBusy(false);
+  const createUser = useCreateStaff();
 
-    if (message) {
-      setError(message);
-      toast.error(message);
+  const payload = { ...form, phone: form.phone.trim() || null };
+  const field = useFieldErrors(userCreateSchema, payload);
+
+  async function create() {
+    if (!field.touchAll()) {
       return;
     }
-    toast.success("Xodim qo'shildi");
-    onDone();
-    router.refresh();
+
+    try {
+      await createUser.mutateAsync(payload);
+      toast.success("Xodim qo'shildi");
+      onOpenChange(false);
+    } catch (cause) {
+      const message = requestErrorMessage(cause, "Saqlanmadi. Maydonlarni tekshiring.");
+      setError(message);
+      toast.error(message);
+    }
   }
 
   return (
-    /* `panel` rather than a hand-copied border+radius+padding: the container
-       recipe lives in one place, so a card here and a card on the dashboard
-       cannot end up 20px and 24px deep. */
-    <form onSubmit={create} className="panel mt-4 max-w-3xl" noValidate>
-      <h2 className="type-title text-foreground">Yangi xodim</h2>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <FormField label="Ismi">
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Yangi xodim qo'shish"
+      description="Hisob darhol faollashadi. Parolni xodimga o'zingiz yetkazasiz."
+      submitLabel="Xodim qo'shish"
+      onSubmit={create}
+      busy={createUser.isPending}
+      error={error}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Ismi" required error={field.errorFor("name")}>
           <Input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
+            onBlur={() => field.touch("name")}
+            placeholder="Alisher Karimov"
           />
         </FormField>
-        <FormField label="Email">
+        <FormField
+          label="Email"
+          required
+          hint="Panelga shu manzil bilan kiradi"
+          error={field.errorFor("email")}
+        >
           <Input
             type="email"
             autoComplete="off"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
+            onBlur={() => field.touch("email")}
+            className="font-mono"
+            placeholder="alisher@dieselparts.uz"
           />
         </FormField>
-        <FormField label="Telefon">
+        <FormField label="Telefon" error={field.errorFor("phone")}>
           <Input
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onBlur={() => field.touch("phone")}
             className="font-mono"
             placeholder="+998 90 000 00 00"
           />
         </FormField>
-        <FormField label="Boshlang'ich parol" hint="Kamida 8 belgi. Xodimga o'zingiz yetkazasiz.">
+        <FormField
+          label="Boshlang'ich parol"
+          required
+          hint="Kamida 8 belgi. Xodim keyin o'zi almashtiradi."
+          error={field.errorFor("password")}
+        >
           <Input
             type="password"
             autoComplete="new-password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
+            onBlur={() => field.touch("password")}
           />
         </FormField>
-        <FormField label="Rol">
-          <Select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as StaffView["role"] })}
-          >
-            <option value="SELLER">Sotuvchi</option>
-            <option value="DIRECTOR">Direktor</option>
-          </Select>
-        </FormField>
-        <FormField
-          label="Chegirma limiti (%)"
-          hint="Shu foizdan yuqorisi direktor tasdig'ini talab qiladi"
-        >
-          <Input
-            inputMode="numeric"
-            value={String(form.discountLimit)}
-            onChange={(e) => setForm({ ...form, discountLimit: Number(e.target.value) || 0 })}
-            className="font-mono tabular-nums"
-          />
-        </FormField>
+        <RoleAndLimit
+          role={form.role}
+          discountLimit={form.discountLimit}
+          onRole={(role) => setForm({ ...form, role })}
+          onLimit={(discountLimit) => setForm({ ...form, discountLimit })}
+          onBlurLimit={() => field.touch("discountLimit")}
+          limitError={field.errorFor("discountLimit")}
+        />
       </div>
-
-      <div aria-live="polite" className="min-h-5">
-        {error ? (
-          <p role="alert" className="mt-4 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Qo'shilmoqda…" : "Xodim qo'shish"}
-        </Button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-xs text-muted transition-colors hover:text-foreground"
-        >
-          Bekor qilish
-        </button>
-      </div>
-    </form>
+    </FormModal>
   );
 }
 
-export function StaffManager({ users }: { users: StaffView[] }) {
-  const [editing, setEditing] = useState<string | null>(null);
+export function StaffManager({ initialData }: { initialData?: StaffView[] }) {
+  const [editing, setEditing] = useState<StaffView | null>(null);
   const [creating, setCreating] = useState(false);
+  const [suspending, setSuspending] = useState<StaffView | null>(null);
+
+  const list = useAdminStaff(initialData);
+  const setActive = useSetStaffActive(() => setSuspending(null));
+
+  const suspendError = setActive.isError
+    ? requestErrorMessage(setActive.error, "Saqlanmadi. Maydonlarni tekshiring.")
+    : null;
+
+  if (list.isPending) {
+    return (
+      <div aria-busy="true" className="panel">
+        <span className="sr-only">Yuklanmoqda...</span>
+        <div aria-hidden="true" className="flex flex-col gap-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="h-11 animate-pulse rounded-md bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (list.isError) {
+    return (
+      <div className="panel">
+        <p className="type-body text-muted">
+          {requestErrorMessage(list.error, "Xodimlar ro'yxati yuklanmadi.")}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-4"
+          onClick={() => void list.refetch()}
+        >
+          Qayta urinish
+        </Button>
+      </div>
+    );
+  }
+
+  const users = list.data;
 
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted">{users.length} ta hisob</p>
-        {!creating ? (
-          <Button type="button" size="sm" onClick={() => setCreating(true)}>
-            Xodim qo&apos;shish
-          </Button>
-        ) : null}
+        <Button type="button" size="sm" onClick={() => setCreating(true)}>
+          Xodim qo&apos;shish
+        </Button>
       </div>
-
-      {creating ? <CreateForm onDone={() => setCreating(false)} /> : null}
 
       <div className="panel mt-4 overflow-x-auto">
         <table className="w-full min-w-3xl text-left text-sm">
@@ -294,46 +351,92 @@ export function StaffManager({ users }: { users: StaffView[] }) {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) =>
-              editing === user.id ? (
-                <EditRow key={user.id} user={user} onDone={() => setEditing(null)} />
-              ) : (
-                <tr key={user.id} className="border-b border-border last:border-0">
-                  <td className="py-3 pr-3">
-                    <span className="text-foreground">{user.name}</span>
-                    <span className="ml-2 font-mono text-xs text-muted">{user.email}</span>
-                  </td>
-                  <td className="py-3 pr-3 text-muted">{ROLE_LABEL[user.role]}</td>
-                  <td className="py-3 text-right font-mono tabular-nums text-foreground">
-                    {user.discountLimit}%
-                  </td>
-                  <td className="py-3 pl-3 text-right font-mono tabular-nums text-muted">
-                    {user.completedOrders}
-                  </td>
-                  <td className="py-3 pl-3 text-right">
-                    {user.isActive ? (
-                      <span className="text-xs text-muted">faol</span>
-                    ) : (
-                      <span className="rounded-full bg-surface-muted px-2 py-1 text-xs text-muted">
-                        o&apos;chirilgan
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 pl-3 text-right">
+            {users.map((user) => (
+              <tr key={user.id} className="group row-hover border-b border-border last:border-0">
+                <td className="py-3 pr-3">
+                  <span className="text-foreground">{user.name}</span>
+                  <span className="ml-2 font-mono text-xs text-muted">{user.email}</span>
+                </td>
+                <td className="py-3 pr-3 text-muted">{ROLE_LABEL[user.role]}</td>
+                <td className="py-3 text-right font-mono tabular-nums text-foreground">
+                  {user.discountLimit}%
+                </td>
+                <td className="py-3 pl-3 text-right font-mono tabular-nums text-muted">
+                  {user.completedOrders}
+                </td>
+                <td className="py-3 pl-3 text-right">
+                  {/* Two values of one field, so two badges — the same fix the
+                      catalogue's status column got. Bare text beside a pill
+                      reads as one status and one absence of status. */}
+                  {user.isActive ? (
+                    <Badge variant="success">faol</Badge>
+                  ) : (
+                    <Badge>o&apos;chirilgan</Badge>
+                  )}
+                </td>
+                <td className="py-3 pl-3">
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      onClick={() => setEditing(user.id)}
-                      className="text-xs text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
+                      onClick={() => setEditing(user)}
+                      aria-label={"Tahrirlash: " + user.name}
+                      title={"Tahrirlash: " + user.name}
+                      className="flex size-8 items-center justify-center rounded-md text-muted opacity-0 transition-[opacity,color,background-color] group-hover:opacity-100 hover:bg-surface-hover hover:text-foreground focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                     >
-                      Tahrirlash
+                      <Icon icon={Pencil} />
                     </button>
-                  </td>
-                </tr>
-              ),
-            )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActive.reset();
+                        setSuspending(user);
+                      }}
+                      aria-label={(user.isActive ? "O'chirish: " : "Yoqish: ") + user.name}
+                      title={user.isActive ? "Hisobni o'chirish" : "Hisobni yoqish"}
+                      className={
+                        "flex size-8 items-center justify-center rounded-md text-muted opacity-0 transition-[opacity,color,background-color] group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 " +
+                        (user.isActive
+                          ? "hover:bg-danger-surface hover:text-danger"
+                          : "hover:bg-surface-hover hover:text-foreground")
+                      }
+                    >
+                      <Icon icon={Power} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+
+      {creating ? <CreateModal key="create" open onOpenChange={() => setCreating(false)} /> : null}
+
+      {editing !== null ? (
+        <EditModal key={editing.id} user={editing} open onOpenChange={() => setEditing(null)} />
+      ) : null}
+
+      <ConfirmModal
+        open={suspending !== null}
+        onOpenChange={() => setSuspending(null)}
+        title={
+          suspending?.isActive === false ? "Hisob yoqilsinmi?" : "Hisob o'chirilsinmi?"
+        }
+        subject={suspending === null ? "" : suspending.name + " · " + suspending.email}
+        warning={
+          suspending?.isActive === false
+            ? "Xodim yana panelga kira oladi va unga buyurtma biriktirish mumkin bo'ladi."
+            : "Xodim panelga kira olmaydi va ochiq sessiyasi darhol to'xtaydi. Yopgan savdolari va biriktirilgan mijozlari joyida qoladi."
+        }
+        confirmLabel={suspending?.isActive === false ? "Yoqish" : "O'chirish"}
+        busy={setActive.isPending}
+        error={suspendError}
+        onConfirm={() => {
+          if (suspending !== null) {
+            setActive.mutate({ user: suspending, isActive: !suspending.isActive });
+          }
+        }}
+      />
     </div>
   );
 }

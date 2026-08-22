@@ -9,6 +9,7 @@
     "readMore": "Batafsil",
     "viewAll": "Barchasini ko'rish",
     "loading": "Yuklanmoqda...",
+    "retry": "Qayta urinish",
     "close": "Yopish",
     "skipToContent": "Asosiy qismga o'tish",
     "submit": "Yuborish",
@@ -286,6 +287,17 @@
     "email": "info@dieselparts.uz",
     "hoursTitle": "Ish vaqti",
     "hours": "Dushanba - Shanba, 09:00 - 23:00"
+  },
+  "support": {
+    "open": "Yordam oynasini ochish",
+    "title": "DieselParts Support",
+    "status": "Online — tez javob beramiz",
+    "greeting": "Salom! Sizga qanday yordam bera olamiz? Savollaringiz bo'lsa — yozing yoki qo'ng'iroq qiling.",
+    "telegram": "Telegram'da yozish",
+    "telegramHint": "Tez javob — 5 daqiqa ichida",
+    "call": "Qo'ng'iroq qilish",
+    "responseLabel": "O'rtacha javob vaqti",
+    "responseValue": "5 daqiqa"
   },
   "productActions": {
     "addToWishlist": "Saralanganlarga qo'shish",

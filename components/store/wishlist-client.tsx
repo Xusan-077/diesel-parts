@@ -63,7 +63,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
         {items.map(({ product, brandName, categoryName }) => (
           <li
             key={product.id}
-            className="flex flex-col gap-4 rounded-lg border border-border bg-surface-muted p-4 sm:flex-row sm:items-center"
+            className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center"
           >
             <div className="flex h-20 w-full shrink-0 items-center justify-center rounded-md bg-linear-to-br from-surface-hover to-transparent text-xs text-muted sm:w-28">
               {product.imageLabels[0]}
@@ -106,7 +106,7 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
                     cart.add(product.id);
                     toast.success(dict.toastCartAdded);
                   }}
-                  className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+                  className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
                 >
                   {dict.addToCart}
                 </button>

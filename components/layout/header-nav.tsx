@@ -12,7 +12,7 @@ export function HeaderNav({ nav }: { nav: Dictionary["nav"] }) {
   const items = buildMainNav(nav);
 
   return (
-    <nav className="hidden border-b border-border bg-surface-muted lg:block">
+    <nav className="header-plate hidden border-b border-chrome-border lg:block">
       <Container className="flex items-center gap-7">
         {items.map((item) => {
           const active = isNavItemActive(pathname, item.href);
@@ -24,8 +24,8 @@ export function HeaderNav({ nav }: { nav: Dictionary["nav"] }) {
               className={cn(
                 "whitespace-nowrap border-b-2 py-2.5 text-sm transition-colors",
                 active
-                  ? "border-accent text-accent-strong"
-                  : "border-transparent text-muted hover:text-foreground"
+                  ? "border-chrome-accent text-chrome-foreground"
+                  : "border-transparent text-chrome-secondary hover:text-chrome-foreground"
               )}
             >
               {item.label}

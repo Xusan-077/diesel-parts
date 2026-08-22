@@ -33,7 +33,10 @@ export function HeaderMain({
   phone,
 }: HeaderMainProps) {
   return (
-    <div className="bg-surface">
+    // The white plate starts here: everything below reads its chrome tokens
+    // against white rather than against the frame's near-black. See the
+    // `header-plate` utility in globals.css.
+    <div className="header-plate border-b border-chrome-border">
       {/*
         This row's height is fixed at every breakpoint, and the condensed state
         deliberately does not touch it. It used to tighten its padding by 8px

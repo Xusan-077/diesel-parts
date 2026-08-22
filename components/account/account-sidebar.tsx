@@ -80,7 +80,7 @@ export function AccountBonusBanner({ panel, className }: { panel: Panel; classNa
   return (
     <div
       className={cn(
-        "rounded-sm border border-border bg-surface-muted px-4 py-3",
+        "rounded-sm border border-border bg-surface px-4 py-3",
         className
       )}
     >
@@ -98,14 +98,12 @@ export function AccountNavList({
   panel,
   active,
   notificationCount,
-  onSelect,
   onLogout,
   onNavigate,
 }: {
   panel: Panel;
   active: AccountSection;
   notificationCount: number;
-  onSelect: (section: AccountSection) => void;
   onLogout: () => void;
   /** Called after any choice, so the mobile sheet can shut itself. */
   onNavigate?: () => void;
@@ -114,23 +112,6 @@ export function AccountNavList({
     <nav aria-label={panel.menuTitle} className="flex flex-col gap-0.5">
       {ACCOUNT_NAV.map((item) => {
         const label = panel.nav[item.id];
-        const glyph = (
-          <Icon icon={NAV_ICON[item.id]} size="md" className="shrink-0 text-muted" />
-        );
-
-        if (item.kind === "link") {
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(ROW, "text-foreground hover:bg-surface-hover")}
-            >
-              {glyph}
-              {label}
-            </Link>
-          );
-        }
 
         if (item.kind === "logout") {
           return (
@@ -143,22 +124,25 @@ export function AccountNavList({
               }}
               className={cn(ROW, "mt-1 border-t border-border pt-3 text-muted hover:text-foreground")}
             >
-              {glyph}
+              <Icon icon={NAV_ICON[item.id]} size="md" className="shrink-0 text-muted" />
               {label}
             </button>
           );
         }
 
-        const isActive = item.id === active;
+        /*
+         * Sections and the one outbound link are the same control now — both
+         * are `<Link>`, because both go somewhere. Only the mark differs: a
+         * section can be the page you are on, the link never is.
+         */
+        const isActive = item.kind === "section" && item.id === active;
+
         return (
-          <button
+          <Link
             key={item.id}
-            type="button"
+            href={item.href}
+            onClick={onNavigate}
             aria-current={isActive ? "page" : undefined}
-            onClick={() => {
-              onSelect(item.id);
-              onNavigate?.();
-            }}
             className={cn(
               ROW,
               isActive
@@ -178,7 +162,7 @@ export function AccountNavList({
                 {notificationCount}
               </span>
             ) : null}
-          </button>
+          </Link>
         );
       })}
     </nav>
@@ -192,7 +176,6 @@ export function AccountSidebar(props: {
   phone: string;
   active: AccountSection;
   notificationCount: number;
-  onSelect: (section: AccountSection) => void;
   onLogout: () => void;
 }) {
   const { panel, profile, phone, ...nav } = props;

@@ -48,7 +48,7 @@ export function CatalogMegaMenu({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         className={cn(
-          "inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-accent-edge bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90",
+          "inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-accent-edge bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active",
           className
         )}
       >
@@ -72,7 +72,7 @@ export function CatalogMegaMenu({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={MOTION.pop}
-                className="z-100 flex max-h-[min(34rem,calc(100vh-8rem))] w-[min(72rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl"
+                className="z-100 flex max-h-[min(34rem,calc(100vh-8rem))] w-[min(72rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface-elevated shadow-2xl"
               >
                 <div className="min-h-0 flex-1 overflow-y-auto p-6">
                   {isError ? (

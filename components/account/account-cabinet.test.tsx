@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AccountCabinet } from "./account-cabinet";
+import { AccountDetails } from "./account-details";
 import { useProfileStore } from "@/lib/store/stores";
 import { EMPTY_PROFILE } from "@/lib/account/profile";
 import dictionary from "@/dictionaries/uz.json";
@@ -26,7 +27,12 @@ vi.mock("axios", () => ({
   },
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
+// The rail reads the active row off the URL, so the route under test is the
+// one the mock reports. Every case below is on the cabinet's index.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh }),
+  usePathname: () => "/account",
+}));
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -46,8 +52,19 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+/*
+ * The sections are routes now, so the panel beside the menu is whatever the
+ * router handed the frame. These cases are the cabinet's index, which is the
+ * details page — the same tree the old single-page cabinet rendered by
+ * default, assembled the way app/(site)/account/(cabinet)/page.tsx assembles
+ * it.
+ */
 function renderCabinet() {
-  return render(<AccountCabinet dict={account} phone={PHONE} />);
+  return render(
+    <AccountCabinet dict={account} phone={PHONE}>
+      <AccountDetails dict={account} phone={PHONE} />
+    </AccountCabinet>
+  );
 }
 
 describe("AccountCabinet", () => {
@@ -114,14 +131,28 @@ describe("AccountCabinet", () => {
     expect(screen.getAllByRole("button", { name: panel.edit })).toHaveLength(2);
   });
 
-  it("swaps the panel for the section the menu picks", async () => {
-    const user = userEvent.setup();
+  it("points every menu row at a route of its own", () => {
     renderCabinet();
 
-    await user.click(screen.getByRole("button", { name: panel.nav.reviews }));
+    // Saved products open inside the cabinet, not on the standalone page the
+    // header's heart goes to.
+    for (const link of screen.getAllByRole("link", { name: panel.nav.wishlist })) {
+      expect(link.getAttribute("href")).toBe("/account/wishlist");
+    }
+    for (const link of screen.getAllByRole("link", { name: panel.nav.reviews })) {
+      expect(link.getAttribute("href")).toBe("/account/reviews");
+    }
+  });
 
-    expect(screen.getByText(panel.empty.reviews)).toBeDefined();
-    expect(screen.queryByRole("heading", { name: panel.detailsTitle })).toBeNull();
+  it("marks the row the current route belongs to", () => {
+    renderCabinet();
+
+    // The mock reports /account, which is the details section.
+    const active = screen.getAllByRole("link", { name: panel.nav.details });
+    expect(active.every((link) => link.getAttribute("aria-current") === "page")).toBe(true);
+
+    const inactive = screen.getAllByRole("link", { name: panel.nav.orders });
+    expect(inactive.every((link) => link.getAttribute("aria-current") === null)).toBe(true);
   });
 
   it("clears the session when the menu's sign-out is used", async () => {

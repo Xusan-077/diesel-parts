@@ -1,5 +1,33 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+
+/**
+ * "Everything in this block, on its own page."
+ *
+ * A card on a dashboard shows the top few rows; the link is how a reader gets
+ * the rest, and it belongs on the heading line because that is where they are
+ * already looking when they decide the card is not enough. The arrow moves on
+ * hover, which is the whole of the affordance — an underline here would put a
+ * second rule beside the card's own.
+ */
+export function SeeAllLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="group type-label inline-flex items-center gap-1 text-accent-strong transition-colors hover:text-foreground"
+    >
+      {label}
+      <Icon
+        icon={ArrowRight}
+        size="xs"
+        className="transition-transform group-hover:translate-x-0.5"
+      />
+    </Link>
+  );
+}
 
 /**
  * A titled block of a panel page, drawn as one card.
@@ -41,8 +69,22 @@ export function PanelSection({
     <section className={cn("panel flex h-full min-w-0 flex-col", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="type-title text-foreground">{title}</h2>
-        {meta ? <p className="type-caption font-mono text-muted">{meta}</p> : null}
-        {action ? <div className="flex items-center gap-3">{action}</div> : null}
+        {/* A count that belongs to the heading, set as a chip on the recessed
+            surface so it reads as an annotation on the title rather than as
+            the first line of the block's content. */}
+        {meta || action ? (
+          /* One trailing slot, so a block that carries both a count and a
+             "see all" does not have them arriving from opposite ends of the
+             heading line. */
+          <div className="flex items-center gap-3">
+            {meta ? (
+              <p className="type-eyebrow inline-flex h-5 items-center rounded-full bg-surface-muted px-2 text-muted">
+                {meta}
+              </p>
+            ) : null}
+            {action}
+          </div>
+        ) : null}
       </div>
 
       {description ? <p className="type-caption mt-1 text-muted">{description}</p> : null}

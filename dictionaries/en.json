@@ -9,6 +9,7 @@
     "readMore": "Read More",
     "viewAll": "View All",
     "loading": "Loading...",
+    "retry": "Try again",
     "close": "Close",
     "skipToContent": "Skip to content",
     "submit": "Submit",
@@ -286,6 +287,17 @@
     "email": "info@dieselparts.uz",
     "hoursTitle": "Business Hours",
     "hours": "Monday - Saturday, 9:00 AM - 6:00 PM"
+  },
+  "support": {
+    "open": "Open support chat",
+    "title": "DieselParts Support",
+    "status": "Online — we reply fast",
+    "greeting": "Hi! How can we help? Send us a message or give us a call — we answer any question about a part.",
+    "telegram": "Message on Telegram",
+    "telegramHint": "Fast reply — within 5 minutes",
+    "call": "Call us",
+    "responseLabel": "Average response time",
+    "responseValue": "5 minutes"
   },
   "productActions": {
     "addToWishlist": "Add to favorites",

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCOUNT_NAV,
+  ACCOUNT_ROOT,
   ACCOUNT_SECTIONS,
   DEFAULT_ACCOUNT_SECTION,
+  accountSectionFromPath,
+  accountSectionHref,
   isAccountSection,
-  resolveAccountSection,
 } from "./nav";
 
 describe("account nav", () => {
@@ -21,12 +23,12 @@ describe("account nav", () => {
     ]);
   });
 
-  it("gives every link a destination and no section one", () => {
+  it("gives every row but the sign-out a destination", () => {
     for (const item of ACCOUNT_NAV) {
-      if (item.kind === "link") {
-        expect(item.href.startsWith("/")).toBe(true);
-      } else {
+      if (item.kind === "logout") {
         expect(item).not.toHaveProperty("href");
+      } else {
+        expect(item.href.startsWith("/")).toBe(true);
       }
     }
   });
@@ -36,14 +38,29 @@ describe("account nav", () => {
     expect([...sections].sort()).toEqual([...ACCOUNT_SECTIONS].sort());
   });
 
-  it("narrows known section ids", () => {
-    expect(isAccountSection("orders")).toBe(true);
-    expect(isAccountSection("wishlist")).toBe(false);
+  it("serves the default section at the cabinet root and the rest at a slug", () => {
+    expect(accountSectionHref(DEFAULT_ACCOUNT_SECTION)).toBe(ACCOUNT_ROOT);
+    expect(accountSectionHref("wishlist")).toBe("/account/wishlist");
+    expect(accountSectionHref("notifications")).toBe("/account/notifications");
   });
 
-  it("falls back for a missing or unknown tab", () => {
-    expect(resolveAccountSection("notifications")).toBe("notifications");
-    expect(resolveAccountSection("nonsense")).toBe(DEFAULT_ACCOUNT_SECTION);
-    expect(resolveAccountSection(null)).toBe(DEFAULT_ACCOUNT_SECTION);
+  it("narrows known section ids", () => {
+    expect(isAccountSection("orders")).toBe(true);
+    // A section since the saved list moved into the cabinet.
+    expect(isAccountSection("wishlist")).toBe(true);
+    expect(isAccountSection("support")).toBe(false);
+  });
+
+  it("reads the active section back off a route", () => {
+    expect(accountSectionFromPath("/account/wishlist")).toBe("wishlist");
+    expect(accountSectionFromPath("/account/notifications/")).toBe("notifications");
+  });
+
+  it("falls back for the root, an unknown slug and a missing path", () => {
+    expect(accountSectionFromPath(ACCOUNT_ROOT)).toBe(DEFAULT_ACCOUNT_SECTION);
+    expect(accountSectionFromPath("/account/nonsense")).toBe(DEFAULT_ACCOUNT_SECTION);
+    expect(accountSectionFromPath(null)).toBe(DEFAULT_ACCOUNT_SECTION);
+    // `details` has no route of its own — it is what the root serves.
+    expect(accountSectionFromPath("/account/details")).toBe(DEFAULT_ACCOUNT_SECTION);
   });
 });

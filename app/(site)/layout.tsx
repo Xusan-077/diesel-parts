@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "../globals.css";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
-import { OG_LOCALES, SITE_URL } from "@/lib/site-config";
+import { OG_IMAGE, OG_LOCALES, SITE_ICONS, SITE_URL } from "@/lib/site-config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getLocale } from "@/lib/i18n/server-locale";
 import { getSession } from "@/lib/auth/session";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { LocationSection } from "@/components/layout/location-section";
 import { RouteBreadcrumb } from "@/components/layout/route-breadcrumb";
 import { staticRouteLabels } from "@/lib/breadcrumb";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -17,6 +18,7 @@ import { StoreHydration } from "@/components/providers/store-hydration";
 import { LanguageSync } from "@/components/providers/language-sync";
 import { MotionProvider } from "@/components/providers/motion-provider";
 import { Toaster } from "@/components/providers/toaster";
+import { FloatingContactWidget } from "@/components/layout/floating-contact-widget";
 
 /*
  * Only the sans face is loaded. Geist Mono was declared alongside it but no
@@ -45,13 +47,25 @@ export async function generateMetadata(): Promise<Metadata> {
     description: dict.meta.tagline,
     // `alternates` is deliberately not set here — see lib/seo.ts. Pages set
     // their own so each canonical points at the page itself.
+    icons: SITE_ICONS,
+    manifest: "/site.webmanifest",
     openGraph: {
       type: "website",
       siteName: dict.meta.siteName,
       locale: OG_LOCALES[lang],
       alternateLocale: SUPPORTED_LOCALES.filter((l) => l !== lang).map((l) => OG_LOCALES[l]),
+      // No page overrides `openGraph`, so this card is what every route shares.
+      // The moment one does, it has to restate `images` — Next replaces the
+      // whole `openGraph` object per segment rather than merging into it.
+      images: [{ ...OG_IMAGE, alt: dict.meta.siteName }],
     },
-    twitter: { card: "summary_large_image" },
+    // Next would copy the openGraph images here on its own, but a page that
+    // ever sets its own `openGraph` would silently take the twitter card with
+    // it. Stated outright, the two cards fail independently.
+    twitter: {
+      card: "summary_large_image",
+      images: [{ ...OG_IMAGE, alt: dict.meta.siteName }],
+    },
     robots: { index: true, follow: true },
   };
 }
@@ -78,7 +92,14 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      {/*
+        `site-root` is what scopes the storefront's palette — see the
+        MARKETING SITE PALETTE block in app/globals.css. It sits on <body>
+        rather than <html> for the same reason `admin-root` does: the theme
+        class lands on <html>, so the override has to be a descendant of it
+        (`.dark .site-root`) to outweigh `.dark`.
+      */}
+      <body className="site-root min-h-full flex flex-col bg-background text-foreground">
         <ThemeScript />
         <ThemeProvider>
           <MotionProvider>
@@ -121,6 +142,11 @@ export default async function RootLayout({
                 />
                 {children}
               </div>
+              {/*
+                The map band closes the page above the footer chrome, so it
+                is a sibling of <Footer> rather than a block inside it.
+              */}
+              <LocationSection footer={dict.footer} />
               <Footer
                 siteName={dict.meta.siteName}
                 footer={dict.footer}
@@ -128,6 +154,7 @@ export default async function RootLayout({
                 payment={dict.payment}
                 phone={dict.contact.phone}
               />
+              <FloatingContactWidget support={dict.support} closeLabel={dict.common.close} />
               <Toaster />
             </QueryProvider>
           </MotionProvider>

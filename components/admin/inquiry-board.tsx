@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import {
+  useInquiryBoard,
+  useInquiryBoardRefresh,
+} from "@/hooks/admin/use-admin-inquiries";
+import { claimInquiry, updateInquiry } from "@/lib/api/admin/resources";
+import type { InquiryBoardView } from "@/lib/api/inquiry-board-view";
 import { isRefusal, requestErrorMessage } from "@/lib/api/request-error";
+import type { InquiryUpdateInput } from "@/lib/schemas";
 import { INQUIRY_COLUMNS, type InquiryColumn } from "@/lib/api/inquiry-board";
 import { cn } from "@/lib/utils";
 import {
@@ -23,45 +28,45 @@ import {
 } from "@/lib/admin/inquiry-board-state";
 import { InquiryCard } from "./inquiry-card";
 
-/**
- * How often the board re-reads itself while it is on screen.
- *
- * Nothing here needs to be live to the second — a lead that arrived thirty
- * seconds ago is not more claimable than one that arrived a minute ago — so the
- * board leans on the two moments that actually matter: the seller coming back to
- * the tab, and a slow tick behind that as a backstop. Polling stops entirely
- * when the tab is hidden, because a phone in a pocket must not hold a request
- * loop open.
+/*
+ * Stable references for the frames before the first answer arrives, so an
+ * unseeded board does not rebuild its groupings on every render.
  */
-const POLL_MS = 90_000;
+const EMPTY_CARDS: BoardCard[] = [];
+const EMPTY_TOTALS = Object.fromEntries(
+  INQUIRY_COLUMNS.map((column) => [column, 0]),
+) as Record<InquiryColumn, number>;
 
 export interface InquiryBoardProps {
-  cards: BoardCard[];
-  totals: Record<InquiryColumn, number>;
-  /** Shown on a card the moment it is claimed, before the server confirms. */
-  sellerName: string;
-  showAssignee: boolean;
-  todayIso: string;
+  /**
+   * The board as the page read it. `undefined` when that read failed, which
+   * leaves the board to fetch and show its own loading and error states.
+   */
+  initialData?: InquiryBoardView;
 }
 
-export function InquiryBoard({
-  cards,
-  totals,
-  sellerName,
-  showAssignee,
-  todayIso,
-}: InquiryBoardProps) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+/**
+ * The seller's board.
+ *
+ * The data belongs to React Query now: the page seeds it, the hook polls it
+ * while the tab is open, and every write below rereads it. What stays here is
+ * the part a cache cannot do — the optimistic overlay that moves a card under
+ * the pointer and rolls it back if the server refuses.
+ */
+export function InquiryBoard({ initialData }: InquiryBoardProps) {
+  const board = useInquiryBoard(initialData);
+  const refresh = useInquiryBoardRefresh();
+
+  const cards = board.data?.cards ?? EMPTY_CARDS;
+  const totals = board.data?.totals ?? EMPTY_TOTALS;
+  const sellerName = board.data?.sellerName ?? "";
+  const showAssignee = board.data?.showAssignee ?? false;
+  const todayIso = board.data?.todayIso ?? "";
 
   const [overlay, setOverlay] = useState<BoardOverlay>(EMPTY_OVERLAY);
   const [busyIds, setBusyIds] = useState<readonly string[]>([]);
   const [errors, setErrors] = useState<Readonly<Record<string, string>>>({});
   const [activeColumn, setActiveColumn] = useState<InquiryColumn>("new");
-
-  const refresh = useCallback(() => {
-    startTransition(() => router.refresh());
-  }, [router]);
 
   /*
    * A move the server has since confirmed must stop being an overlay, or a lead
@@ -76,24 +81,6 @@ export function InquiryBoard({
     setPrunedAgainst(cards);
     setOverlay((current) => pruneSettled(current, cards));
   }
-
-  useEffect(() => {
-    const refreshIfVisible = () => {
-      if (document.visibilityState === "visible") {
-        refresh();
-      }
-    };
-
-    window.addEventListener("focus", refreshIfVisible);
-    document.addEventListener("visibilitychange", refreshIfVisible);
-    const timer = window.setInterval(refreshIfVisible, POLL_MS);
-
-    return () => {
-      window.removeEventListener("focus", refreshIfVisible);
-      document.removeEventListener("visibilitychange", refreshIfVisible);
-      window.clearInterval(timer);
-    };
-  }, [refresh]);
 
   /**
    * Moves the card first and asks the server second.
@@ -138,15 +125,15 @@ export function InquiryBoard({
   );
 
   const patchInquiry = useCallback(
-    (id: string, body: Record<string, unknown>, patch: CardPatch) =>
-      send(id, patch, () => axios.patch(`/api/v1/inquiries/${id}`, body)),
+    (id: string, body: InquiryUpdateInput, patch: CardPatch) =>
+      send(id, patch, () => updateInquiry(id, body)),
     [send],
   );
 
   const onClaim = useCallback(
     (id: string) => {
       void send(id, { column: "claimed", assignedSellerName: sellerName }, async () => {
-        await axios.post(`/api/v1/inquiries/${id}/claim`);
+        await claimInquiry(id);
         toast.success("So'rov sizga biriktirildi");
       });
     },
@@ -159,7 +146,7 @@ export function InquiryBoard({
       // the write itself: `send` swallows failures to roll the card back, so a
       // `.then` on it would confirm a move that never happened.
       void send(id, { column: move.column }, async () => {
-        await axios.patch(`/api/v1/inquiries/${id}`, { status: move.status });
+        await updateInquiry(id, { status: move.status });
         toast.success(`Ko'chirildi: ${COLUMN_LABELS[move.column]}`);
       });
     },

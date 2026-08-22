@@ -1,35 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
-import type { LucideIcon } from "lucide-react";
-import { Bell, MapPin, Menu, PackageOpen, Star } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   AccountBonusBanner,
   AccountIdentity,
   AccountNavList,
   AccountSidebar,
 } from "./account-sidebar";
-import { ProfilePanel } from "./profile-panel";
-import { DEFAULT_ACCOUNT_SECTION, type AccountSection } from "@/lib/account/nav";
+import { accountSectionFromPath } from "@/lib/account/nav";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { useProfile } from "@/hooks/use-store";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { FormModalShell } from "@/components/ui/form-modal-shell";
 import { Icon } from "@/components/ui/icon";
-
-type Panel = Dictionary["account"]["profilePanel"];
-
-/** The sections with nothing behind them yet, and the mark each one shows. */
-const EMPTY_ICON: Record<Exclude<AccountSection, "details">, LucideIcon> = {
-  orders: PackageOpen,
-  reviews: Star,
-  addresses: MapPin,
-  notifications: Bell,
-};
 
 /**
  * There is no notification feed yet. The count is threaded through as a real
@@ -38,53 +25,35 @@ const EMPTY_ICON: Record<Exclude<AccountSection, "details">, LucideIcon> = {
  */
 const NOTIFICATION_COUNT = 0;
 
-function EmptySection({
-  panel,
-  section,
-  ordersCta,
-}: {
-  panel: Panel;
-  section: Exclude<AccountSection, "details">;
-  ordersCta: string;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-surface">
-      <div className="border-b border-border px-6 py-4">
-        <h2 className="type-title text-foreground">{panel.nav[section]}</h2>
-      </div>
-      <div className="flex flex-col items-center px-6 py-14 text-center">
-        <Icon icon={EMPTY_ICON[section]} size="xl" className="text-muted" />
-        <p className="mt-4 type-body text-muted">{panel.empty[section]}</p>
-        {section === "orders" ? (
-          <Link href="/products" className={buttonVariants({ className: "mt-6" })}>
-            {ordersCta}
-          </Link>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
 /**
- * The account screen: a menu rail and the panel it selects.
+ * The cabinet's frame: a menu rail, and the section it points at.
  *
- * Client-side because the profile it shows lives in the browser (see
- * lib/account/profile.ts) and because every card here opens a modal. The one
- * thing that does come from the server — the signed-in number — is passed in
- * already formatted, so this tree never parses a phone.
+ * The section is `children` now, not state. Each one is a route under
+ * /account (see lib/account/nav.ts), so this component renders once per
+ * navigation and the panel beside it is whatever the router matched — which
+ * is what lets "Saralanganlar" be a page at /account/wishlist with the real
+ * list on it rather than a link out of the cabinet.
+ *
+ * Still a client component, and for the two reasons it always was: the head
+ * shows the profile, which lives in the browser (lib/account/profile.ts), and
+ * the sign-out is an action. The one thing that comes from the server — the
+ * signed-in number — is passed in already formatted, so this tree never parses
+ * a phone.
  */
 export function AccountCabinet({
   dict,
   phone,
+  children,
 }: {
   dict: Dictionary["account"];
   /** Display form of the session's number, e.g. "+998 90 123-45-67". */
   phone: string;
+  children: React.ReactNode;
 }) {
   const panel = dict.profilePanel;
   const router = useRouter();
-  const { profile, save } = useProfile();
-  const [section, setSection] = useState<AccountSection>(DEFAULT_ACCOUNT_SECTION);
+  const pathname = usePathname();
+  const { profile } = useProfile();
   const [menuOpen, setMenuOpen] = useState(false);
 
   async function handleLogout() {
@@ -101,9 +70,10 @@ export function AccountCabinet({
 
   const navProps = {
     panel,
-    active: section,
+    // Read off the URL rather than held here: the browser's back button and a
+    // pasted link have to move the mark too, and they never call a setter.
+    active: accountSectionFromPath(pathname),
     notificationCount: NOTIFICATION_COUNT,
-    onSelect: setSection,
     onLogout: handleLogout,
   };
 
@@ -130,13 +100,7 @@ export function AccountCabinet({
         </Button>
       </div>
 
-      <main>
-        {section === "details" ? (
-          <ProfilePanel dict={dict} profile={profile} phone={phone} onSave={save} />
-        ) : (
-          <EmptySection panel={panel} section={section} ordersCta={dict.ordersEmptyCta} />
-        )}
-      </main>
+      <main>{children}</main>
 
       <FormModalShell
         open={menuOpen}

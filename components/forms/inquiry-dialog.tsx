@@ -101,7 +101,7 @@ export function InquiryDialog({
                 animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                 exit={{ opacity: 0, scale: 0.96, x: "-50%", y: "-50%" }}
                 transition={MOTION.pop}
-                className="fixed left-1/2 top-1/2 z-60 w-full max-w-md rounded-lg border border-border bg-background p-6"
+                className="fixed left-1/2 top-1/2 z-60 w-full max-w-md rounded-lg border border-border bg-surface-elevated p-6"
               >
           <div className="flex items-start justify-between">
             <div>

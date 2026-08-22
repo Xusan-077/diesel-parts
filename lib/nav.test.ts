@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getDictionary } from "@/lib/i18n/dictionaries";
@@ -8,9 +8,27 @@ import { buildHeaderActions, buildMainNav, isNavItemActive } from "./nav";
 /**
  * `(site)` is a route group, so it contributes nothing to the URL: the href and
  * the folder below it line up one to one, with no locale segment in between.
+ *
+ * A route group can also sit *inside* that folder and is just as invisible —
+ * /account is served by `account/(cabinet)/page.tsx`, where the group exists so
+ * the sign-in guard in its layout does not also cover /account/verify. So a
+ * page one level down inside a parenthesised folder answers the same href.
  */
 function routeExists(href: string): boolean {
-  return existsSync(path.join(process.cwd(), "app", "(site)", href.slice(1), "page.tsx"));
+  const dir = path.join(process.cwd(), "app", "(site)", href.slice(1));
+  if (existsSync(path.join(dir, "page.tsx"))) {
+    return true;
+  }
+  if (!existsSync(dir)) {
+    return false;
+  }
+
+  return readdirSync(dir, { withFileTypes: true }).some(
+    (entry) =>
+      entry.isDirectory() &&
+      entry.name.startsWith("(") &&
+      existsSync(path.join(dir, entry.name, "page.tsx"))
+  );
 }
 
 describe("buildMainNav", () => {

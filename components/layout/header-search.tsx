@@ -134,7 +134,7 @@ export function HeaderSearch({
       <form role="search" onSubmit={handleSubmit}>
         <Icon
           icon={Search}
-          className="pointer-events-none absolute left-3 top-5 -translate-y-1/2 text-muted"
+          className="pointer-events-none absolute left-3 top-5 -translate-y-1/2 text-chrome-muted"
         />
         <input
           type="search"
@@ -157,14 +157,19 @@ export function HeaderSearch({
           aria-activedescendant={
             showing && active !== NO_SUGGESTION ? `${listId}-${active}` : undefined
           }
-          className="h-10 w-full rounded-md border border-border bg-surface pl-9 pr-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent"
+          // The same ring the panel's fields wear: a border in `accent-strong`
+          // with a 2px solid stop hard against it. The bare `focus:border-accent`
+          // this replaces was a 1px change at 2.56:1 on white, which is under
+          // what a focus indicator owes — it only ever read as focused because
+          // an unlayered rule was drawing a black outline over the top of it.
+          className="h-10 w-full rounded-md border border-chrome-border-strong bg-chrome-surface pl-9 pr-9 text-sm text-chrome-foreground outline-none transition-[border-color,box-shadow] placeholder:text-chrome-muted focus:border-chrome-accent focus:shadow-[0_0_0_2px_var(--chrome-accent)]"
         />
         {pending ? (
           <Icon
             icon={Loader2}
             aria-hidden={false}
             aria-label={header.searchLoading}
-            className="pointer-events-none absolute right-3 top-5 -translate-y-1/2 animate-spin text-muted"
+            className="pointer-events-none absolute right-3 top-5 -translate-y-1/2 animate-spin text-chrome-muted"
           />
         ) : null}
       </form>
@@ -174,7 +179,7 @@ export function HeaderSearch({
           // Keeping focus in the field means the panel cannot close itself out
           // from under the click that is about to land on one of its rows.
           onMouseDown={(event) => event.preventDefault()}
-          className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-lg border border-border bg-surface shadow-2xl"
+          className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-lg border border-border bg-surface-elevated shadow-2xl"
         >
           <ul id={listId} role="listbox" aria-label={header.searchSuggestions}>
             {items.map((product, index) => {

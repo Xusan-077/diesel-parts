@@ -9,6 +9,7 @@
     "readMore": "Подробнее",
     "viewAll": "Смотреть все",
     "loading": "Загрузка...",
+    "retry": "Повторить",
     "close": "Закрыть",
     "skipToContent": "Перейти к содержимому",
     "submit": "Отправить",
@@ -286,6 +287,17 @@
     "email": "info@dieselparts.uz",
     "hoursTitle": "Часы работы",
     "hours": "Понедельник - Суббота, 09:00 - 23:00"
+  },
+  "support": {
+    "open": "Открыть окно поддержки",
+    "title": "Поддержка DieselParts",
+    "status": "Онлайн — ответим быстро",
+    "greeting": "Здравствуйте! Чем можем помочь? Напишите нам или позвоните — ответим на любой вопрос.",
+    "telegram": "Написать в Telegram",
+    "telegramHint": "Быстрый ответ — в течение 5 минут",
+    "call": "Позвонить",
+    "responseLabel": "Среднее время ответа",
+    "responseValue": "5 минут"
   },
   "productActions": {
     "addToWishlist": "Добавить в избранное",

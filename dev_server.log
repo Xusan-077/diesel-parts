@@ -2,173 +2,20 @@
 > diesel-parts@0.1.0 dev
 > next dev
 
+⚠ Port 3000 is in use by process 30288, using available port 3001 instead.
 ▲ Next.js 16.3.0 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://26.223.165.124:3000
-✓ Ready in 419ms
-✓ Running next.config.ts took 32ms
+- Local:         http://localhost:3001
+- Network:       http://26.223.165.124:3001
+- Environments: .env.local
+✓ Ready in 743ms
+✓ Running next.config.ts took 35ms
+⨯ Another next dev server is already running.
 
- GET /uz/request-quote 200 in 1216ms (next.js: 444ms, proxy.ts: 141ms, generate-params: 406ms, application-code: 225ms)
-[quote-request] {
-  name: 'John Doe',
-  company: 'Acme Co',
-  phone: '+998901234567',
-  email: 'john@example.com',
-  country: 'Uzbekistan',
-  products: 'CAT 3126 injector',
-  quantity: '10',
-  message: ''
-}
- POST /api/quote-request 200 in 371ms (next.js: 323ms, application-code: 48ms)
- GET /ru/request-quote 200 in 91ms (next.js: 11ms, proxy.ts: 7ms, generate-params: 12ms, application-code: 60ms)
- GET /en/request-quote 200 in 49ms (next.js: 6ms, proxy.ts: 3ms, generate-params: 5ms, application-code: 36ms)
- GET /uz 200 in 545ms (next.js: 38ms, proxy.ts: 5ms, generate-params: 418ms, application-code: 84ms)
- GET /uz/categories/engine-parts 200 in 685ms (next.js: 202ms, proxy.ts: 3ms, generate-params: 459ms, application-code: 21ms)
- GET /uz/products 200 in 609ms (next.js: 147ms, proxy.ts: 2ms, generate-params: 440ms, application-code: 20ms)
- GET /uz/about 200 in 549ms (next.js: 111ms, proxy.ts: 3ms, generate-params: 415ms, application-code: 20ms)
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.pe8gakrsmu' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.pe8gakrsmu' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js.tmp.pe8gakrsmu',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\static\development\_buildManifest.js.tmp.lwq5xzp3k7' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\static\development\_buildManifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\static\development\_buildManifest.js.tmp.lwq5xzp3k7' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\static\development\_buildManifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\static\\development\\_buildManifest.js.tmp.lwq5xzp3k7',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\static\\development\\_buildManifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js.tmp.aszvh322rl' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js'
-Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.pe8gakrsmu' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js.tmp.pe8gakrsmu',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.p2qkn1xuxe' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-⨯ unhandledRejection: Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.p2qkn1xuxe' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js.tmp.p2qkn1xuxe',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js'
-}
- GET /uz/contact 500 in 971ms (next.js: 934ms, proxy.ts: 2ms, application-code: 35ms)
- GET /uz/contact 500 in 972ms (next.js: 934ms, proxy.ts: 2ms, application-code: 36ms)
- GET /uz/contact 200 in 461ms (next.js: 14ms, proxy.ts: 4ms, generate-params: 410ms, application-code: 33ms)
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.gtpj2x1k7pf' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.gtpj2x1k7pf' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js.tmp.gtpj2x1k7pf',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js.tmp.pmbgjt9dn7' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js.tmp.pmbgjt9dn7' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\middleware-build-manifest.js.tmp.pmbgjt9dn7',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\middleware-build-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.eiob0ca3jwm' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-⨯ unhandledRejection: Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.eiob0ca3jwm' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js.tmp.eiob0ca3jwm',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js'
-}
-Could not find files for /_error in .next/build-manifest.json
-Could not find files for /_error in .next/build-manifest.json
- GET /uz/blog 500 in 297ms (next.js: 194ms, proxy.ts: 3ms, application-code: 100ms)
- GET /uz/blog 200 in 507ms (next.js: 13ms, proxy.ts: 3ms, generate-params: 444ms, application-code: 47ms)
- GET /uz/about 200 in 29ms (next.js: 6ms, proxy.ts: 2ms, generate-params: 6ms, application-code: 14ms)
- GET /uz/blog 200 in 30ms (next.js: 6ms, proxy.ts: 3ms, generate-params: 5ms, application-code: 16ms)
- GET /uz/about 200 in 29ms (next.js: 6ms, proxy.ts: 2ms, generate-params: 7ms, application-code: 14ms)
- GET /uz/products 200 in 33ms (next.js: 6ms, proxy.ts: 2ms, generate-params: 4ms, application-code: 20ms)
- GET /uz/products 200 in 41ms (next.js: 8ms, proxy.ts: 3ms, generate-params: 5ms, application-code: 24ms)
- GET /uz/products 200 in 198ms (next.js: 81ms, proxy.ts: 65ms, generate-params: 7ms, application-code: 44ms)
- GET /uz/products 200 in 50ms (next.js: 9ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 37ms)
- GET /uz/products 200 in 59ms (next.js: 14ms, proxy.ts: 5ms, generate-params: 0.0ms, application-code: 41ms)
- GET /uz/products 200 in 52ms (next.js: 14ms, proxy.ts: 5ms, generate-params: 0.0ms, application-code: 33ms)
- GET /uz/products 200 in 45ms (next.js: 11ms, proxy.ts: 5ms, generate-params: 0.0ms, application-code: 29ms)
- GET /uz/products 200 in 42ms (next.js: 9ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 29ms)
- GET /uz/products 200 in 43ms (next.js: 9ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 30ms)
- GET /uz/products 200 in 51ms (next.js: 10ms, proxy.ts: 5ms, generate-params: 0.0ms, application-code: 35ms)
- GET /uz/products 200 in 44ms (next.js: 9ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 31ms)
- GET /uz/products 200 in 40ms (next.js: 8ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 28ms)
- GET /uz/products 200 in 38ms (next.js: 8ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 27ms)
- GET /uz/products 200 in 53ms (next.js: 8ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 41ms)
- GET /uz/products 200 in 51ms (next.js: 9ms, proxy.ts: 5ms, generate-params: 8ms, application-code: 29ms)
- GET /uz/products 200 in 33ms (next.js: 6ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 23ms)
- GET /uz/products 200 in 37ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 28ms)
- GET /uz/products 200 in 32ms (next.js: 7ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 22ms)
- GET /uz/products 200 in 35ms (next.js: 7ms, proxy.ts: 2ms, generate-params: 0.0ms, application-code: 25ms)
- GET /uz/products 200 in 34ms (next.js: 7ms, proxy.ts: 2ms, generate-params: 0.0ms, application-code: 25ms)
- GET /uz/products 200 in 38ms (next.js: 8ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 27ms)
- GET /uz/products 200 in 32ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 23ms)
- GET /uz/products 200 in 36ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 27ms)
- GET /uz/products 200 in 32ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 22ms)
- GET /uz/products 200 in 38ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 28ms)
- GET /uz/products 200 in 37ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 27ms)
- GET /uz/products 200 in 30ms (next.js: 6ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 20ms)
- GET /uz/products 200 in 43ms (next.js: 8ms, proxy.ts: 3ms, generate-params: 0.0ms, application-code: 33ms)
- GET /uz/products 200 in 70ms (next.js: 7ms, proxy.ts: 4ms, generate-params: 0.0ms, application-code: 59ms)
- GET /uz/products 200 in 37ms (next.js: 8ms, proxy.ts: 5ms, generate-params: 5ms, application-code: 19ms)
- GET /uz/products 200 in 46ms (next.js: 8ms, proxy.ts: 4ms, generate-params: 6ms, application-code: 27ms)
- GET /uz/products 200 in 67ms (next.js: 7ms, proxy.ts: 3ms, generate-params: 6ms, application-code: 51ms)
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.a1jwwo3nxpn' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js.tmp.a1jwwo3nxpn' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\server-reference-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js.tmp.a1jwwo3nxpn',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\server-reference-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js.tmp.8bwuwyzxcgu' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js'
-⨯ Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js.tmp.8bwuwyzxcgu' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\middleware-build-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\middleware-build-manifest.js.tmp.8bwuwyzxcgu',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\middleware-build-manifest.js'
-}
-Node.js fs rename failed after 101 retries with error Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.bhssfy0ang8' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-Could not find files for /_error in .next/build-manifest.json
-Could not find files for /_error in .next/build-manifest.json
-⨯ unhandledRejection: Error: EPERM: operation not permitted, rename 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js.tmp.bhssfy0ang8' -> 'C:\Users\Acer_Predator-PC\OneDrive\Desktop\diesel-parts\.claude\worktrees\marketing-website\.next\dev\server\next-font-manifest.js'
-    at ignore-listed frames {
-  errno: -4048,
-  code: 'EPERM',
-  syscall: 'rename',
-  path: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js.tmp.bhssfy0ang8',
-  dest: 'C:\\Users\\Acer_Predator-PC\\OneDrive\\Desktop\\diesel-parts\\.claude\\worktrees\\marketing-website\\.next\\dev\\server\\next-font-manifest.js'
-}
- GET /uz/products/cat-fuel-injector-3126 500 in 180ms (next.js: 152ms, proxy.ts: 5ms, application-code: 23ms)
- GET /uz/products/cat-fuel-injector-3126 200 in 693ms (next.js: 24ms, proxy.ts: 2ms, generate-params: 450ms, application-code: 217ms)
- GET /uz/products/cat-fuel-injector-3126 200 in 54ms (next.js: 7ms, proxy.ts: 2ms, generate-params: 6ms, application-code: 39ms)
-[inquiry] {
-  productId: 'cat-injector-3126',
-  productSlug: 'cat-fuel-injector-3126',
-  name: 'Jane Doe',
-  email: 'jane@example.com',
-  phone: '',
-  message: 'Is this compatible with CAT 320D?'
-}
- POST /api/inquiry 200 in 277ms (next.js: 229ms, application-code: 49ms)
+- Local:        http://localhost:3000
+- PID:          30288
+- Dir:          C:\dev\Diesel Parts\diesel-parts-app
+- Log:          .next\dev\logs\next-development.log
+
+You can access the existing server at http://localhost:3000,
+or run taskkill /PID 30288 /F to stop it and start a new one.
+[?25h

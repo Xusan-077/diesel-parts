@@ -40,7 +40,7 @@ export function LanguageSelect({ lang, label }: { lang: Locale; label: string })
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={label}
-        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+        className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-chrome-secondary transition-colors hover:bg-chrome-hover hover:text-chrome-foreground"
       >
         <FlagIcon locale={language} className="h-3 w-4.5 shrink-0 rounded-xs" />
         <span className="font-medium">{LOCALE_LABELS[language]}</span>

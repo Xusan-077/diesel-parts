@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { useUpdateCustomer } from "@/hooks/admin/use-admin-customers";
 import { toast } from "sonner";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,9 @@ export function CustomerNotes({ customerId, notes, editable }: CustomerNotesProp
   const router = useRouter();
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+
+  const update = useUpdateCustomer();
+  const busy = update.isPending;
 
   /*
    * Falling back to the saved note rather than seeding state from it means a
@@ -43,23 +45,25 @@ export function CustomerNotes({ customerId, notes, editable }: CustomerNotesProp
   }
 
   async function save() {
-    setBusy(true);
     setError(null);
 
     try {
-      await axios.patch(`/api/v1/customers/${customerId}`, {
-        notes: value.trim() || null,
-      });
+      await update.mutateAsync({ id: customerId, values: { notes: value.trim() || null } });
 
       setDraft(null);
       toast.success("Izoh saqlandi");
+  /*
+   * The invalidation inside the mutation refreshes the customer *lists*. This
+   * screen is not one of them: the account it draws is read by a server
+   * component, so `router.refresh()` is what re-reads it. Both are needed, and
+   * they are not duplicates — one re-runs this route, the other drops caches
+   * the route knows nothing about.
+   */
       router.refresh();
-    } catch (error) {
-      const message = requestErrorMessage(error, "Saqlanmadi.");
+    } catch (cause) {
+      const message = requestErrorMessage(cause, "Saqlanmadi.");
       setError(message);
       toast.error(message);
-    } finally {
-      setBusy(false);
     }
   }
 

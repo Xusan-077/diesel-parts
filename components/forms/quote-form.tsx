@@ -128,7 +128,7 @@ export function QuoteForm({
         ref={(el) => {
           el?.focus();
         }}
-        className="rounded-lg border border-border bg-surface-muted p-8 text-center"
+        className="rounded-lg border border-border bg-surface p-8 text-center"
       >
         <h2 className="text-xl font-semibold text-foreground">{dict.successTitle}</h2>
         <p className="mt-2 text-muted">{dict.successText}</p>

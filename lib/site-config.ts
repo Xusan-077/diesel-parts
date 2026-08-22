@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import type { GeoPoint } from "./map-links";
 
 /**
@@ -40,3 +42,61 @@ export const SITE_PHONES: SitePhone[] = [
  * Taken from the Yandex Maps share link for the showroom.
  */
 export const SITE_LOCATION: GeoPoint = { lat: 41.186136, lon: 69.196655 };
+
+/**
+ * The two channels the floating support widget offers. Kept here, beside the
+ * numbers the header and footer already read, so the widget has exactly one
+ * knob per channel and no copy of a phone number lives in a component.
+ */
+export interface SupportContact {
+  /** Telegram handle, stored without the leading `@`. */
+  telegramUsername: string;
+  /** Which of the numbers above the "call" row dials. */
+  phone: SitePhone;
+}
+
+/** TODO(Xusan): confirm the support handle before launch — see SITE_PHONES. */
+export const SUPPORT_CONTACT: SupportContact = {
+  telegramUsername: "dieselparts_uz",
+  phone: SITE_PHONES[0],
+};
+
+/** `t.me` link for a handle stored without its `@`. */
+export function telegramHref(username: string): string {
+  return `https://t.me/${username.replace(/^@/, "")}`;
+}
+
+/**
+ * The icon set, shared by both root layouts — the storefront and the panel.
+ *
+ * It is declared here rather than through the `app/icon.*` file convention on
+ * purpose. There is no single root layout to hang the convention off (the
+ * storefront and the panel are two separate roots), and Next only injects a
+ * convention icon when a segment leaves `metadata.icons` unset — so the moment
+ * either layout declares icons of its own, a stray `app/favicon.ico` would go
+ * silently unused while still shadowing `public/favicon.ico` on the
+ * `/favicon.ico` route. One explicit list, two consumers, no shadowing.
+ *
+ * `favicon.ico` stays last: it is the legacy fallback, and browsers that
+ * understand the PNGs should pick the sharp one ahead of it.
+ */
+export const SITE_ICONS: Metadata["icons"] = {
+  icon: [
+    { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+    { url: "/favicon.ico", sizes: "any" },
+  ],
+  apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+};
+
+/**
+ * Social preview card. Width and height are stated so crawlers that do not
+ * fetch the file still lay the card out at 1.91:1 instead of guessing.
+ */
+export const OG_IMAGE = {
+  url: "/og-image.png",
+  width: 1200,
+  height: 630,
+  type: "image/png",
+} as const;

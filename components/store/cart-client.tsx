@@ -87,7 +87,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
           {lines.map(({ product, brandName, categoryName, quantity }) => (
             <li
               key={product.id}
-              className="flex flex-col gap-4 rounded-lg border border-border bg-surface-muted p-4 sm:flex-row sm:items-center"
+              className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center"
             >
               <div className="flex h-20 w-full shrink-0 items-center justify-center rounded-md bg-linear-to-br from-surface-hover to-transparent text-xs text-muted sm:w-28">
                 {product.imageLabels[0]}
@@ -163,7 +163,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         </ul>
       </div>
 
-      <aside className="rounded-lg border border-border bg-surface-muted p-6 lg:sticky lg:top-40">
+      <aside className="rounded-lg border border-border bg-surface p-6 lg:sticky lg:top-40">
         <h2 className="text-base font-semibold text-foreground">{dict.summaryTitle}</h2>
 
         <dl className="mt-4 space-y-2 text-sm">
@@ -193,7 +193,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
 
         <Link
           href="/request-quote"
-          className="mt-6 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+          className="mt-6 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
         >
           {dict.checkout}
         </Link>

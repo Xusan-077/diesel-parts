@@ -26,7 +26,7 @@ export default async function PaymentPage() {
       <h2 className="text-xl font-semibold text-foreground">{dict.payment.methodsTitle}</h2>
       <FeatureGrid items={dict.payment.methods} className="mt-8" />
 
-      <p className="mx-auto mt-10 max-w-3xl rounded-lg border border-border bg-surface-muted p-5 text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-10 max-w-3xl rounded-lg border border-border bg-surface p-5 text-sm leading-relaxed text-muted">
         {dict.payment.note}
       </p>
 

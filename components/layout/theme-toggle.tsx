@@ -26,7 +26,7 @@ export function ThemeToggle({ lightLabel, darkLabel, className }: ThemeTogglePro
       title={label}
       onClick={toggleTheme}
       className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground",
+        "flex h-7 w-7 items-center justify-center rounded-md text-chrome-secondary transition-colors hover:bg-chrome-hover hover:text-chrome-foreground",
         className
       )}
     >

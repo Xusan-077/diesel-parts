@@ -67,7 +67,7 @@ export function DropdownMenuContent({
               exit={{ opacity: 0, y: -6 }}
               transition={MOTION.pop}
               className={cn(
-                "z-100 min-w-[10rem] overflow-hidden rounded-md border border-border bg-surface p-1 text-foreground shadow-lg",
+                "z-100 min-w-[10rem] overflow-hidden rounded-md border border-border bg-surface-elevated p-1 text-foreground shadow-lg",
                 className
               )}
             >
@@ -87,7 +87,11 @@ export function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-surface-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        // The app ring is kept, pulled inside the item. A menu row's only other
+        // focus mark is `surface-hover`, which is 1.15:1 against the menu — a
+        // highlight, not an indicator. The inset is because the ring used to be
+        // drawn 2px *outside* the row and clipped on the menu's own edge.
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors focus:bg-surface-hover focus-visible:-outline-offset-2 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className
       )}
       {...props}

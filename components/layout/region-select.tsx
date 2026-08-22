@@ -22,7 +22,7 @@ export function RegionSelect({ lang, label }: { lang: Locale; label: string }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={label}
-        className="flex max-w-[11rem] items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground sm:max-w-none"
+        className="flex max-w-[11rem] items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-chrome-secondary transition-colors hover:bg-chrome-hover hover:text-chrome-foreground sm:max-w-none"
       >
         <Icon icon={MapPin} size="xs" className="shrink-0" />
         <span className="truncate">{active.name[lang]}</span>

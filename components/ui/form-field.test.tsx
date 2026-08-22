@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CheckboxField } from "./checkbox";
+import { controlVariants } from "./field-styles";
 import { FormField } from "./form-field";
 import { Input } from "./input";
 import { Select } from "./select";
@@ -84,16 +85,44 @@ describe("FormField", () => {
         <Input />
       </FormField>,
     );
-    const rail = () => container.firstElementChild as HTMLElement;
-    expect(rail().className).toContain("focus-within:border-accent-strong");
+    /* The box, not the outer wrapper: the field is label / box / message now,
+       and the rail travels with the box because the frame and the rail are one
+       object — see `fieldBox`. */
+    const box = () => container.querySelector("[class*='border-l-2']") as HTMLElement;
+    expect(box().className).toContain("focus-within:border-accent-strong");
 
     rerender(
       <FormField label="Narx" error="Faqat raqam">
         <Input />
       </FormField>,
     );
-    expect(rail().className).toContain("border-danger");
-    expect(rail().className).not.toContain("focus-within:border-accent-strong");
+    expect(box().className).toContain("border-danger");
+    expect(box().className).not.toContain("focus-within:border-accent-strong");
+  });
+
+  it("marks a required field on the control, not in its name", () => {
+    render(
+      <FormField label="SKU" required>
+        <Input />
+      </FormField>,
+    );
+
+    // The asterisk is decoration. The requirement itself is the control's, so
+    // the field stays findable by exactly the words printed above it.
+    expect(screen.getByText("*").getAttribute("aria-hidden")).toBe("true");
+    expect((control("SKU") as HTMLInputElement).required).toBe(true);
+  });
+
+  it("prints the unit inside the box rather than in the label", () => {
+    render(
+      <FormField label="Narx" suffix="so'm">
+        <Input />
+      </FormField>,
+    );
+
+    // Reached through the label, so the suffix cannot be what is labelling it.
+    expect(control("Narx")).toBeTruthy();
+    expect(screen.getByText("so'm")).toBeTruthy();
   });
 
   it("disables the control it wraps", () => {
@@ -150,8 +179,36 @@ describe("control variant", () => {
 
     // Inside a field the rail is the only boundary — no second box, no shadow.
     expect(control("Ichkarida").className).toContain("border-0");
-    // Standalone, the control has to draw its own, at the 3:1 a UI component needs.
-    expect(control("Tashqarida").className).toContain("border-border-strong");
+    // Standalone, the control has to draw its own, at the 3:1 a UI component
+    // needs — `--field-border`, which holds that line in both palettes.
+    expect(control("Tashqarida").className).toContain("border-field-border");
+  });
+
+  /*
+   * The focus indicator belongs to exactly one element. Inside a field that is
+   * the field, and the control has to stand down or the app's near-black ring
+   * is drawn straight through the field's orange one — the control is inset by
+   * the box's padding, so the two rectangles cross rather than nest.
+   */
+  it("hands the focus ring to the field it sits in", () => {
+    render(
+      <>
+        <FormField label="Ichkarida">
+          <Input />
+        </FormField>
+        <Input aria-label="Tashqarida" />
+      </>,
+    );
+
+    expect(control("Ichkarida").className).toContain("focus:outline-none");
+    // Standalone it draws the ring itself, so it drops the app's one too.
+    expect(control("Tashqarida").className).toContain("focus:outline-none");
+  });
+
+  it("keeps the app's ring on a control that nothing else will mark", () => {
+    // What a toolbar filter on a bare `fieldRail` wears: no field context, so
+    // no `focus-within` box behind it, so the app ring is all it has.
+    expect(controlVariants({ variant: "rail" })).not.toContain("outline-none");
   });
 });
 

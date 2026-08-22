@@ -85,7 +85,7 @@ export function HeaderActions({
   const visible = compact ? actions.filter((action) => action.key !== "compare") : actions;
 
   const itemClass = cn(
-    "flex flex-col items-center gap-1 rounded-md text-muted transition-colors hover:text-accent-strong",
+    "flex flex-col items-center gap-1 rounded-md text-chrome-secondary transition-colors hover:text-chrome-accent",
     compact ? "p-2" : "w-16 px-1 py-1.5"
   );
 
@@ -151,7 +151,7 @@ export function HeaderActions({
         href="/account"
         aria-label={signedInLabel}
         title={signedInLabel}
-        className="ml-1 flex h-10 items-center rounded-md border border-border px-3 text-[13px] font-medium tabular-nums leading-none text-foreground transition-colors hover:border-accent/60 hover:text-accent-strong"
+        className="ml-1 flex h-10 items-center rounded-md border border-chrome-border-strong px-3 text-[13px] font-medium tabular-nums leading-none text-chrome-foreground transition-colors hover:border-chrome-accent hover:text-chrome-accent"
       >
         {readable}
       </Link>

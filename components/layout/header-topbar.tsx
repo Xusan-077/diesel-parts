@@ -16,7 +16,7 @@ export function HeaderTopbar({
   header: Dictionary["header"];
 }) {
   return (
-    <div className="border-b border-border bg-surface-muted">
+    <div className="border-b border-chrome-border">
       <Container className="flex h-9 items-center gap-2 sm:gap-4">
         <RegionSelect lang={lang} label={header.regionLabel} />
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
@@ -25,7 +25,7 @@ export function HeaderTopbar({
               <a
                 key={phone.tel}
                 href={`tel:${phone.tel}`}
-                className="flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-foreground"
+                className="flex items-center gap-1.5 text-xs text-chrome-secondary transition-colors hover:text-chrome-foreground"
               >
                 <Icon icon={Phone} size="xs" />
                 {phone.display}

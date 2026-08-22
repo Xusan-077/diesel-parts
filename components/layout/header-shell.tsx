@@ -83,7 +83,17 @@ export function HeaderShell({
       // `condensed` is false — so the header paints in its resting state and
       // the measurement lands before it can ever be asked to move.
       style={condensed ? { transform: `translateY(-${topbarHeight}px)` } : undefined}
-      className="group/header sticky top-0 z-50 border-b border-border bg-background transition-transform duration-300 ease-out"
+      // `bg-chrome` is the dark material, and only the top bar shows it now:
+      // the two rows below carry `header-plate`, which paints over it and
+      // swaps the chrome palette for the page's own. The class stays on the
+      // header itself because the base layer's focus-ring rule is keyed to it
+      // — inside the plate `--chrome-foreground` is near-black, outside it is
+      // near-white, and one selector covers both.
+      //
+      // No `border-b` here any more. The rows own their own bottom edges, and
+      // against a white plate a second line under the first is visible rather
+      // than merely redundant.
+      className="group/header sticky top-0 z-50 bg-chrome transition-transform duration-300 ease-out"
     >
       <div ref={topbarRef}>{topbar}</div>
       {children}

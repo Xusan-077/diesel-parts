@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
+import { adminKeys } from "@/lib/api/admin/keys";
+import { panelClient } from "@/lib/api/admin/client";
 import { toast } from "sonner";
 import { refusalPayload } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ function announce(report: ImportReport): void {
  * duplicates.
  */
 export function CatalogTransfer() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,14 +77,23 @@ export function CatalogTransfer() {
     body.append("file", file);
 
     try {
-      const { data } = await axios.post<ImportBody>("/api/v1/products/import", body);
+      /*
+       * Multipart, so the client's JSON content type has to be dropped: axios
+       * fills in the boundary itself only when nothing else claims the header.
+       */
+      const { data } = await panelClient.post<ImportBody>("/products/import", body, {
+        headers: { "Content-Type": undefined },
+      });
 
       const next = toReport(data);
       setReport(next);
       announce(next);
 
       if (data.success) {
-        router.refresh();
+        // An import rewrites rows wholesale, so the catalogue table and the
+        // trail that recorded the import are both invalidated.
+        void queryClient.invalidateQueries({ queryKey: adminKeys.products.all });
+        void queryClient.invalidateQueries({ queryKey: adminKeys.audit.all });
       }
     } catch (error) {
       const payload = refusalPayload<ImportBody>(error);

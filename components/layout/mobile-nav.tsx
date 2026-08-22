@@ -15,6 +15,7 @@ import { SITE_PHONES } from "@/lib/site-config";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/locales";
 import { useLanguage } from "@/hooks/use-store";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { BrandMark } from "./brand-mark";
 import { FlagIcon } from "./flag-icon";
 import { Icon } from "@/components/ui/icon";
 
@@ -69,7 +70,7 @@ export function MobileMenu({
       <Dialog.Trigger
         aria-label={nav.menu}
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-surface-hover",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-chrome-foreground transition-colors hover:bg-chrome-hover",
           className
         )}
       >
@@ -99,10 +100,21 @@ export function MobileMenu({
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={MOTION.drawer}
-                className="fixed inset-y-0 left-0 z-100 flex w-full max-w-sm flex-col overflow-y-auto bg-background text-foreground"
+                className="fixed inset-y-0 left-0 z-100 flex w-full max-w-sm flex-col overflow-y-auto bg-surface-elevated text-foreground"
               >
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
-            <Dialog.Title className="text-lg font-semibold">{siteName}</Dialog.Title>
+            {/*
+              The drawer opens over the page, not over the chrome, so the mark
+              picks up `text-foreground` here rather than the frame's own
+              foreground — near-black on a light page, near-white on a dark
+              one. Both are what the lower half of the mark wants.
+            */}
+            <div className="flex items-center gap-2">
+              <BrandMark className="h-7" />
+              <Dialog.Title className="text-lg font-semibold tracking-tight">
+                {siteName}
+              </Dialog.Title>
+            </div>
             <Dialog.Close
               aria-label={closeLabel}
               className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-surface-hover"
@@ -212,7 +224,7 @@ export function MobileMenu({
             <Link
               href="/request-quote"
               onClick={close}
-              className="flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+              className="flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
             >
               {nav.requestQuote}
             </Link>

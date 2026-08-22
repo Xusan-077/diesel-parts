@@ -46,4 +46,41 @@ export function getErrorFallbackStrings(locale: Locale = DEFAULT_LOCALE): ErrorF
   return ERROR_FALLBACK[locale] ?? ERROR_FALLBACK[DEFAULT_LOCALE];
 }
 
-export type { ErrorFallbackStrings };
+/**
+ * The 404's four strings, kept beside the error boundary's for the same
+ * reason: the screen is four sentences, and pulling `getDictionary` in for it
+ * would load all three marketing dictionaries to print them.
+ *
+ * `label` is the workshop's own words rather than a translation of "not
+ * found" — a part that is not in stock is what this shop actually says when
+ * something cannot be produced, and it is the line the screen is built around.
+ */
+interface NotFoundStrings {
+  label: string;
+  description: string;
+  cta: string;
+}
+
+const NOT_FOUND_FALLBACK: Record<Locale, NotFoundStrings> = {
+  uz: {
+    label: "Zapchast topilmadi",
+    description: "Qidirilgan sahifa mavjud emas yoki ko'chirilgan.",
+    cta: "Bosh sahifaga",
+  },
+  ru: {
+    label: "Запчасть не найдена",
+    description: "Запрашиваемая страница не существует или была перемещена.",
+    cta: "На главную",
+  },
+  en: {
+    label: "Part not found",
+    description: "The page you asked for does not exist, or it has moved.",
+    cta: "Back to home",
+  },
+};
+
+export function getNotFoundStrings(locale: Locale = DEFAULT_LOCALE): NotFoundStrings {
+  return NOT_FOUND_FALLBACK[locale] ?? NOT_FOUND_FALLBACK[DEFAULT_LOCALE];
+}
+
+export type { ErrorFallbackStrings, NotFoundStrings };

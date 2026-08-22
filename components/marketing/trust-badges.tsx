@@ -15,7 +15,7 @@ export function TrustBadges({ items }: { items: Dictionary["home"]["trustBadges"
       {items.map((item) => (
         <div
           key={item.title}
-          className="rounded-lg border border-border bg-surface-muted p-6 transition-colors hover:border-border-strong"
+          className="rounded-lg border border-border bg-surface p-6 transition-colors hover:border-border-strong"
         >
           <CountUp
             label={item.title}

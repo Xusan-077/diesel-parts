@@ -29,7 +29,7 @@ export default async function ContactPage() {
 
       <div className="mt-10 grid gap-6 sm:grid-cols-2">
         {info.map((item) => (
-          <div key={item.title} className="rounded-lg border border-border bg-surface-muted p-6">
+          <div key={item.title} className="rounded-lg border border-border bg-surface p-6">
             <p className="text-sm text-muted">{item.title}</p>
             <p className="mt-1 text-foreground">{item.value}</p>
           </div>

@@ -15,26 +15,35 @@ export function Textarea({
   variant,
   id,
   disabled,
+  required,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
   ...props
 }: TextareaProps) {
   const field = useFieldState();
-  const control = useControlProps(field, { variant, id, disabled, describedBy, invalid });
+  const control = useControlProps(field, {
+    variant,
+    id,
+    disabled,
+    required,
+    describedBy,
+    invalid,
+  });
 
   return (
     <textarea
       id={control.id}
       disabled={control.disabled}
+      required={control.required}
       aria-describedby={control["aria-describedby"]}
       aria-invalid={control["aria-invalid"]}
       className={cn(
-        controlVariants({ variant: control.variant }),
+        controlVariants({ variant: control.variant, ring: control.ring }),
         // A box needs a floor so it reads as more than a tall input. A rail
         // does not, and the old blanket `min-h-24` meant `rows` was a lie
         // everywhere — call sites were passing `rows={2}` and getting 96px,
         // then cancelling it again with `min-h-0`.
-        control.variant === "box" ? "min-h-24 py-2" : "py-1",
+        control.variant === "box" ? "min-h-24 py-2" : "py-2",
         className,
       )}
       {...props}
