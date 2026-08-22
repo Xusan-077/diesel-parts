@@ -10,25 +10,53 @@ import type { AvailabilityFilter } from "@/lib/filters";
  */
 export interface CatalogFilters {
   search: string;
-  brandId: string;
+  /**
+   * Brands ticked in the sidebar. Empty means every brand: a checkbox list has
+   * no "all" row to select, so absence is the only honest way to say it.
+   */
+  brandIds: string[];
   categoryId: string;
   availability: AvailabilityFilter;
+  /** Price bounds in UZS. `null` on either end means the reader set no bound. */
+  priceMin: number | null;
+  priceMax: number | null;
 }
 
 export const DEFAULT_FILTERS: CatalogFilters = {
   search: "",
-  brandId: "all",
+  brandIds: [],
   categoryId: "all",
   availability: "all",
+  priceMin: null,
+  priceMax: null,
 };
 
-/** How many filters are narrowing the results. Drives the mobile badge. */
+/**
+ * Adds or removes one brand.
+ *
+ * The order ticked is preserved rather than sorted, so the chip row above the
+ * grid reads back in the order the reader built it.
+ */
+export function toggleBrand(brandIds: readonly string[], id: string): string[] {
+  return brandIds.includes(id)
+    ? brandIds.filter((current) => current !== id)
+    : [...brandIds, id];
+}
+
+/**
+ * How many filters are narrowing the results. Drives the mobile badge.
+ *
+ * Each ticked brand counts separately — the badge answers "how much have I
+ * narrowed this", and three brands is three narrowings, not one.
+ */
 export function activeFilterCount(filters: CatalogFilters): number {
   let count = 0;
   if (filters.search.trim() !== "") count += 1;
-  if (filters.brandId !== "all") count += 1;
+  count += filters.brandIds.length;
   if (filters.categoryId !== "all") count += 1;
   if (filters.availability !== "all") count += 1;
+  // A range is one narrowing however many ends the reader moved.
+  if (filters.priceMin !== null || filters.priceMax !== null) count += 1;
   return count;
 }
 
@@ -39,7 +67,7 @@ export function hasActiveFilters(filters: CatalogFilters): boolean {
 /**
  * Clearing keeps the search box.
  *
- * The visitor typed that; the selects they merely picked from. Wiping a search
+ * The visitor typed that; the rest they merely picked from. Wiping a search
  * someone entered — often the part number they arrived with — is the one
  * "clear" that reads as data loss rather than as a reset.
  */
@@ -50,15 +78,20 @@ export function clearFilters(filters: CatalogFilters): CatalogFilters {
 /**
  * One applied filter, as the chip row above the grid shows it.
  *
- * The chips exist because the panel is not always on screen — it is a drawer on
+ * The chips exist because the panel is not always on screen — it is a sheet on
  * a phone, and on a desktop it is a rail the reader has scrolled past by the
  * time they are looking at page three. Without them, a short result list and a
  * heavily filtered one look identical, and the only way to find out which is to
- * go back and read four controls.
+ * go back and read six controls.
  */
 export interface FilterChip {
-  /** Which filter this came from; the key `onRemove` is called with. */
+  /** Which filter this came from; what `removeFilter` is told to clear. */
   key: keyof CatalogFilters;
+  /**
+   * The one value to drop, for a filter that holds several. Absent on a filter
+   * that holds one, where removing the chip clears the whole thing.
+   */
+  id?: string;
   /** What was filtered on, e.g. "Brend". */
   label: string;
   /** What it was set to, e.g. "CAT". */
@@ -71,20 +104,23 @@ export interface FilterChipLabels {
   brand: string;
   category: string;
   availability: string;
+  price: string;
   /** Resolves an id to the name a reader would recognise. */
   brandName: (id: string) => string;
   categoryName: (id: string) => string;
   availabilityName: (value: AvailabilityFilter) => string;
+  /** Renders the range the reader set, e.g. "500 000 – 2 000 000 so'm". */
+  priceRange: (min: number | null, max: number | null) => string;
 }
 
 /**
  * Describes the filters that are actually narrowing the grid.
  *
  * A filter left at "all" is not a filter and gets no chip — a row of chips that
- * always says "Brand: all brands" tells the reader nothing and hides the two
- * that matter. An id whose row has since been deleted resolves to nothing and
- * is dropped for the same reason: a chip reading "Brend:" with an empty value
- * cannot be understood, though it can still be cleared from the panel.
+ * always says "Brend: barcha brendlar" tells the reader nothing and hides the
+ * two that matter. An id whose row has since been deleted resolves to nothing
+ * and is dropped for the same reason: a chip reading "Brend:" with an empty
+ * value cannot be understood, though it can still be cleared from the panel.
  */
 export function describeActiveFilters(
   filters: CatalogFilters,
@@ -97,10 +133,13 @@ export function describeActiveFilters(
     chips.push({ key: "search", label: labels.search, value: search });
   }
 
-  if (filters.brandId !== "all") {
-    const name = labels.brandName(filters.brandId);
+  // One chip per brand rather than "Brend: CAT, Komatsu, Volvo": a combined
+  // chip can only be removed whole, which is never what a reader wants when
+  // they have ticked three and changed their mind about one.
+  for (const id of filters.brandIds) {
+    const name = labels.brandName(id);
     if (name !== "") {
-      chips.push({ key: "brandId", label: labels.brand, value: name });
+      chips.push({ key: "brandIds", id, label: labels.brand, value: name });
     }
   }
 
@@ -109,6 +148,14 @@ export function describeActiveFilters(
     if (name !== "") {
       chips.push({ key: "categoryId", label: labels.category, value: name });
     }
+  }
+
+  if (filters.priceMin !== null || filters.priceMax !== null) {
+    chips.push({
+      key: "priceMin",
+      label: labels.price,
+      value: labels.priceRange(filters.priceMin, filters.priceMax),
+    });
   }
 
   if (filters.availability !== "all") {
@@ -123,12 +170,24 @@ export function describeActiveFilters(
 }
 
 /**
- * The value that turns a filter off.
+ * The filter state with one chip's narrowing undone.
  *
- * Every filter but the search box is an id or an enum whose "off" is the string
- * "all"; the search box's is an empty string. Keeping that in one place is what
- * lets a chip's ✕ be a single call rather than a switch at the call site.
+ * Returns whole state rather than a per-key "off" value, because the two
+ * filters that are not a single value cannot express theirs as one: dropping a
+ * brand leaves the other brands standing, and clearing a price range clears
+ * both ends from one chip.
  */
-export function clearedValue<K extends keyof CatalogFilters>(key: K): CatalogFilters[K] {
-  return DEFAULT_FILTERS[key];
+export function removeFilter(filters: CatalogFilters, chip: FilterChip): CatalogFilters {
+  switch (chip.key) {
+    case "brandIds":
+      return {
+        ...filters,
+        brandIds: filters.brandIds.filter((id) => id !== chip.id),
+      };
+    case "priceMin":
+    case "priceMax":
+      return { ...filters, priceMin: null, priceMax: null };
+    default:
+      return { ...filters, [chip.key]: DEFAULT_FILTERS[chip.key] };
+  }
 }

@@ -60,10 +60,19 @@ export function HeaderActions({
   const authHint = useAuthHint();
   const signedIn = phone !== null || authHint;
 
+  /*
+   * All three badges count the same kind of thing: how many parts the visitor
+   * has put somewhere. The cart used to answer in units instead, so ordering
+   * seven of one screwdriver read as "7" beside a favourites "1" — three
+   * numbers in a row, two of them meaning something else.
+   *
+   * Units are still worth showing, just not here, where there is no room to
+   * say which is which. The cart page prints both against their own labels.
+   */
   const counts: Record<HeaderActionKey, number> = {
     compare: compare.count,
     favorites: wishlist.count,
-    cart: cart.unitCount,
+    cart: cart.lineCount,
     account: 0,
   };
 

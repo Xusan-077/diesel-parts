@@ -38,9 +38,10 @@ export function toCategory(row: CategoryRow): Category {
     id: row.id,
     slug: row.slug,
     name: { uz: row.nameUz, ru: row.nameRu, en: row.nameEn },
+    parentId: row.parentId,
   };
 }
 
 export function toBrand(row: BrandRow): Brand {
-  return { id: row.id, slug: row.slug, name: row.name };
+  return { id: row.id, slug: row.slug, name: row.name, logoUrl: row.logoUrl };
 }

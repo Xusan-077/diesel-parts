@@ -9,7 +9,7 @@ import { MOTION } from "@/components/providers/motion-provider";
 import { ChevronDown, Menu, Phone, X } from "lucide-react";
 import { CatalogIcon } from "@/components/catalog/catalog-icon";
 import { cn } from "@/lib/utils";
-import { catalogGroups } from "@/lib/data/catalog-menu";
+import { useCatalogTree } from "@/hooks/use-catalog-tree";
 import { buildMainNav, isNavItemActive } from "@/lib/nav";
 import { SITE_PHONES } from "@/lib/site-config";
 import { SUPPORTED_LOCALES, type Locale } from "@/lib/i18n/locales";
@@ -24,6 +24,8 @@ interface MobileMenuProps {
   nav: Dictionary["nav"];
   header: Dictionary["header"];
   closeLabel: string;
+  /** Shown on the link that opens a whole section rather than one entry. */
+  viewAllLabel: string;
   className?: string;
 }
 
@@ -33,6 +35,7 @@ export function MobileMenu({
   nav,
   header,
   closeLabel,
+  viewAllLabel,
   className,
 }: MobileMenuProps) {
   const pathname = usePathname();
@@ -40,6 +43,9 @@ export function MobileMenu({
   const [open, setOpen] = useState(false);
   const items = buildMainNav(nav);
   const { language, setLanguage } = useLanguage(lang);
+  // Same cache as the desktop menu, and the same reason for waiting until the
+  // drawer opens: most visits never open it.
+  const catalog = useCatalogTree(open);
 
   function close() {
     setOpen(false);
@@ -109,31 +115,77 @@ export function MobileMenu({
             <p className="py-2 text-xs font-medium uppercase tracking-wide text-muted">
               {header.catalog}
             </p>
-            {catalogGroups.map((group) => (
-              <details key={group.id} className="group border-b border-border">
-                <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-base transition-colors hover:text-accent-strong [&::-webkit-details-marker]:hidden">
-                  {group.name[lang]}
-                  <Icon
-                    icon={ChevronDown}
-                    className="text-muted transition-transform duration-200 group-open:rotate-180"
-                  />
-                </summary>
-                <ul className="pb-2">
-                  {group.subcategories.map((subcategory) => (
-                    <li key={subcategory.id}>
+
+            {catalog.isError ? (
+              <div role="alert" className="flex flex-col items-start gap-2 py-3">
+                <p className="text-sm text-muted">{header.catalogError}</p>
+                <button
+                  type="button"
+                  onClick={catalog.retry}
+                  className="rounded-md border border-border-strong px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-hover"
+                >
+                  {header.catalogRetry}
+                </button>
+              </div>
+            ) : catalog.isLoading ? (
+              <div aria-busy="true" className="py-1">
+                <span className="sr-only">{header.catalogLoading}</span>
+                {Array.from({ length: 6 }, (_, row) => (
+                  <div key={row} aria-hidden="true" className="border-b border-border py-4">
+                    <div
+                      className="h-3.5 animate-pulse rounded-sm bg-surface-hover"
+                      style={{ width: `${70 - (row % 3) * 12}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : catalog.items.length === 0 ? (
+              <p className="py-3 text-sm text-muted">{header.catalogEmpty}</p>
+            ) : (
+              catalog.items.map((root) => (
+                <details key={root.id} className="group border-b border-border">
+                  <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-base transition-colors hover:text-accent-strong [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-2.5">
+                      {root.icon ? (
+                        <span className="text-accent-strong">
+                          <CatalogIcon icon={root.icon} />
+                        </span>
+                      ) : null}
+                      {root.name[lang]}
+                    </span>
+                    <Icon
+                      icon={ChevronDown}
+                      className="text-muted transition-transform duration-200 group-open:rotate-180"
+                    />
+                  </summary>
+                  <ul className="pb-2">
+                    {/* The section itself is a destination too — on a phone the
+                        heading is the only way to reach a whole column. */}
+                    <li>
                       <Link
-                        href={`/products?category=${subcategory.slug}`}
+                        href={`/products?group=${root.slug}`}
                         onClick={close}
-                        className="flex items-center gap-2.5 py-2 pl-2 text-sm text-muted transition-colors hover:text-accent-strong"
+                        className="flex items-center gap-2.5 py-2 pl-2 text-sm text-accent-strong"
                       >
-                        <CatalogIcon icon={subcategory.icon} />
-                        {subcategory.name[lang]}
+                        {root.name[lang]} — {viewAllLabel}
                       </Link>
                     </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
+                    {root.children.map((child) => (
+                      <li key={child.id}>
+                        <Link
+                          href={`/products?category=${child.slug}`}
+                          onClick={close}
+                          className="flex items-center gap-2.5 py-2 pl-2 text-sm text-muted transition-colors hover:text-accent-strong"
+                        >
+                          {child.icon ? <CatalogIcon icon={child.icon} /> : null}
+                          {child.name[lang]}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))
+            )}
           </section>
 
           <nav className="flex flex-col px-4 py-2">

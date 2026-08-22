@@ -90,8 +90,50 @@ export async function listBrands(): Promise<Brand[]> {
   return rows.map(toBrand);
 }
 
+/**
+ * The cheapest and dearest priced product in the catalog.
+ *
+ * The slider needs real ends, and guessing them is worse than not shipping
+ * one: a track that runs to 100 000 000 when nothing costs over 4 000 000
+ * leaves every useful position inside the first few pixels. Rounded outwards to
+ * a round figure so the thumbs land on numbers a reader would type themselves.
+ *
+ * Products with no price are ignored here, exactly as the price filter ignores
+ * them. `null` means there is nothing priced to slide over at all.
+ */
+export async function getPriceBounds(): Promise<{ min: number; max: number } | null> {
+  const result = await prisma.product.aggregate({
+    where: { isActive: true, price: { not: null } },
+    _min: { price: true },
+    _max: { price: true },
+  });
+
+  const min = result._min.price;
+  const max = result._max.price;
+
+  if (min === null || max === null) {
+    return null;
+  }
+
+  const step = 10_000;
+  const low = Math.floor(min.toNumber() / step) * step;
+  const high = Math.ceil(max.toNumber() / step) * step;
+
+  // A catalog where everything costs the same would collapse the track to a
+  // point; widening by one step keeps the control operable.
+  return { min: low, max: high > low ? high : low + step };
+}
+
+/**
+ * Every category, in menu order.
+ *
+ * Ordered here rather than in the filter sidebar: the sidebar nests these rows
+ * into a tree and a stable input order is what lets it do that without a second
+ * sort key. Ties break on the Uzbek name for the same reason the menu does it —
+ * the tree's shape should not change when the reader changes language.
+ */
 export async function listCategories(): Promise<Category[]> {
-  const rows = await prisma.category.findMany({ orderBy: { id: "asc" } });
+  const rows = await prisma.category.findMany({ orderBy: [{ order: "asc" }, { nameUz: "asc" }] });
   return rows.map(toCategory);
 }
 

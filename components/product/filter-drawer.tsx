@@ -9,13 +9,20 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 /**
- * The filter panel as a drawer, for screens with no room for a sidebar.
+ * The filter panel as a bottom sheet, for screens with no room for a sidebar.
  *
- * Same Radix dialog and same slide-in as the header's menu, so the site has
- * one drawer rather than two that behave slightly differently. The trigger
- * carries the count of filters already narrowing the grid: on a phone the
- * sidebar is out of sight, and without that number a visitor cannot tell a
- * short result list from a filtered one.
+ * It rises from the bottom rather than sliding in from the side, which is the
+ * side of a phone a thumb can actually reach: the header's navigation drawer
+ * is opened once and read top-down, while this one is opened, adjusted,
+ * adjusted again and dismissed. Same Radix dialog and the same easing, so the
+ * two still feel like one site.
+ *
+ * Capped at 85vh with the results left visible above it, because the grid
+ * behind updates as each filter lands — a sheet that covered the page would
+ * turn a live panel back into a form. The trigger carries the count of filters
+ * already narrowing the grid: on a phone the sidebar is out of sight, and
+ * without that number a visitor cannot tell a short result list from a
+ * filtered one.
  */
 export function FilterDrawer({
   triggerLabel,
@@ -73,12 +80,18 @@ export function FilterDrawer({
           {open ? (
             <Dialog.Content asChild forceMount key="drawer" aria-describedby={undefined}>
               <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
                 transition={MOTION.drawer}
-                className="fixed inset-y-0 left-0 z-100 flex w-full max-w-sm flex-col bg-background text-foreground"
+                className="fixed inset-x-0 bottom-0 z-100 flex max-h-[85dvh] flex-col rounded-t-lg border-t border-border bg-background text-foreground shadow-xl"
               >
+                {/* The grab handle is the only thing that says "this came from
+                    the bottom edge and goes back there". */}
+                <div className="flex shrink-0 justify-center pt-2" aria-hidden>
+                  <span className="h-1 w-9 rounded-full bg-border-strong" />
+                </div>
+
                 <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
                   <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
                   <Dialog.Close
@@ -89,11 +102,14 @@ export function FilterDrawer({
                   </Dialog.Close>
                 </div>
 
-                {/* The results update live behind the drawer, so this scrolls
+                {/* The results update live behind the sheet, so this scrolls
                     and the footer button only dismisses. */}
-                <div className="flex-1 overflow-y-auto p-4">{children}</div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{children}</div>
 
-                <div className="shrink-0 border-t border-border p-4">
+                {/* Padded for the home indicator: on iOS the bottom 34px of the
+                    viewport is the system gesture area, and a button under it
+                    swipes the app away instead of closing the sheet. */}
+                <div className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                   <Dialog.Close className="flex h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90">
                     {applyLabel}
                   </Dialog.Close>

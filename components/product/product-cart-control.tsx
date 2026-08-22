@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, MessageCircle, Minus, Plus, ShoppingCart } from "lucide-react";
+import { MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-store";
 import { useSnapshotStore } from "@/lib/store/stores";
@@ -14,19 +13,25 @@ import type { Locale } from "@/lib/i18n/locales";
 import type { Product } from "@/lib/types";
 
 /**
- * How many, and into the cart — without leaving the grid.
+ * One slot at the foot of the card, holding whichever control the part is
+ * currently owed.
  *
- * Buying a filter is rarely buying one filter. The old card had a single
- * add-to-cart icon, so five of something meant five clicks with a toast after
- * each; a stepper beside the button turns that into one decision and one
- * confirmation.
+ * A part that is not in the cart owes exactly one decision — put it in — so the
+ * card shows one button and nothing else. A part that *is* in the cart owes a
+ * different one — how many — so the same slot becomes the stepper, reading and
+ * writing the cart's own quantity. There is no draft quantity any more: a
+ * stepper standing beside an add button asked the visitor to choose an amount
+ * for something they had not yet decided to buy, and left two controls on every
+ * tile of a grid that mostly wants one.
  *
- * The stepper is *local* until the button is pressed. It is a draft quantity,
- * not a live edit of the cart: writing straight through would mean a stray tap
- * on a card in a grid silently changes an order, and there is no undo on a
- * catalog page. Once the part is in the cart the control switches to reading
- * the cart's own quantity, because from then on the stepper *is* the cart —
- * and the cart page is one click away for anything more.
+ * The slot is a fixed `h-9` box and both states fill it, so the swap happens
+ * without a pixel of movement — the card below the button must not jump under
+ * a finger that is still on the screen.
+ *
+ * Stepping below one is how a part leaves the cart: `setCartQuantity` drops the
+ * line at zero, the quantity read here goes back to zero, and the slot returns
+ * to the add button. That is why the minus turns into a bin at one — the
+ * control says what the next press will actually do.
  */
 export function ProductCartControl({
   product,
@@ -50,21 +55,9 @@ export function ProductCartControl({
   const cart = useCart();
   const { record } = useSnapshotStore.getState();
 
-  const [draft, setDraft] = useState(MIN_QUANTITY);
-
   const productId = product.id;
-  const inCart = cart.has(productId);
-  const inCartQuantity = cart.quantityOf(productId);
-  const quantity = inCart ? inCartQuantity : draft;
-
-  function setQuantity(next: number) {
-    const clamped = Math.min(MAX_QUANTITY, Math.max(MIN_QUANTITY, next));
-    if (inCart) {
-      cart.setQuantity(productId, clamped);
-      return;
-    }
-    setDraft(clamped);
-  }
+  const quantity = cart.quantityOf(productId);
+  const inCart = quantity > 0;
 
   if (product.price === null) {
     /*
@@ -77,92 +70,91 @@ export function ProductCartControl({
      * size. `flex-1` belongs on a child of the row, never on the row.
      */
     return (
-      <div className={cn("flex items-center", className)}>
-        <Link
-          href="/contact"
-          className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-accent-strong transition-colors hover:border-accent/60"
-        >
-          <Icon icon={MessageCircle} size="xs" className="hidden @[11rem]:block" />
-          <span className="truncate">{requestPriceLabel}</span>
-        </Link>
+      <div className={cn(className)}>
+        <div className="flex h-9 items-center">
+          <Link
+            href="/contact"
+            className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-accent-strong transition-colors hover:border-accent/60"
+          >
+            <Icon icon={MessageCircle} size="xs" className="hidden @[11rem]:block" />
+            <span className="truncate">{requestPriceLabel}</span>
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const atLast = quantity <= MIN_QUANTITY;
+
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div
-        role="group"
-        aria-label={dict.quantity}
-        className="flex h-9 shrink-0 items-center rounded-md border border-border"
-      >
-        <button
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            setQuantity(quantity - 1);
-          }}
-          disabled={quantity <= MIN_QUANTITY}
-          aria-label={dict.decrease}
-          className="flex h-full w-8 items-center justify-center text-muted transition-colors hover:text-accent-strong disabled:opacity-40 disabled:hover:text-muted"
-        >
-          <Icon icon={Minus} size="xs" />
-        </button>
-        {/*
-          `aria-live` so the number is announced as it changes — the buttons
-          say "increase", which does not say what it became.
-        */}
-        <span
-          aria-live="polite"
-          className="w-7 text-center text-sm tabular-nums text-foreground"
-        >
-          {quantity}
-        </span>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            setQuantity(quantity + 1);
-          }}
-          disabled={quantity >= MAX_QUANTITY}
-          aria-label={dict.increase}
-          className="flex h-full w-8 items-center justify-center text-muted transition-colors hover:text-accent-strong disabled:opacity-40 disabled:hover:text-muted"
-        >
-          <Icon icon={Plus} size="xs" />
-        </button>
-      </div>
+    <div className={cn(className)}>
+      {/* The fixed box the two states share. */}
+      <div className="h-9">
+        {inCart ? (
+          <div
+            role="group"
+            aria-label={dict.quantity}
+            className="flex h-9 w-full items-center rounded-md border border-accent bg-accent/10"
+          >
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                cart.setQuantity(productId, quantity - 1);
+                if (atLast) {
+                  toast.success(dict.toastCartRemoved);
+                }
+              }}
+              aria-label={atLast ? dict.removeFromCart : dict.decrease}
+              title={atLast ? dict.removeFromCart : dict.decrease}
+              className="flex h-full w-9 shrink-0 items-center justify-center rounded-l-md text-accent-strong transition-colors hover:bg-accent/15"
+            >
+              <Icon icon={atLast ? Trash2 : Minus} size="xs" />
+            </button>
 
-      <button
-        type="button"
-        onClick={(event) => {
-          event.preventDefault();
-          record([{ product, brandName, categoryName }], lang);
+            {/*
+              `aria-live` so the number is announced as it changes — the buttons
+              say "increase", which does not say what it became.
+            */}
+            <span
+              aria-live="polite"
+              className="min-w-0 flex-1 text-center text-sm font-semibold tabular-nums text-accent-strong"
+            >
+              {quantity}
+            </span>
 
-          if (inCart) {
-            // Already there, and the stepper has been editing it directly —
-            // so this is the visitor confirming rather than adding again.
-            toast.success(dict.toastCartAdded);
-            return;
-          }
-
-          cart.add(productId, draft);
-          setDraft(MIN_QUANTITY);
-          toast.success(dict.toastCartAdded);
-        }}
-        aria-label={inCart ? `${dict.inCart} (${inCartQuantity})` : dict.addToCart}
-        title={inCart ? dict.inCart : dict.addToCart}
-        className={cn(
-          "flex h-9 min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors @[13rem]:flex-1",
-          inCart
-            ? "border border-accent bg-accent/10 text-accent-strong"
-            : "bg-accent text-accent-foreground hover:bg-accent/90"
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                cart.setQuantity(productId, quantity + 1);
+              }}
+              disabled={quantity >= MAX_QUANTITY}
+              aria-label={dict.increase}
+              title={dict.increase}
+              className="flex h-full w-9 shrink-0 items-center justify-center rounded-r-md text-accent-strong transition-colors hover:bg-accent/15 disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <Icon icon={Plus} size="xs" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              record([{ product, brandName, categoryName }], lang);
+              cart.add(productId, MIN_QUANTITY);
+              toast.success(dict.toastCartAdded);
+            }}
+            aria-label={dict.addToCart}
+            title={dict.addToCart}
+            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            <Icon icon={ShoppingCart} size="xs" className="hidden @[9rem]:block" />
+            <span className="truncate">{dict.addToCart}</span>
+          </button>
         )}
-      >
-        <Icon icon={inCart ? Check : ShoppingCart} size="xs" />
-        <span className="hidden truncate @[13rem]:inline">
-          {inCart ? dict.inCart : dict.addToCart}
-        </span>
-      </button>
+      </div>
     </div>
   );
 }

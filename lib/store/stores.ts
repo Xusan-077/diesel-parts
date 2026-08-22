@@ -10,6 +10,7 @@ import {
   type CartItem,
 } from "./cart";
 import { parseIdList, removeId, toggleId } from "./collection";
+import { EMPTY_PROFILE, parseProfile, type Profile } from "@/lib/account/profile";
 import { normalizePersistedValue } from "./persist-storage";
 import {
   forgetSnapshot,
@@ -159,10 +160,44 @@ export const useSnapshotStore = create<SnapshotState>()(
   )
 );
 
+interface ProfileState {
+  profile: Profile;
+  save: (profile: Profile) => void;
+  clear: () => void;
+}
+
+type ProfileSlice = Pick<ProfileState, "profile">;
+
+/**
+ * The visitor's own details. Client-owned for the same reason the cart is:
+ * there is no customer row on the server to hang them off yet. See
+ * lib/account/profile.ts for what happens to this when there is.
+ */
+export const useProfileStore = create<ProfileState>()(
+  persist(
+    (set) => ({
+      profile: EMPTY_PROFILE,
+      save: (profile) => set({ profile: parseProfile(profile) }),
+      clear: () => set({ profile: EMPTY_PROFILE }),
+    }),
+    {
+      ...SKIP_HYDRATION,
+      name: "diesel-parts:profile",
+      storage: createStorage<ProfileSlice>("profile"),
+      partialize: (state): ProfileSlice => ({ profile: state.profile }),
+      merge: (persisted, current): ProfileState => ({
+        ...current,
+        profile: parseProfile((persisted as ProfileSlice | undefined)?.profile),
+      }),
+    }
+  )
+);
+
 /** Called once after mount to load persisted state without a render mismatch. */
 export function rehydrateStores(): void {
   void useWishlistStore.persist.rehydrate();
   void useCompareStore.persist.rehydrate();
   void useCartStore.persist.rehydrate();
   void useSnapshotStore.persist.rehydrate();
+  void useProfileStore.persist.rehydrate();
 }

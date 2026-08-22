@@ -15,11 +15,11 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
  * first frame makes every visitor open the page to find out. This shows all of
  * them without leaving the grid.
  *
- * One frame draws no dots and no arrows: a control that cannot move is worse
- * than no control. Two or more draws both, and takes a swipe.
+ * One frame draws no markers and no arrows: a control that cannot move is
+ * worse than no control. Two or more draws both, and takes a swipe.
  *
  * The catalog stores captions rather than photographs (`imageLabels`), so each
- * frame is a placeholder tile bearing its caption. The frame count, the dots
+ * frame is a placeholder tile bearing its caption. The frame count, the markers
  * and the gestures are all real today; the day photographs arrive, only what is
  * *inside* the frame changes.
  */
@@ -117,9 +117,14 @@ export function CardGallery({
           ))}
 
           {/* Bottom-right, because the card corners its availability badge
-              bottom-left and a centred row of dots collided with it on a
-              two-up phone grid. */}
-          <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5">
+              bottom-left and a centred row of markers collided with it on a
+              two-up phone grid.
+
+              Dashes rather than dots, matching the hero: they lie along the
+              axis the frames move on, and against a photograph a 2px rule
+              reads as a mark on the picture where a filled circle reads as a
+              speck of dirt on it. */}
+          <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1">
             {frames.map((frame, index) => (
               <button
                 key={frame}
@@ -131,17 +136,17 @@ export function CardGallery({
                   setActive(index);
                 }}
                 className={cn(
-                  // A 16px hit area around a 6px dot: the dot is the mark, the
-                  // padding is what makes it tappable.
-                  "flex h-4 w-4 items-center justify-center rounded-full transition-opacity",
-                  index === current ? "opacity-100" : "opacity-50 hover:opacity-80"
+                  // A 16px-tall hit area around a 2px dash: the dash is the
+                  // mark, the padding is what makes it tappable.
+                  "flex h-4 items-center px-0.5 transition-opacity",
+                  index === current ? "opacity-100" : "opacity-60 hover:opacity-90"
                 )}
               >
                 <span
                   aria-hidden
                   className={cn(
-                    "block h-1.5 w-1.5 rounded-full transition-colors",
-                    index === current ? "bg-foreground" : "bg-border-strong"
+                    "block h-0.5 rounded-full transition-all duration-300",
+                    index === current ? "w-4 bg-foreground" : "w-2 bg-border-strong"
                   )}
                 />
               </button>

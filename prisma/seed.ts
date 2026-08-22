@@ -11,6 +11,7 @@ import { hash } from "bcryptjs";
 import { deriveStockStatus } from "@/lib/api/stock-status";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/prisma/generated/prisma/client";
+import { catalogGroups } from "@/lib/data/catalog-menu";
 import { brands } from "@/prisma/seed-data/brands";
 import { categories } from "@/prisma/seed-data/categories";
 import { products } from "@/prisma/seed-data/products";
@@ -55,6 +56,74 @@ async function seedDirector(): Promise<void> {
   });
 }
 
+/**
+ * Shapes the flat categories above into the two-level menu the header draws.
+ *
+ * A group becomes a root category keyed by its own slug — English ids like
+ * `undercarriage` are already taken by the product categories, and a root
+ * sharing an id with one of its own children would make the tree point at
+ * itself. A subcategory that names a `categoryId` *is* that existing row: it is
+ * adopted into the tree rather than duplicated, so the products already hanging
+ * off it stay where they are and `/categories/<slug>` keeps working. Its name
+ * and slug are deliberately left alone for that reason — only its place in the
+ * tree is set here. Subcategories with no product category yet are created as
+ * empty branches, which is what lets the menu show a section before there is
+ * anything to sell in it.
+ *
+ * Idempotent like the rest of the seed, and non-destructive: nothing here
+ * deletes or renames a category a director has since edited in the panel.
+ */
+async function seedCatalogTree(): Promise<void> {
+  for (const [groupIndex, group] of catalogGroups.entries()) {
+    const rootFields = {
+      slug: group.slug,
+      nameUz: group.name.uz,
+      nameRu: group.name.ru,
+      nameEn: group.name.en,
+      type: group.id,
+      order: groupIndex,
+      parentId: null,
+      icon: group.icon,
+    };
+
+    const root = await prisma.category.upsert({
+      where: { id: group.slug },
+      update: rootFields,
+      create: { id: group.slug, ...rootFields },
+    });
+
+    for (const [subIndex, subcategory] of group.subcategories.entries()) {
+      const placement = {
+        type: group.id,
+        order: subIndex,
+        parentId: root.id,
+        icon: subcategory.icon,
+      };
+
+      if (subcategory.categoryId) {
+        await prisma.category.update({
+          where: { id: subcategory.categoryId },
+          data: placement,
+        });
+        continue;
+      }
+
+      await prisma.category.upsert({
+        where: { id: subcategory.slug },
+        update: placement,
+        create: {
+          id: subcategory.slug,
+          slug: subcategory.slug,
+          nameUz: subcategory.name.uz,
+          nameRu: subcategory.name.ru,
+          nameEn: subcategory.name.en,
+          ...placement,
+        },
+      });
+    }
+  }
+}
+
 async function main(): Promise<void> {
   console.warn(
     "\n[seed] WARNING: seeded product prices are PLACEHOLDER UZS figures, not\n" +
@@ -82,6 +151,8 @@ async function main(): Promise<void> {
       create: { id: category.id, ...fields },
     });
   }
+
+  await seedCatalogTree();
 
   for (const product of products) {
     const stock = STOCK_BY_STATUS[product.stockStatus];

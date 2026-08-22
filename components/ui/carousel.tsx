@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Icon } from "./icon";
 
@@ -15,11 +14,7 @@ export interface CarouselLabels {
   region: string;
   prev: string;
   next: string;
-  /** Shown while autoplay is running — the button stops it. */
-  pause: string;
-  /** Shown while autoplay is stopped — the button starts it. */
-  play: string;
-  /** Template for a dot, e.g. "Slide {n}". Only needed where dots are shown. */
+  /** Template for a marker, e.g. "Slide {n}". Only needed where dots are shown. */
   slide?: string;
 }
 
@@ -46,48 +41,32 @@ function useCarousel() {
 interface CarouselProps extends React.ComponentProps<"section"> {
   opts?: EmblaOptions;
   labels: CarouselLabels;
-  /** Advance on a timer. Stops on hover, focus and any manual interaction. */
-  autoplay?: boolean;
-  /** Milliseconds between automatic advances. */
-  autoplayDelay?: number;
   setApi?: (api: CarouselApi) => void;
 }
 
+/**
+ * A carousel here never moves on its own.
+ *
+ * It used to advance on a timer on the hero and the lead product row. A track
+ * that changes under a reader who is still reading the slide they are on takes
+ * the decision away from them — and the fix a timer needs (a stop button, a
+ * hover pause, a focus pause, a reduced-motion escape) is four controls
+ * standing in for one that should not have been there. Every move through a
+ * carousel is now a press: an arrow, a marker, a drag, or an arrow key.
+ */
 export function Carousel({
   opts,
   labels,
-  autoplay = false,
-  autoplayDelay = 5000,
   setApi,
   className,
   children,
   ...props
 }: CarouselProps) {
-  /*
-   * The plugin instance has to survive re-renders — a fresh one each render
-   * would restart the timer and make the track stutter. A lazy `useState`
-   * initialiser builds it exactly once and is safe to read while rendering,
-   * which a ref is not.
-   */
-  const [autoplayPlugin] = React.useState(() =>
-    Autoplay({
-      delay: autoplayDelay,
-      stopOnMouseEnter: true,
-      stopOnFocusIn: true,
-      // Once the reader takes over, stay out of their way for good.
-      stopOnInteraction: true,
-    })
-  );
-
-  const plugins = React.useMemo(
-    () => (autoplay ? [autoplayPlugin] : []),
-    [autoplay, autoplayPlugin]
-  );
-
-  const [carouselRef, api] = useEmblaCarousel(
-    { align: "start", containScroll: "trimSnaps", ...opts },
-    plugins
-  );
+  const [carouselRef, api] = useEmblaCarousel({
+    align: "start",
+    containScroll: "trimSnaps",
+    ...opts,
+  });
 
   const scrollPrev = React.useCallback(() => api?.scrollPrev(), [api]);
   const scrollNext = React.useCallback(() => api?.scrollNext(), [api]);
@@ -159,7 +138,17 @@ export function Carousel({
   );
 }
 
-export function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
+export interface CarouselContentProps extends React.ComponentProps<"div"> {
+  /**
+   * Classes for the clipping viewport rather than the track inside it.
+   *
+   * Needed by a row that stops being a carousel at a breakpoint: the drag
+   * cursor lives here, and a grid is not draggable.
+   */
+  viewportClassName?: string;
+}
+
+export function CarouselContent({ className, viewportClassName, ...props }: CarouselContentProps) {
   const { carouselRef } = useCarousel();
   return (
     // `overflow-hidden` clips the track; the negative margin pairs with the
@@ -170,7 +159,13 @@ export function CarouselContent({ className, ...props }: React.ComponentProps<"d
       simply missing, so on a desktop the arrows looked like the only way
       through a row that is mostly off-screen.
     */
-    <div ref={carouselRef} className="cursor-grab overflow-hidden active:cursor-grabbing">
+    <div
+      ref={carouselRef}
+      className={cn(
+        "cursor-grab overflow-hidden active:cursor-grabbing",
+        viewportClassName
+      )}
+    >
       <div className={cn("flex -ml-4", className)} {...props} />
     </div>
   );
@@ -223,68 +218,19 @@ export function CarouselNext({ className, ...props }: React.ComponentProps<"butt
 }
 
 /**
- * Explicit stop/start for the autoplay timer. Required whenever motion starts
- * on its own: hover and focus pauses do not help a reader who is neither
- * hovering nor tabbing, and reduced-motion users need a way to end it outright.
- */
-export function CarouselAutoplayToggle({
-  className,
-  ...props
-}: React.ComponentProps<"button">) {
-  const { api, labels } = useCarousel();
-
-  const subscribe = React.useCallback(
-    (onChange: () => void) => {
-      if (!api) return () => {};
-      api.on("autoplay:play", onChange).on("autoplay:stop", onChange).on("reInit", onChange);
-      return () => {
-        api.off("autoplay:play", onChange).off("autoplay:stop", onChange).off("reInit", onChange);
-      };
-    },
-    [api]
-  );
-
-  const isPlaying = React.useSyncExternalStore(
-    subscribe,
-    () => api?.plugins()?.autoplay?.isPlaying() ?? false,
-    () => false
-  );
-
-  function toggle() {
-    const autoplayApi = api?.plugins()?.autoplay;
-    if (!autoplayApi) return;
-    if (autoplayApi.isPlaying()) {
-      autoplayApi.stop();
-    } else {
-      autoplayApi.play();
-    }
-  }
-
-  if (!api?.plugins()?.autoplay) {
-    return null;
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={isPlaying ? labels.pause : labels.play}
-      onClick={toggle}
-      className={cn(navButtonClass, className)}
-      {...props}
-    >
-      <Icon icon={isPlaying ? Pause : Play} size="md" />
-    </button>
-  );
-}
-
-/**
- * One dot per slide, for a carousel whose slides are whole screens rather than
- * a row of cards.
+ * One marker per slide, for a carousel whose slides are whole screens rather
+ * than a row of cards.
  *
  * A product row does not need these — the half-visible card at the edge
- * already says the row continues, and eleven dots under four parts is noise.
- * A hero does: each slide fills the viewport, so without dots there is nothing
- * on screen to say another one exists.
+ * already says the row continues, and eleven markers under four parts is
+ * noise. A hero does: each slide fills the viewport, so without them there is
+ * nothing on screen to say another one exists.
+ *
+ * Dashes rather than dots. A dot is a bullet: it counts slides but says
+ * nothing about them. A dash lies along the axis the track actually moves on,
+ * so the row of them reads as the length of the hero with the reader's place
+ * marked in it — and the current slide is the long one, which is the same
+ * shape a progress bar uses to mean the same thing.
  *
  * Buttons rather than an indicator strip: a reader who can see there are five
  * slides will try to click the fifth.
@@ -329,13 +275,23 @@ export function CarouselDots({ className, ...props }: React.ComponentProps<"div"
             aria-label={(labels.slide ?? "{n}").replace("{n}", String(index + 1))}
             aria-current={current ? "true" : undefined}
             onClick={() => api?.scrollTo(index)}
-            className={cn(
-              // The active dot stretches rather than swelling, so the row does
-              // not jump a pixel every five seconds.
-              "h-1.5 rounded-full transition-all duration-300",
-              current ? "w-6 bg-accent" : "w-1.5 bg-border-strong hover:bg-muted"
-            )}
-          />
+            // A 2px dash is a target nobody can hit. The button is the full
+            // 24px tall and the dash inside it is the mark, which is the same
+            // split the card gallery uses.
+            className="group/dot flex h-6 items-center py-2"
+          >
+            <span
+              aria-hidden
+              className={cn(
+                // The active marker stretches rather than swelling, so the row
+                // keeps its baseline as the hero moves through it.
+                "block h-0.5 rounded-full transition-all duration-300",
+                current
+                  ? "w-8 bg-accent"
+                  : "w-4 bg-border-strong group-hover/dot:bg-muted"
+              )}
+            />
+          </button>
         );
       })}
     </div>

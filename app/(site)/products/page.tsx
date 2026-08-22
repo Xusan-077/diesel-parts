@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getLocale } from "@/lib/i18n/server-locale";
-import { resolveCatalogScope } from "@/lib/catalog-menu";
+import { getCatalogScope } from "@/lib/api/catalog-repository";
 import { DEFAULT_PAGE_SIZE } from "@/lib/api/product-query";
-import { listBrands, listCategories, queryProducts } from "@/lib/api/product-repository";
+import {
+  getPriceBounds,
+  listBrands,
+  listCategories,
+  queryProducts,
+} from "@/lib/api/product-repository";
 import { safeRead } from "@/lib/api/safe-read";
+import type { CatalogScope } from "@/lib/catalog-tree";
 import type { Brand, Category } from "@/lib/types";
 import { canonicalPath } from "@/lib/seo";
 import { ProductCatalogClient } from "@/components/product/product-catalog-client";
@@ -23,10 +29,13 @@ export async function generateMetadata({
   const dict = getDictionary(lang);
 
   const { group, category } = await searchParams;
-  const scope = resolveCatalogScope({
-    group: firstParam(group),
-    category: firstParam(category),
-  });
+  // A menu the database cannot answer for costs this page its title, not the
+  // page itself — the grid below still renders the whole catalog.
+  const { data: scope } = await safeRead(
+    "catalog scope metadata",
+    () => getCatalogScope({ group: firstParam(group), category: firstParam(category) }),
+    null as CatalogScope | null,
+  );
 
   return {
     title: `${scope ? scope.label[lang] : dict.catalog.title} — ${dict.meta.siteName}`,
@@ -49,10 +58,11 @@ export default async function ProductsPage({
 
   const { q, group, category } = await searchParams;
   const initialSearch = firstParam(q) ?? "";
-  const scope = resolveCatalogScope({
-    group: firstParam(group),
-    category: firstParam(category),
-  });
+  const { data: scope } = await safeRead(
+    "catalog scope",
+    () => getCatalogScope({ group: firstParam(group), category: firstParam(category) }),
+    null as CatalogScope | null,
+  );
 
   /*
    * Rendered on the server and handed to React Query as `initialData`, so the
@@ -64,16 +74,18 @@ export default async function ProductsPage({
    * than a server error page — and the moment the database comes back, one
    * click fills the grid without a reload.
    */
-  const [initialData, categories, brands] = await Promise.all([
+  const [initialData, categories, brands, priceBounds] = await Promise.all([
     safeRead(
       "catalog first page",
       () =>
         queryProducts({
           q: initialSearch,
-          brandId: "all",
+          brandIds: [],
           categoryId: "all",
           categoryIds: scope?.categoryIds,
           availability: "all",
+          priceMin: null,
+          priceMax: null,
           sort: "newest",
           page: 1,
           pageSize: DEFAULT_PAGE_SIZE,
@@ -81,10 +93,12 @@ export default async function ProductsPage({
         }),
       null,
     ),
-    // The filter dropdowns degrade to "all brands / all categories" rather
-    // than taking the page with them.
+    // The filter panel degrades to the groups it can still fill rather than
+    // taking the page with it: an empty category list is a panel without a
+    // tree, and null bounds are a panel without a price slider.
     safeRead("catalog categories", listCategories, [] as Category[]),
     safeRead("catalog brands", listBrands, [] as Brand[]),
+    safeRead("catalog price bounds", getPriceBounds, null),
   ]);
 
   return (
@@ -110,6 +124,7 @@ export default async function ProductsPage({
           productDict={dict.product}
           categories={categories.data}
           brands={brands.data}
+          priceBounds={priceBounds.data}
           initialData={initialData.data}
         />
       </div>

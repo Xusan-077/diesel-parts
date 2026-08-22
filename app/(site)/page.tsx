@@ -56,8 +56,6 @@ export default async function HomePage() {
     carousel: {
       prev: dict.common.carouselPrev,
       next: dict.common.carouselNext,
-      pause: dict.common.carouselPause,
-      play: dict.common.carouselPlay,
     },
   };
 
@@ -82,23 +80,21 @@ export default async function HomePage() {
         </Reveal>
       </Container>
 
-      {/* Only the lead row advances on its own — three self-scrolling rows on
-          one page would compete for attention rather than draw it. */}
-      <ProductRow
-        {...rowProps}
-        title={dict.home.popularTitle}
-        products={popular}
-        autoplay
-      />
+      <ProductRow {...rowProps} title={dict.home.popularTitle} products={popular} />
 
       <Container as="section" className="py-16">
         <Reveal>
           <h2 className="text-2xl font-semibold text-foreground">{dict.home.categoriesTitle}</h2>
           <p className="mt-2 text-sm text-muted">{dict.home.categoriesSubtitle}</p>
         </Reveal>
-        <Reveal late className="mt-8">
+        {/*
+          Not wrapped in `Reveal late`: the category belt runs its own entrance,
+          and an ancestor mid-transform is exactly what a row that measures
+          itself on mount must not be given.
+        */}
+        <div className="mt-8">
           <CategoryGrid lang={lang} unavailableLabel={dict.common.dataUnavailable} />
-        </Reveal>
+        </div>
       </Container>
 
       <ProductRow

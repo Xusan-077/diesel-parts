@@ -14,7 +14,12 @@ vi.mock("next/link", () => ({
 
 const dict = dictionary.catalog;
 
-const BRAND: FilterChip = { key: "brandId", label: dict.filterBrandLabel, value: "CAT" };
+const BRAND: FilterChip = {
+  key: "brandIds",
+  id: "cat",
+  label: dict.filterBrandLabel,
+  value: "CAT",
+};
 const STOCK: FilterChip = {
   key: "availability",
   label: dict.filterAvailabilityLabel,
@@ -71,7 +76,29 @@ describe("FilterChips", () => {
       })
     );
 
-    expect(onRemove).toHaveBeenCalledWith("brandId");
+    // The whole chip, not its key: brands produce one chip each, so the key
+    // alone cannot say which of them the ✕ was under.
+    expect(onRemove).toHaveBeenCalledWith(BRAND);
+  });
+
+  it("gives each ticked brand its own ✕", async () => {
+    const VOLVO: FilterChip = {
+      key: "brandIds",
+      id: "volvo",
+      label: dict.filterBrandLabel,
+      value: "Volvo",
+    };
+    const { onRemove } = renderChips([BRAND, VOLVO]);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: dict.filterRemove
+          .replace("{label}", dict.filterBrandLabel)
+          .replace("{value}", "Volvo"),
+      })
+    );
+
+    expect(onRemove).toHaveBeenCalledWith(VOLVO);
   });
 
   it("offers clear-all only once there is more than one thing to clear", async () => {

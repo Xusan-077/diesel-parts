@@ -11,11 +11,13 @@ import {
   MAX_COMPARE_ITEMS,
   useCartStore,
   useCompareStore,
+  useProfileStore,
   useWishlistStore,
 } from "@/lib/store/stores";
 import { useLanguageStore } from "@/lib/store/language-store";
 import { useThemeStore } from "@/lib/store/theme-store";
 import { resolveTheme, type ResolvedTheme, type Theme } from "@/lib/store/theme";
+import type { Profile } from "@/lib/account/profile";
 import type { Locale } from "@/lib/i18n/locales";
 
 export function useWishlist() {
@@ -109,4 +111,16 @@ export function useLanguage(serverLanguage: Locale) {
   return { language: hydrated ? language : serverLanguage, setLanguage };
 }
 
-export type { CartItem, Locale, ResolvedTheme, Theme };
+/**
+ * The visitor's own details. `save` replaces the whole profile rather than
+ * patching fields, because every editor here is a modal that submits a
+ * complete form — a partial update would only invent a merge nobody needs.
+ */
+export function useProfile() {
+  const profile = useProfileStore((state) => state.profile);
+  const { save, clear } = useProfileStore.getState();
+
+  return { profile, save, clear };
+}
+
+export type { CartItem, Locale, Profile, ResolvedTheme, Theme };

@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { delivered } = await deliverOtp(phone, issued.code);
+  const { delivered, devCode } = await deliverOtp(phone, issued.code);
   if (!delivered) {
     return NextResponse.json({ success: false, error: "delivery_failed" }, { status: 502 });
   }
@@ -39,6 +39,8 @@ export async function POST(request: Request) {
   const response = NextResponse.json({
     success: true,
     resendAfterSeconds: issued.resendAfterSeconds,
+    // Undefined in production, so the field is absent from the payload there.
+    devCode,
   });
   // The phone travels in an httpOnly cookie rather than the URL or the client.
   response.cookies.set(PENDING_PHONE_COOKIE, phone, pendingPhoneCookieOptions);

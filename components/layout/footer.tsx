@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { FeatureIcon } from "@/components/marketing/feature-icon";
+import { LocationCard } from "@/components/layout/location-card";
 import { Container } from "@/components/ui/container";
+import { SITE_LOCATION } from "@/lib/site-config";
+import { yandexEmbedUrl } from "@/lib/map-links";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-/**
- * TODO(Xusan): replace with the real office coordinates. These point at the
- * centre of Tashkent purely as a placeholder.
- * Format: ll=<longitude>,<latitude>&z=<zoom>
- */
-const MAP_EMBED_URL =
-  "https://yandex.uz/map-widget/v1/?ll=69.240562%2C41.311081&z=15";
+const MAP_EMBED_URL = yandexEmbedUrl(SITE_LOCATION);
 
 interface FooterProps {
   siteName: string;
@@ -95,6 +92,12 @@ export function Footer({ siteName, footer, nav, payment, phone }: FooterProps) {
 
       <Container className="pb-12">
         <p className="text-sm font-semibold text-foreground">{footer.mapTitle}</p>
+        <LocationCard
+          className="mt-4"
+          address={footer.address}
+          point={SITE_LOCATION}
+          footer={footer}
+        />
         {/*
           The address sits behind the iframe, so a map that fails to load
           (blocked network, offline) leaves something useful rather than a

@@ -84,30 +84,22 @@ describe("ProductCard actions", () => {
     expect(followed()).toBe(0);
   });
 
-  it("adds the quantity the stepper is showing, in one go", async () => {
+  it("shows no stepper until the part is actually in the cart", () => {
     renderCard();
-    const followed = trackNavigation();
 
-    // Buying a filter is rarely buying one filter, and this used to be five
-    // clicks and five toasts.
-    await userEvent.click(screen.getByRole("button", { name: productActions.increase }));
-    await userEvent.click(screen.getByRole("button", { name: productActions.increase }));
-    await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
-
-    expect(useCartStore.getState().items).toEqual([
-      { productId: product.id, quantity: 3 },
-    ]);
-    expect(followed()).toBe(0);
+    // One slot, one decision. A quantity control beside the button asked for
+    // an amount of something nobody had yet agreed to buy.
+    expect(screen.queryByRole("group", { name: productActions.quantity })).toBeNull();
+    expect(screen.queryByRole("button", { name: productActions.increase })).toBeNull();
   });
 
-  it("leaves the cart alone until the button is pressed", async () => {
+  it("puts the stepper in the button's place once it is", async () => {
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: productActions.increase }));
+    await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
 
-    // A stray tap on a card in a grid must not silently change an order —
-    // there is no undo on a catalog page.
-    expect(useCartStore.getState().items).toEqual([]);
+    expect(screen.getByRole("group", { name: productActions.quantity })).toBeDefined();
+    expect(screen.queryByRole("button", { name: productActions.addToCart })).toBeNull();
   });
 
   it("edits the cart directly once the part is in it", async () => {
@@ -123,11 +115,30 @@ describe("ProductCard actions", () => {
     expect(followed()).toBe(0);
   });
 
-  it("will not step below one", async () => {
+  it("steps back down without leaving the cart while there is more than one", async () => {
     renderCard();
 
-    const decrease = screen.getByRole("button", { name: productActions.decrease });
-    expect(decrease).toHaveProperty("disabled", true);
+    await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
+    await userEvent.click(screen.getByRole("button", { name: productActions.increase }));
+    await userEvent.click(screen.getByRole("button", { name: productActions.decrease }));
+
+    expect(useCartStore.getState().items).toEqual([
+      { productId: product.id, quantity: 1 },
+    ]);
+  });
+
+  it("steps off the last one back to the add button", async () => {
+    renderCard();
+    const followed = trackNavigation();
+
+    await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
+    // At one the minus is a bin, and says so — the control has to name what
+    // the next press will actually do.
+    await userEvent.click(screen.getByRole("button", { name: productActions.removeFromCart }));
+
+    expect(useCartStore.getState().items).toEqual([]);
+    expect(screen.getByRole("button", { name: productActions.addToCart })).toBeDefined();
+    expect(followed()).toBe(0);
   });
 
   it("toggles the wishlist in place too", async () => {

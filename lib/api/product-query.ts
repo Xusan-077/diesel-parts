@@ -10,11 +10,18 @@ const AVAILABILITY: AvailabilityFilter[] = ["all", "available", "limited", "out_
 
 export interface ProductQuery {
   q: string;
-  brandId: string;
+  /**
+   * Brands the reader ticked. Empty means "every brand" — a list filter has no
+   * "all" option to select, so absence is the only honest way to say it.
+   */
+  brandIds: string[];
   categoryId: string;
   /** Extra scope from the catalog menu; `undefined` means "no scope". */
   categoryIds?: string[];
   availability: AvailabilityFilter;
+  /** Inclusive price bounds in UZS. `null` on either end means unbounded. */
+  priceMin: number | null;
+  priceMax: number | null;
   sort: SortKey;
   page: number;
   pageSize: number;
@@ -29,6 +36,21 @@ function clampInt(raw: string | null, fallback: number, min: number, max: number
   return Math.min(max, Math.max(min, parsed));
 }
 
+/**
+ * A price bound, or `null` when there isn't one.
+ *
+ * Negative and non-numeric values are dropped rather than clamped to zero: a
+ * bound nobody could have meant should widen the results back out, not silently
+ * narrow them.
+ */
+function priceBound(raw: string | null): number | null {
+  if (raw === null || raw.trim() === "") {
+    return null;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function oneOf<T extends string>(raw: string | null, allowed: T[], fallback: T): T {
   return allowed.includes(raw as T) ? (raw as T) : fallback;
 }
@@ -41,13 +63,23 @@ function oneOf<T extends string>(raw: string | null, allowed: T[], fallback: T):
 export function parseProductQuery(params: URLSearchParams): ProductQuery {
   const rawLang = params.get("lang");
   const categoryIds = params.getAll("categoryIds").filter((id) => id.length > 0);
+  // `brand` repeats, one per ticked box. The legacy single-value form and the
+  // "all" sentinel the selects used to send both still parse to "no filter".
+  const brandIds = params.getAll("brand").filter((id) => id.length > 0 && id !== "all");
+
+  const priceMin = priceBound(params.get("priceMin"));
+  const priceMax = priceBound(params.get("priceMax"));
 
   return {
     q: (params.get("q") ?? "").trim(),
-    brandId: params.get("brand") || "all",
+    brandIds,
     categoryId: params.get("category") || "all",
     categoryIds: params.has("categoryIds") ? categoryIds : undefined,
     availability: oneOf(params.get("availability"), AVAILABILITY, "all"),
+    // A reversed range is read the way it was meant rather than refused; the
+    // slider cannot produce one, but a hand-edited URL can.
+    priceMin: priceMin !== null && priceMax !== null ? Math.min(priceMin, priceMax) : priceMin,
+    priceMax: priceMin !== null && priceMax !== null ? Math.max(priceMin, priceMax) : priceMax,
     sort: oneOf(params.get("sort"), SORT_KEYS, "newest"),
     page: clampInt(params.get("page"), 1, 1, Number.MAX_SAFE_INTEGER),
     pageSize: clampInt(params.get("pageSize"), DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE),

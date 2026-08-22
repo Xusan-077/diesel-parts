@@ -46,8 +46,8 @@ export function buildProductWhere(query: ProductQuery): {
 } {
   const where: Prisma.ProductWhereInput = { isActive: true };
 
-  if (query.brandId !== "all") {
-    where.brandId = query.brandId;
+  if (query.brandIds.length > 0) {
+    where.brandId = { in: query.brandIds };
   }
 
   // The catalog menu passes an explicit set, which wins over the single value.
@@ -60,6 +60,18 @@ export function buildProductWhere(query: ProductQuery): {
 
   if (query.availability !== "all") {
     where.stockStatus = query.availability;
+  }
+
+  /*
+   * A price bound also excludes the products that have no price. Those show a
+   * "contact us" action instead of a figure, and a reader who has said "under
+   * 2 000 000" has not asked to be shown parts whose cost is unknown.
+   */
+  if (query.priceMin !== null || query.priceMax !== null) {
+    where.price = {
+      ...(query.priceMin !== null ? { gte: query.priceMin } : {}),
+      ...(query.priceMax !== null ? { lte: query.priceMax } : {}),
+    };
   }
 
   if (query.q.length > 0) {

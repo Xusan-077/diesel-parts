@@ -51,6 +51,7 @@ export function HeaderMain({
           nav={nav}
           header={header}
           closeLabel={closeLabel}
+          viewAllLabel={viewAllLabel}
           className="lg:hidden"
         />
 
@@ -58,8 +59,8 @@ export function HeaderMain({
 
         <CatalogMegaMenu
           lang={lang}
-          label={header.catalog}
-          viewAllLabel={viewAllLabel}
+          header={header}
+          allProductsLabel={nav.allProducts}
           className="hidden lg:inline-flex"
         />
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
-import { CURRENCY, formatPrice, sumPrices } from "./format-price";
+import { CURRENCY, formatNumber, formatPrice, parseAmount, sumPrices } from "./format-price";
 
 describe("formatPrice", () => {
   it("groups thousands and appends the local currency word", () => {
@@ -74,5 +74,39 @@ describe("sumPrices", () => {
 
   it("returns zeroes for an empty cart", () => {
     expect(sumPrices([])).toEqual({ total: 0, unpriced: 0 });
+  });
+});
+
+describe("formatNumber", () => {
+  it("groups the digits without naming a currency", () => {
+    // The price filter's heading already says "so'm"; repeating it inside both
+    // ends of the range would double the width of a sidebar control.
+    expect(formatNumber(3_450_000, "uz")).toBe("3 450 000");
+    expect(formatNumber(3_450_000, "en")).toBe("3,450,000");
+  });
+
+  it("leaves a short number alone", () => {
+    expect(formatNumber(500, "uz")).toBe("500");
+  });
+});
+
+describe("parseAmount", () => {
+  it("reads back what formatNumber wrote, in any locale", () => {
+    expect(parseAmount("3 450 000")).toBe(3_450_000);
+    expect(parseAmount("3,450,000")).toBe(3_450_000);
+  });
+
+  it("ignores a pasted currency word", () => {
+    expect(parseAmount("3450000 so'm")).toBe(3_450_000);
+  });
+
+  it("reads an entry with no digits as an open end, not as zero", () => {
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("   ")).toBeNull();
+    expect(parseAmount("so'm")).toBeNull();
+  });
+
+  it("keeps a typed zero, which is a real lower bound", () => {
+    expect(parseAmount("0")).toBe(0);
   });
 });
