@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin } from "lucide-react";
+import { ExternalLink, MapPinHouse } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,8 @@ export function LocationCard({ address, point, footer, className }: LocationCard
     >
       <div className="flex gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-strong">
-          <Icon icon={MapPin} size="md" />
+          {/* A plain pin marks any point; this one marks the premises. */}
+          <Icon icon={MapPinHouse} size="md" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">{address}</p>

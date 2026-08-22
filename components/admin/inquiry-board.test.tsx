@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import axios from "axios";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { InquiryBoard } from "./inquiry-board";
 import { refusal } from "./refusal.fixture";
 import type { BoardCard } from "@/lib/admin/inquiry-board-state";
@@ -12,14 +12,22 @@ import type { InquiryColumn } from "@/lib/api/inquiry-board";
  * The board's one flow, end to end through the component: a seller takes a lead
  * out of the pool and then moves it along.
  *
- * `router.refresh()` is stubbed, so the props never change after mount. That is
- * deliberate — it isolates the optimistic layer, which is the part that decides
- * what the seller sees in the second between tapping and the server answering.
+ * The board is seeded with its cards and the refetch is mocked to answer with
+ * that same seed, so the query never changes what is on screen after mount.
+ * That is deliberate — it isolates the optimistic layer, which is the part that
+ * decides what the seller sees in the second between tapping and the server
+ * answering.
  */
-const refresh = vi.fn();
+const get = vi.fn();
+const post = vi.fn();
+const patch = vi.fn();
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh }),
+vi.mock("@/lib/api/admin/client", () => ({
+  panelClient: {
+    get: (...args: unknown[]) => get(...args),
+    post: (...args: unknown[]) => post(...args),
+    patch: (...args: unknown[]) => patch(...args),
+  },
 }));
 
 function card(overrides: Partial<BoardCard> = {}): BoardCard {
@@ -52,20 +60,33 @@ const NO_TOTALS: Record<InquiryColumn, number> = {
   lost: 0,
 };
 
-function renderBoard(cards: BoardCard[]) {
+function view(cards: BoardCard[]) {
   const totals = { ...NO_TOTALS };
   for (const item of cards) {
     totals[item.column] += 1;
   }
 
+  return {
+    cards,
+    totals,
+    sellerName: "Nodir Karimov",
+    showAssignee: false,
+    todayIso: "2026-08-19",
+  };
+}
+
+function renderBoard(cards: BoardCard[]) {
+  const seed = view(cards);
+  // Every reread answers with the seed, so a poll or an invalidation cannot
+  // move a card on its own — only the overlay under test can.
+  get.mockResolvedValue({ data: seed });
+
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
   return render(
-    <InquiryBoard
-      cards={cards}
-      totals={totals}
-      sellerName="Nodir Karimov"
-      showAssignee={false}
-      todayIso="2026-08-19"
-    />,
+    <QueryClientProvider client={queryClient}>
+      <InquiryBoard initialData={seed} />
+    </QueryClientProvider>,
   );
 }
 
@@ -74,9 +95,6 @@ function column(name: string) {
   return within(screen.getByRole("region", { name }));
 }
 
-const post = vi.fn();
-const patch = vi.fn();
-
 /** Claims go out as a POST, every other card edit as a PATCH. */
 function settleAll(value: { data: unknown }) {
   post.mockResolvedValue(value);
@@ -84,11 +102,9 @@ function settleAll(value: { data: unknown }) {
 }
 
 beforeEach(() => {
+  get.mockReset();
   post.mockReset();
   patch.mockReset();
-  refresh.mockReset();
-  vi.spyOn(axios, "post").mockImplementation(post);
-  vi.spyOn(axios, "patch").mockImplementation(patch);
 });
 
 afterEach(() => {
@@ -106,7 +122,7 @@ describe("InquiryBoard", () => {
 
     await user.click(column("Yangi").getByRole("button", { name: "Men olaman" }));
 
-    expect(post).toHaveBeenCalledWith("/api/v1/inquiries/i1/claim");
+    expect(post).toHaveBeenCalledWith("/inquiries/i1/claim");
 
     // The card is in the seller's hands before the server has said so.
     const claimed = await column("Band qilingan").findByText("Sardor Aliyev");
@@ -117,13 +133,18 @@ describe("InquiryBoard", () => {
       column("Band qilingan").getByRole("button", { name: "Jarayonga o'tkazish" }),
     );
 
-    expect(patch).toHaveBeenLastCalledWith("/api/v1/inquiries/i1", {
+    expect(patch).toHaveBeenLastCalledWith("/inquiries/i1", {
       status: "IN_PROGRESS",
     });
 
     expect(await column("Jarayonda").findByText("Sardor Aliyev")).toBeDefined();
     expect(column("Band qilingan").queryByText("Sardor Aliyev")).toBeNull();
-    expect(refresh).toHaveBeenCalled();
+
+    /*
+     * What replaced `router.refresh()`: a settled move invalidates the board,
+     * and the board goes back to the API rather than trusting its own overlay.
+     */
+    await waitFor(() => expect(get).toHaveBeenCalledWith("/inquiries/board"));
   });
 
   it("puts a lead back in the pool and says why when another seller won the race", async () => {
@@ -176,7 +197,7 @@ describe("InquiryBoard", () => {
 
     await user.type(screen.getByLabelText("Qayta aloqa sanasi"), "2026-09-01");
 
-    expect(patch).toHaveBeenLastCalledWith("/api/v1/inquiries/i1", {
+    expect(patch).toHaveBeenLastCalledWith("/inquiries/i1", {
       followUpAt: "2026-09-01",
     });
     // Sent as an ISO date, shown the way the arrival stamp beside it is shown.

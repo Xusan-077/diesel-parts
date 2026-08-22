@@ -1,23 +1,24 @@
 "use client";
 
-import { useId, useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+import { useState } from "react";
+import { useCreateCustomer } from "@/hooks/admin/use-admin-customers";
 import { toast } from "sonner";
 import { requestErrorMessage } from "@/lib/api/request-error";
-import { Button } from "@/components/ui/button";
+import { useFieldErrors } from "@/lib/forms/use-field-errors";
+import { customerCreateSchema } from "@/lib/schemas";
+import { FormField } from "@/components/ui/form-field";
+import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-/** The panel's field frame: a rule that inks when the field takes focus. */
-const FIELD = "border-l-2 border-border pl-4 transition-colors focus-within:border-accent-strong";
 
 const EMPTY = { name: "", phone: "", email: "", company: "", notes: "" };
 
 export interface CustomerCreateFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** Prefills the form when the seller arrived from a board card. */
   initial?: Partial<typeof EMPTY>;
+  /** Fired after the customer is created, before the list refreshes. */
   onDone: () => void;
 }
 
@@ -28,135 +29,129 @@ export interface CustomerCreateFormProps {
  * is not checked for uniqueness anywhere: `Customer.phone` is deliberately
  * non-unique because a company switchboard is shared by several contacts. The
  * list's search covers the number, so a seller who wants to check first can.
+ *
+ * This form used to hand-roll the panel's field frame in a local `FIELD`
+ * constant, and had drifted from the real one — it was a bare rail with no box,
+ * and every control inside it had to cancel its own border with
+ * `border-0 px-0 focus:border-0`. It goes through `FormField` now, which is
+ * where that treatment actually lives.
  */
-export function CustomerCreateForm({ initial, onDone }: CustomerCreateFormProps) {
-  const router = useRouter();
-  const fieldId = useId();
+export function CustomerCreateForm({
+  open,
+  onOpenChange,
+  initial,
+  onDone,
+}: CustomerCreateFormProps) {
   const [form, setForm] = useState({ ...EMPTY, ...initial });
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  const id = (field: string) => `${fieldId}-${field}`;
+  const create = useCreateCustomer();
+  const busy = create.isPending;
+
   const set = (field: keyof typeof EMPTY) => (value: string) =>
     setForm((current) => ({ ...current, [field]: value }));
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
+  /*
+   * Blank optional fields are sent as null, not "": the schema takes a nullable
+   * string, and an empty string would be stored as one — a customer whose email
+   * is the empty string is not the same record as one with no email on file.
+   */
+  const payload = {
+    name: form.name.trim(),
+    phone: form.phone.trim(),
+    email: form.email.trim() || null,
+    company: form.company.trim() || null,
+    notes: form.notes.trim() || null,
+  };
+
+  const field = useFieldErrors(customerCreateSchema, payload);
+
+  async function submit() {
+    if (!field.touchAll()) {
+      return;
+    }
+
     setError(null);
 
     try {
-      await axios.post("/api/v1/customers", {
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        // Blank optional fields are sent as null, not "": the schema takes a
-        // nullable string, and an empty string would be stored as one.
-        email: form.email.trim() || null,
-        company: form.company.trim() || null,
-        notes: form.notes.trim() || null,
-      });
+      // The mutation invalidates the customer lists, which is what refills the
+      // table behind this dialog.
+      await create.mutateAsync(payload);
 
       setForm({ ...EMPTY });
       toast.success("Mijoz qo'shildi");
       onDone();
-      router.refresh();
-    } catch (error) {
-      const message = requestErrorMessage(error, "Saqlanmadi. Maydonlarni tekshiring.");
+    } catch (cause) {
+      const message = requestErrorMessage(cause, "Saqlanmadi. Maydonlarni tekshiring.");
       setError(message);
       toast.error(message);
-    } finally {
-      setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={submit} className="mt-6 max-w-3xl rounded-lg border border-border p-6" noValidate>
-      <h2 className="type-eyebrow text-muted">
-        Yangi mijoz
-      </h2>
-
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div className={FIELD}>
-          <Label htmlFor={id("name")}>Ismi</Label>
+    <FormModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      title="Yangi mijoz qo'shish"
+      description="Ism va telefon yetarli — qolganini keyin to'ldirsangiz ham bo'ladi."
+      submitLabel="Mijoz qo'shish"
+      onSubmit={submit}
+      busy={busy}
+      error={error}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Ismi" required error={field.errorFor("name")}>
           <Input
-            id={id("name")}
             value={form.name}
             onChange={(event) => set("name")(event.target.value)}
-            className="mt-2 border-0 px-0 focus:border-0"
-            required
+            onBlur={() => field.touch("name")}
+            placeholder="Anvar Karimov"
           />
-        </div>
+        </FormField>
 
-        <div className={FIELD}>
-          <Label htmlFor={id("phone")}>Telefon</Label>
+        <FormField label="Telefon" required error={field.errorFor("phone")}>
           <Input
-            id={id("phone")}
             type="tel"
             value={form.phone}
             onChange={(event) => set("phone")(event.target.value)}
-            className="mt-2 border-0 px-0 font-mono focus:border-0"
+            onBlur={() => field.touch("phone")}
+            className="font-mono"
             placeholder="+998 90 000 00 00"
-            required
           />
-        </div>
+        </FormField>
 
-        <div className={FIELD}>
-          <Label htmlFor={id("company")}>Kompaniya</Label>
+        <FormField label="Kompaniya" error={field.errorFor("company")}>
           <Input
-            id={id("company")}
             value={form.company}
             onChange={(event) => set("company")(event.target.value)}
-            className="mt-2 border-0 px-0 focus:border-0"
-            placeholder="Ixtiyoriy"
+            onBlur={() => field.touch("company")}
+            placeholder="Yo'l Qurilish MChJ"
           />
-        </div>
+        </FormField>
 
-        <div className={FIELD}>
-          <Label htmlFor={id("email")}>Email</Label>
+        <FormField label="Email" error={field.errorFor("email")}>
           <Input
-            id={id("email")}
             type="email"
             autoComplete="off"
             value={form.email}
             onChange={(event) => set("email")(event.target.value)}
-            className="mt-2 border-0 px-0 focus:border-0"
-            placeholder="Ixtiyoriy"
+            onBlur={() => field.touch("email")}
+            className="font-mono"
+            placeholder="anvar@yolqurilish.uz"
           />
-        </div>
+        </FormField>
       </div>
 
-      <div className={`mt-4 ${FIELD}`}>
-        <Label htmlFor={id("notes")}>Izoh</Label>
+      <FormField label="Izoh" multiline error={field.errorFor("notes")}>
         <Textarea
-          id={id("notes")}
           rows={3}
           value={form.notes}
           onChange={(event) => set("notes")(event.target.value)}
-          className="mt-2 min-h-0 border-0 px-0 text-sm focus:border-0"
-          placeholder="Qanday mijoz, nima bilan shug'ullanadi"
+          onBlur={() => field.touch("notes")}
+          placeholder="Qanday mijoz, nima bilan shug'ullanadi, qaysi texnikasi bor"
         />
-      </div>
-
-      <div aria-live="polite" className="min-h-5">
-        {error === null ? null : (
-          <p role="alert" className="mt-4 text-sm text-danger">
-            {error}
-          </p>
-        )}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Qo'shilmoqda…" : "Mijoz qo'shish"}
-        </Button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-xs text-muted transition-colors hover:text-foreground"
-        >
-          Bekor qilish
-        </button>
-      </div>
-    </form>
+      </FormField>
+    </FormModal>
   );
 }

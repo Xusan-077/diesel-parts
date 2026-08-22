@@ -3,16 +3,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * The inspection lamp.
+ * The measurement grid, and the module the cursor is over.
  *
  * Adapted from the mouse-follow grid hero published on 21st.dev
- * (`uniquesonu/modern-hero-section-1`): a measurement grid, a radial glow that
- * tracks the cursor, and a highlighted tile beneath it. Re-cut for this site —
- * the glow is the brand orange rather than a SaaS violet, and the tile snaps to
- * the grid module so it reads as picking a part off a technical drawing.
+ * (`uniquesonu/modern-hero-section-1`), which paired the grid with a radial
+ * glow tracking the cursor. The glow is not here: on a flat white page a soft
+ * orange pool has no depth to belong to and reads as a smudge over the
+ * headline. The tile is the part worth keeping — it snaps to the grid module,
+ * so it reads as picking one part off a technical drawing, and every edge of
+ * it is hard.
  *
- * The whole effect is two CSS custom properties. Nothing re-renders on move:
- * the handler writes `--lamp-x` / `--lamp-y` straight to the node, throttled to
+ * The whole effect is three CSS custom properties. Nothing re-renders on move:
+ * the handler writes `--tile-x` / `--tile-y` straight to the node, throttled to
  * one write per frame, and the compositor does the rest.
  */
 export function HeroLamp() {
@@ -45,11 +47,8 @@ export function HeroLamp() {
       const gridStep =
         Number.parseFloat(getComputedStyle(node).getPropertyValue("--lamp-module")) || 64;
 
-      node.style.setProperty("--lamp-x", `${x}px`);
-      node.style.setProperty("--lamp-y", `${y}px`);
       node.style.setProperty("--tile-x", `${Math.floor(x / gridStep) * gridStep}px`);
       node.style.setProperty("--tile-y", `${Math.floor(y / gridStep) * gridStep}px`);
-      node.style.setProperty("--lamp-on", "1");
       node.style.setProperty("--tile-on", "1");
     }
 
@@ -61,7 +60,6 @@ export function HeroLamp() {
     function onLeave() {
       const node = ref.current;
       if (!node) return;
-      node.style.setProperty("--lamp-on", "0");
       node.style.setProperty("--tile-on", "0");
     }
 

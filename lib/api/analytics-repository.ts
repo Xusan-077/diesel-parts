@@ -170,6 +170,86 @@ export async function getLowStockProducts(limit: number = 8): Promise<LowStockPr
   }));
 }
 
+export interface OrderStatusBreakdown {
+  completed: number;
+  open: number;
+  cancelled: number;
+}
+
+/**
+ * How the period's orders ended up, as three counts.
+ *
+ * Three buckets and not five, because the five statuses answer two different
+ * questions. `getSalesSummary` already splits them by *money* — banked versus
+ * in flight — and repeating that split here would draw the same fact twice on
+ * one screen. What the ring answers is the other question: of everything
+ * opened in this window, what share landed, what is still moving, and what was
+ * lost. DRAFT, PENDING and CONFIRMED are all "still moving" from that angle.
+ *
+ * Counted by `createdAt` in the window, so an order raised last month and
+ * completed this one is not claimed by this period.
+ */
+export async function getOrderStatusBreakdown(period: Period): Promise<OrderStatusBreakdown> {
+  const grouped = await prisma.order.groupBy({
+    by: ["status"],
+    where: { createdAt: { gte: period.from, lt: period.to } },
+    _count: { _all: true },
+  });
+
+  const countOf = (status: OrderStatus) =>
+    grouped.find((row) => row.status === status)?._count._all ?? 0;
+
+  return {
+    completed: countOf("COMPLETED"),
+    open: countOf("DRAFT") + countOf("PENDING") + countOf("CONFIRMED"),
+    cancelled: countOf("CANCELLED"),
+  };
+}
+
+export interface RecentOrder {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  sellerName: string;
+  status: OrderStatus;
+  total: number;
+  createdAt: Date;
+}
+
+/**
+ * The last few orders across every status.
+ *
+ * Deliberately unfiltered. The revenue figures above it only count COMPLETED,
+ * which is correct for money and wrong for "what has been happening" — a
+ * director scanning this block wants to see the draft raised an hour ago as
+ * much as the sale that closed yesterday.
+ */
+export async function getRecentOrders(limit: number = 6): Promise<RecentOrder[]> {
+  const rows = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      totalAmount: true,
+      createdAt: true,
+      customer: { select: { name: true } },
+      seller: { select: { name: true } },
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    orderNumber: row.orderNumber,
+    customerName: row.customer.name,
+    sellerName: row.seller.name,
+    status: row.status,
+    total: Number(row.totalAmount),
+    createdAt: row.createdAt,
+  }));
+}
+
 export interface DashboardCounts {
   newInquiries: number;
   pendingDiscounts: number;

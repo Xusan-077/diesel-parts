@@ -32,7 +32,7 @@ export default async function AboutPage() {
         <h2 className="text-xl font-semibold text-foreground">{dict.about.statsTitle}</h2>
         <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4">
           {dict.about.stats.map((stat) => (
-            <div key={stat.label} className="rounded-lg border border-border bg-surface-muted p-6 text-center">
+            <div key={stat.label} className="rounded-lg border border-border bg-surface p-6 text-center">
               <p className="text-3xl font-semibold text-accent-strong">{stat.value}</p>
               <p className="mt-1 text-sm text-muted">{stat.label}</p>
             </div>

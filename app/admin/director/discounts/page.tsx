@@ -1,9 +1,14 @@
 import { listPendingDiscounts } from "@/lib/api/discount-repository";
+import { safeRead } from "@/lib/api/safe-read";
 import { PageHeader } from "@/components/admin/page-header";
 import { DiscountQueue } from "@/components/admin/discount-queue";
 
 export default async function DirectorDiscountsPage() {
-  const requests = await listPendingDiscounts();
+  /*
+   * Seeds the queue below, which owns it from there: a decision invalidates
+   * that cache and the answered card leaves the list.
+   */
+  const requests = await safeRead("admin discount queue", listPendingDiscounts, undefined);
 
   return (
     <div>
@@ -14,7 +19,7 @@ export default async function DirectorDiscountsPage() {
       />
 
       <DiscountQueue
-        requests={requests.map((request) => ({
+        initialData={requests.data?.map((request) => ({
           ...request,
           createdAt: request.createdAt.toISOString(),
         }))}

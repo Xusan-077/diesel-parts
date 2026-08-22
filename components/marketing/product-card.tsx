@@ -81,7 +81,7 @@ export function ProductCard({
       pointer crosses it; this is just enough to say the whole card is a
       target, which it is — the title link is stretched over all of it.
     */
-    <article className="group @container relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface-muted transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg hover:shadow-black/20 motion-reduce:hover:translate-y-0">
+    <article className="group @container relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg motion-reduce:hover:translate-y-0">
       <div className="relative">
         <CardGallery
           frames={product.imageLabels}

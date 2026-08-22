@@ -1,7 +1,40 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, apiError } from "@/lib/api/route-auth";
-import { createProduct } from "@/lib/api/product-write-repository";
-import { productWriteSchema } from "@/lib/schemas";
+import { authenticateDirector, apiError, parseQuery } from "@/lib/api/route-auth";
+import {
+  ADMIN_PAGE_SIZE,
+  createProduct,
+  listProductsForAdmin,
+} from "@/lib/api/product-write-repository";
+import { adminProductListQuerySchema, productWriteSchema } from "@/lib/schemas";
+
+/**
+ * The catalogue table's rows.
+ *
+ * Director-only, like every write below it: this listing exposes stock levels
+ * and the archive, neither of which belongs in the public `/api/products`.
+ * The page renders the first page itself and seeds React Query with it; this
+ * is what the table refetches against after an edit, an archive or a restore.
+ */
+export async function GET(request: Request) {
+  const guard = await authenticateDirector();
+  if (!guard.ok) {
+    return guard.response;
+  }
+
+  const query = parseQuery(request.url, adminProductListQuerySchema);
+  if (!query.ok) {
+    return query.response;
+  }
+
+  const page = await listProductsForAdmin({
+    search: query.data.q,
+    page: query.data.page,
+    includeInactive: query.data.all,
+    sort: query.data.sort,
+  });
+
+  return NextResponse.json({ success: true, ...page, pageSize: ADMIN_PAGE_SIZE });
+}
 
 export async function POST(request: Request) {
   const guard = await authenticateDirector();

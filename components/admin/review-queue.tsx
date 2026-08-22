@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { toast } from "sonner";
+import {
+  useAdminReviews,
+  useDeleteReview,
+  useSetReviewApproval,
+} from "@/hooks/admin/use-admin-reviews";
+import type { AdminReviewPage } from "@/lib/api/admin/resources";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import { formatReviewDate } from "@/lib/reviews";
 import type { ModeratedReview } from "@/lib/api/review-repository";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/form-modal";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,44 +25,16 @@ import { cn } from "@/lib/utils";
  * entry that should not be there.
  */
 function ReviewRow({ review }: { review: ModeratedReview }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState<"visibility" | "delete" | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  async function run(
-    kind: "visibility" | "delete",
-    request: () => Promise<unknown>,
-    done: string,
-    failed: string,
-  ) {
-    setBusy(kind);
-    try {
-      await request();
-      toast.success(done);
-      router.refresh();
-    } catch (error) {
-      toast.error(requestErrorMessage(error, failed));
-    } finally {
-      setBusy(null);
-    }
-  }
+  const visibility = useSetReviewApproval();
+  const remove = useDeleteReview(() => setConfirming(false));
 
-  const toggleVisibility = () =>
-    run(
-      "visibility",
-      () =>
-        axios.patch(`/api/v1/reviews/${review.id}`, { isApproved: !review.isApproved }),
-      review.isApproved ? "Sharh yashirildi" : "Sharh qaytarildi",
-      "Holatni o'zgartirib bo'lmadi.",
-    );
-
-  const remove = () =>
-    run(
-      "delete",
-      () => axios.delete(`/api/v1/reviews/${review.id}`),
-      "Sharh o'chirildi",
-      "O'chirib bo'lmadi.",
-    );
+  // Printed in the dialog rather than as a toast: a toast would appear behind
+  // the still-open dialog that asked the question.
+  const deleteError = remove.isError
+    ? requestErrorMessage(remove.error, "O'chirib bo'lmadi.")
+    : null;
 
   return (
     <li className="py-6">
@@ -99,45 +75,48 @@ function ReviewRow({ review }: { review: ModeratedReview }) {
           type="button"
           size="sm"
           variant="outline"
-          disabled={busy !== null}
-          onClick={toggleVisibility}
+          disabled={visibility.isPending || remove.isPending}
+          onClick={() => visibility.mutate({ id: review.id, isApproved: !review.isApproved })}
         >
-          {busy === "visibility"
+          {visibility.isPending
             ? "…"
             : review.isApproved
               ? "Saytdan yashirish"
               : "Saytga qaytarish"}
         </Button>
 
-        {/*
-          Two clicks rather than a `confirm()`: a browser dialog blocks the page
-          and reads as a system error rather than a decision. Same pattern as
-          retiring a product.
-        */}
-        {confirming ? (
-          <>
-            <p className="text-xs text-muted">Butunlay o&apos;chirilsinmi?</p>
-            <Button type="button" size="sm" disabled={busy !== null} onClick={remove}>
-              {busy === "delete" ? "…" : "Ha, o'chirish"}
-            </Button>
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              className="text-xs text-muted transition-colors hover:text-foreground"
-            >
-              Bekor qilish
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="text-xs text-muted transition-colors hover:text-danger"
-          >
-            O&apos;chirish
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            remove.reset();
+            setConfirming(true);
+          }}
+          className="text-xs text-muted transition-colors hover:text-danger"
+        >
+          O&apos;chirish
+        </button>
       </div>
+
+      {/*
+        * Hiding is reversible and stays a one-click button above. Deleting is
+        * not, so it goes through the panel's confirmation dialog — the same one
+        * the catalogue and the staff list use, rather than this row growing its
+        * own two-click sequence as it had before.
+        */}
+      <ConfirmModal
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Sharh o'chirilsinmi?"
+        subject={review.authorName + " · " + review.rating + "/5 · " + review.product.name}
+        /* Named for the same action as the trigger, but specific enough that
+           the two are not one ambiguous "O'chirish" to a screen reader
+           listing the buttons on the page. */
+        confirmLabel="Sharhni o'chirish"
+        warning="Sharh butunlay o'chadi va uni qaytarib bo'lmaydi. Vaqtincha olib turish uchun «Saytdan yashirish» dan foydalaning."
+        busy={remove.isPending}
+        error={deleteError}
+        onConfirm={() => remove.mutate(review.id)}
+      />
     </li>
   );
 }
@@ -151,8 +130,50 @@ function ReviewRow({ review }: { review: ModeratedReview }) {
  * is the screen for taking one down afterwards — so it has to show what is
  * already up, not only what is waiting.
  */
-export function ReviewQueue({ reviews }: { reviews: ModeratedReview[] }) {
-  if (reviews.length === 0) {
+export function ReviewQueue({
+  page,
+  initialData,
+}: {
+  /** Which page the URL asked for; also this list's cache key. */
+  page: number;
+  /** The page as the server read it, or `undefined` when that read failed. */
+  initialData?: AdminReviewPage;
+}) {
+  const list = useAdminReviews(page, initialData);
+
+  if (list.isPending) {
+    return (
+      <div aria-busy="true" className="mt-8">
+        <span className="sr-only">Yuklanmoqda...</span>
+        <div aria-hidden="true" className="flex flex-col gap-4">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="h-28 animate-pulse rounded-md bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (list.isError) {
+    return (
+      <div className="mt-8">
+        <p className="type-body text-foreground">
+          {requestErrorMessage(list.error, "Sharhlar yuklanmadi.")}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-4"
+          onClick={() => void list.refetch()}
+        >
+          Qayta urinish
+        </Button>
+      </div>
+    );
+  }
+
+  if (list.data.items.length === 0) {
     return (
       <div className="mt-8">
         <p className="type-body text-foreground">Hozircha sharh yo&apos;q.</p>
@@ -163,11 +184,52 @@ export function ReviewQueue({ reviews }: { reviews: ModeratedReview[] }) {
     );
   }
 
+  const hidden = list.data.items.filter((review) => !review.isApproved).length;
+
   return (
-    <ul className="mt-8 divide-y divide-border">
-      {reviews.map((review) => (
-        <ReviewRow key={review.id} review={review} />
-      ))}
-    </ul>
+    <>
+      {/*
+        * The tally moved here from the page header for the same reason the
+        * catalogue's did: it counts the rows below it, and a count read from a
+        * server render that a hide or a delete has since invalidated is a count
+        * that disagrees with what is on screen.
+        */}
+      <p className="mt-6 font-mono text-xs tabular-nums text-muted">
+        Jami {list.data.total} ta
+        {hidden > 0 ? ` · shu sahifada ${hidden} tasi yashirilgan` : ""}
+      </p>
+
+      <ul className="mt-8 divide-y divide-border">
+        {list.data.items.map((review) => (
+          <ReviewRow key={review.id} review={review} />
+        ))}
+      </ul>
+
+      {list.data.totalPages > 1 ? (
+        <nav aria-label="Sahifalar" className="mt-8 flex items-center gap-3">
+          {list.data.page > 1 ? (
+            <Link
+              href={`/admin/director/reviews?page=${list.data.page - 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Oldingi
+            </Link>
+          ) : null}
+
+          <span className="font-mono text-xs tabular-nums text-muted">
+            {list.data.page} / {list.data.totalPages}
+          </span>
+
+          {list.data.page < list.data.totalPages ? (
+            <Link
+              href={`/admin/director/reviews?page=${list.data.page + 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Keyingi
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
+    </>
   );
 }

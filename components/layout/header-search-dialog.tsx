@@ -43,7 +43,7 @@ export function HeaderSearchDialog({
       <Dialog.Trigger
         aria-label={header.searchLabel}
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-accent-strong",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-chrome-secondary transition-colors hover:bg-chrome-hover hover:text-chrome-accent",
           className
         )}
       >
@@ -67,11 +67,11 @@ export function HeaderSearchDialog({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={MOTION.pop}
-                className="fixed inset-0 z-100 flex flex-col bg-background"
+                className="fixed inset-0 z-100 flex flex-col bg-chrome"
               >
                 <Dialog.Title className="sr-only">{header.searchLabel}</Dialog.Title>
 
-                <div className="flex items-start gap-2 border-b border-border p-3">
+                <div className="flex items-start gap-2 border-b border-chrome-border p-3">
                   <HeaderSearch
                     lang={lang}
                     header={header}
@@ -82,7 +82,7 @@ export function HeaderSearchDialog({
                   />
                   <Dialog.Close
                     aria-label={closeLabel}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-chrome-secondary transition-colors hover:bg-chrome-hover hover:text-chrome-foreground"
                   >
                     <Icon icon={X} size="lg" />
                   </Dialog.Close>

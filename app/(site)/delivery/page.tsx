@@ -23,7 +23,7 @@ export default async function DeliveryPage() {
       home={dict.home}
     >
       <FeatureGrid items={dict.delivery.items} />
-      <p className="mx-auto mt-10 max-w-3xl rounded-lg border border-border bg-surface-muted p-5 text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-10 max-w-3xl rounded-lg border border-border bg-surface p-5 text-sm leading-relaxed text-muted">
         {dict.delivery.note}
       </p>
     </ContentPage>

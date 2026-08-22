@@ -15,20 +15,29 @@ export function Input({
   variant,
   id,
   disabled,
+  required,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
   ...props
 }: InputProps) {
   const field = useFieldState();
-  const control = useControlProps(field, { variant, id, disabled, describedBy, invalid });
+  const control = useControlProps(field, {
+    variant,
+    id,
+    disabled,
+    required,
+    describedBy,
+    invalid,
+  });
 
   return (
     <input
       id={control.id}
       disabled={control.disabled}
+      required={control.required}
       aria-describedby={control["aria-describedby"]}
       aria-invalid={control["aria-invalid"]}
-      className={cn(controlVariants({ variant: control.variant }), "h-10", className)}
+      className={cn(controlVariants({ variant: control.variant, ring: control.ring }), "h-10", className)}
       {...props}
     />
   );

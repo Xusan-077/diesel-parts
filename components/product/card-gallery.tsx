@@ -108,7 +108,7 @@ export function CardGallery({
                 step(delta);
               }}
               className={cn(
-                "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface/90 text-muted opacity-0 backdrop-blur-sm transition-opacity hover:text-accent-strong focus-visible:opacity-100 group-hover/gallery:opacity-100",
+                "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-muted opacity-0 shadow-xs transition-opacity hover:text-accent-strong focus-visible:opacity-100 group-hover/gallery:opacity-100",
                 side
               )}
             >

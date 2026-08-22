@@ -84,7 +84,7 @@ export function FilterDrawer({
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={MOTION.drawer}
-                className="fixed inset-x-0 bottom-0 z-100 flex max-h-[85dvh] flex-col rounded-t-lg border-t border-border bg-background text-foreground shadow-xl"
+                className="fixed inset-x-0 bottom-0 z-100 flex max-h-[85dvh] flex-col rounded-t-lg border-t border-border bg-surface-elevated text-foreground shadow-xl"
               >
                 {/* The grab handle is the only thing that says "this came from
                     the bottom edge and goes back there". */}
@@ -110,7 +110,7 @@ export function FilterDrawer({
                     viewport is the system gesture area, and a button under it
                     swipes the app away instead of closing the sheet. */}
                 <div className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                  <Dialog.Close className="flex h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90">
+                  <Dialog.Close className="flex h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active">
                     {applyLabel}
                   </Dialog.Close>
                 </div>

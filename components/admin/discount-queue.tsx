@@ -1,51 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
-import { toast } from "sonner";
+import { useAdminDiscounts, useDecideDiscount } from "@/hooks/admin/use-admin-discounts";
+import type { DiscountListRow } from "@/lib/api/admin/resources";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatSum } from "@/lib/analytics/format";
 
-export interface DiscountRequestItem {
-  id: string;
-  orderNumber: string;
-  sellerName: string;
-  sellerLimit: number;
-  customerName: string;
-  requestedPercent: number;
-  reason: string | null;
-  subtotal: number;
-  totalIfApproved: number;
-  createdAt: string;
-}
+/**
+ * One request as this screen sees it — the row the API sends, not the row the
+ * repository reads: the timestamp has been through JSON.
+ */
+export type DiscountRequestItem = DiscountListRow;
 
 function DecisionCard({ request }: { request: DiscountRequestItem }) {
-  const router = useRouter();
   const [note, setNote] = useState("");
-  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /*
+   * Which button was pressed, kept beside the mutation rather than derived from
+   * it: `isPending` says a decision is in flight, not which one, and the two
+   * buttons label themselves differently while they wait.
+   */
+  const [pressed, setPressed] = useState<"approve" | "reject" | null>(null);
 
-  async function decide(approve: boolean) {
-    setBusy(approve ? "approve" : "reject");
-    setError(null);
+  const decide = useDecideDiscount();
+  const busy = decide.isPending ? pressed : null;
+  const error = decide.isError ? requestErrorMessage(decide.error, "Saqlanmadi.") : null;
 
-    try {
-      await axios.post("/api/v1/discount-requests/" + request.id, {
-        approve,
-        note: note.trim() || null,
-      });
-
-      toast.success(approve ? "Chegirma tasdiqlandi" : "Chegirma rad etildi");
-      router.refresh();
-    } catch (error) {
-      const message = requestErrorMessage(error, "Saqlanmadi.");
-      setError(message);
-      toast.error(message);
-      setBusy(null);
-    }
+  function send(approve: boolean) {
+    setPressed(approve ? "approve" : "reject");
+    decide.mutate({ id: request.id, approve, note: note.trim() || null });
   }
 
   const overLimit = request.requestedPercent - request.sellerLimit;
@@ -126,15 +110,15 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
       </div>
 
       <div className="mt-3 flex items-center gap-3">
-        <Button type="button" size="sm" onClick={() => decide(true)} disabled={busy !== null}>
+        <Button type="button" size="sm" onClick={() => send(true)} disabled={decide.isPending}>
           {busy === "approve" ? "Tasdiqlanmoqda…" : "Tasdiqlash"}
         </Button>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => decide(false)}
-          disabled={busy !== null}
+          onClick={() => send(false)}
+          disabled={decide.isPending}
         >
           {busy === "reject" ? "Rad etilmoqda…" : "Rad etish"}
         </Button>
@@ -143,7 +127,43 @@ function DecisionCard({ request }: { request: DiscountRequestItem }) {
   );
 }
 
-export function DiscountQueue({ requests }: { requests: DiscountRequestItem[] }) {
+export function DiscountQueue({ initialData }: { initialData?: DiscountRequestItem[] }) {
+  const list = useAdminDiscounts(initialData);
+
+  if (list.isPending) {
+    return (
+      <div aria-busy="true" className="mt-8">
+        <span className="sr-only">Yuklanmoqda...</span>
+        <div aria-hidden="true" className="flex flex-col gap-4">
+          {Array.from({ length: 2 }, (_, index) => (
+            <div key={index} className="h-40 animate-pulse rounded-md bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (list.isError) {
+    return (
+      <div className="mt-8">
+        <p className="text-sm text-foreground">
+          {requestErrorMessage(list.error, "So'rovlar yuklanmadi.")}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-4"
+          onClick={() => void list.refetch()}
+        >
+          Qayta urinish
+        </Button>
+      </div>
+    );
+  }
+
+  const requests = list.data;
+
   if (requests.length === 0) {
     return (
       <div className="mt-8">

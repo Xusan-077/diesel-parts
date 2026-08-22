@@ -148,7 +148,7 @@ export function ProductCartControl({
             }}
             aria-label={dict.addToCart}
             title={dict.addToCart}
-            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90"
+            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
           >
             <Icon icon={ShoppingCart} size="xs" className="hidden @[9rem]:block" />
             <span className="truncate">{dict.addToCart}</span>

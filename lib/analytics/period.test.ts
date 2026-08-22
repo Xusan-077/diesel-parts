@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildPeriod, cumulative, dayKey, fillDays, percentChange } from "./period";
+import {
+  DEFAULT_PERIOD_DAYS,
+  buildCustomPeriod,
+  buildPeriod,
+  cumulative,
+  dayKey,
+  fillDays,
+  percentChange,
+  resolvePeriod,
+} from "./period";
 
 const NOW = new Date("2026-08-18T14:30:00.000Z");
 
@@ -88,5 +97,68 @@ describe("cumulative", () => {
 
   it("returns nothing for an empty window", () => {
     expect(cumulative([])).toEqual([]);
+  });
+});
+
+describe("buildCustomPeriod", () => {
+  it("counts the last day whole, because a person means 1–3 inclusive", () => {
+    const period = buildCustomPeriod("2026-08-01", "2026-08-03");
+
+    expect(period?.days).toBe(3);
+    expect(period?.from.toISOString()).toBe("2026-08-01T00:00:00.000Z");
+    // Exclusive bound one day past the last day asked for.
+    expect(period?.to.toISOString()).toBe("2026-08-04T00:00:00.000Z");
+  });
+
+  it("puts the comparison window immediately before the one asked for", () => {
+    const period = buildCustomPeriod("2026-08-10", "2026-08-19");
+
+    expect(period?.previousFrom.toISOString()).toBe("2026-07-31T00:00:00.000Z");
+    expect(period?.previousTo.toISOString()).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  it("accepts a single day", () => {
+    expect(buildCustomPeriod("2026-08-01", "2026-08-01")?.days).toBe(1);
+  });
+
+  it("refuses a range that ends before it starts", () => {
+    expect(buildCustomPeriod("2026-08-10", "2026-08-01")).toBeNull();
+  });
+
+  it("refuses an unparseable date rather than reporting on NaN", () => {
+    expect(buildCustomPeriod("kecha", "bugun")).toBeNull();
+  });
+
+  it("refuses a span past the cap, so one URL cannot ask for a decade", () => {
+    expect(buildCustomPeriod("2020-01-01", "2026-01-01")).toBeNull();
+  });
+});
+
+describe("resolvePeriod", () => {
+  it("prefers a valid custom range over the day count", () => {
+    const { period, custom } = resolvePeriod({
+      days: "90",
+      from: "2026-08-01",
+      to: "2026-08-07",
+    });
+
+    expect(custom).toBe(true);
+    expect(period.days).toBe(7);
+  });
+
+  it("falls back to the day count when the range is unusable", () => {
+    // A mistyped query string shows the default window, not an error page.
+    const { period, custom } = resolvePeriod({ days: "7", from: "2026-08-10", to: "2026-08-01" });
+
+    expect(custom).toBe(false);
+    expect(period.days).toBe(7);
+  });
+
+  it("falls back to the default window when nothing usable is given", () => {
+    expect(resolvePeriod({}).period.days).toBe(DEFAULT_PERIOD_DAYS);
+  });
+
+  it("takes the analytics-only one-day window", () => {
+    expect(resolvePeriod({ days: "1" }).period.days).toBe(1);
   });
 });

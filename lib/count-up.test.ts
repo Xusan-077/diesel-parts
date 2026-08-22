@@ -9,7 +9,7 @@ import {
 
 describe("splitLeadingNumber", () => {
   it("reads a plain figure and what follows it", () => {
-    expect(splitLeadingNumber("15+ yil tajriba")).toMatchObject({
+    expect(splitLeadingNumber("30+ yil tajriba")).toMatchObject({
       value: 15,
       text: "15",
       rest: "+ yil tajriba",
@@ -44,7 +44,7 @@ describe("splitLeadingNumber", () => {
   });
 
   it("tolerates the whitespace a translator leaves behind", () => {
-    expect(splitLeadingNumber("  15+ yil  ")).toMatchObject({ value: 15 });
+    expect(splitLeadingNumber("  30+ yil  ")).toMatchObject({ value: 15 });
   });
 });
 

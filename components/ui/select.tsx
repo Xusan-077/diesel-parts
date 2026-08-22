@@ -29,24 +29,35 @@ export function Select({
   variant,
   id,
   disabled,
+  required,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
   children,
   ...props
 }: SelectProps) {
   const field = useFieldState();
-  const control = useControlProps(field, { variant, id, disabled, describedBy, invalid });
+  const control = useControlProps(field, {
+    variant,
+    id,
+    disabled,
+    required,
+    describedBy,
+    invalid,
+  });
   const rail = control.variant === "rail";
 
   return (
-    <div className={cn("relative", wrapperClassName)}>
+    // `min-w-0 flex-1` keeps the arrow anchored to the control when the field
+    // around it is a flex row rather than a block.
+    <div className={cn("relative min-w-0 flex-1", wrapperClassName)}>
       <select
         id={control.id}
         disabled={control.disabled}
+        required={control.required}
         aria-describedby={control["aria-describedby"]}
         aria-invalid={control["aria-invalid"]}
         className={cn(
-          controlVariants({ variant: control.variant }),
+          controlVariants({ variant: control.variant, ring: control.ring }),
           "h-10 appearance-none",
           // Room for the arrow.
           rail ? "pr-6" : "pr-9",

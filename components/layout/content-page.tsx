@@ -14,7 +14,7 @@ interface ContentPageProps {
 export function ContentPage({ title, subtitle, home, children }: ContentPageProps) {
   return (
     <main>
-      <section className="border-b border-border bg-surface-muted">
+      <section className="border-b border-border bg-background-subtle">
         <Container size="content" className="py-16 text-center">
           <h1 className="text-3xl font-semibold text-foreground sm:text-4xl">{title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-muted">{subtitle}</p>

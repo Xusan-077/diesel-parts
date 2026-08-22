@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-import { toast } from "sonner";
+import {
+  useClaimCustomer,
+  useCustomerRefresh,
+} from "@/hooks/admin/use-admin-customers";
 import { isRefusal, requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 
@@ -17,31 +18,37 @@ import { Button } from "@/components/ui/button";
  */
 export function ClaimCustomerButton({ customerId }: { customerId: string }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const refreshCustomers = useCustomerRefresh();
+  const claimCustomer = useClaimCustomer(() => {
+    /*
+     * The invalidation inside the mutation refreshes the customer *lists*. This
+     * screen is not one of them: the account it draws is read by a server
+     * component, so `router.refresh()` is what re-reads it. Both are needed, and
+     * they are not duplicates — one re-runs this route, the other drops caches
+     * the route knows nothing about.
+     */
+    router.refresh();
+  });
+  const busy = claimCustomer.isPending;
+  const error = claimCustomer.isError
+    ? requestErrorMessage(claimCustomer.error, "Biriktirilmadi.")
+    : null;
 
-  async function claim() {
-    setBusy(true);
-    setError(null);
-
-    try {
-      await axios.post(`/api/v1/customers/${customerId}/claim`);
-      toast.success("Mijoz sizga biriktirildi");
-      router.refresh();
-    } catch (error) {
-      const message = requestErrorMessage(error, "Biriktirilmadi.");
-      setError(message);
-      toast.error(message);
-
-      // Refreshes after a refusal too: it means this page's picture of the
-      // account is now known to be out of date. A request that never landed
-      // changed nothing, so it leaves the page alone.
-      if (isRefusal(error)) {
-        router.refresh();
-      }
-    } finally {
-      setBusy(false);
-    }
+  function claim() {
+    claimCustomer.mutate(customerId, {
+      onError: (cause) => {
+        /*
+         * A refusal means this page's picture of the account is now known to be
+         * out of date — someone else claimed it — so the customer cache is
+         * dropped and reread. A request that never landed changed nothing on
+         * the server, so it leaves the cache alone.
+         */
+        if (isRefusal(cause)) {
+          refreshCustomers();
+          router.refresh();
+        }
+      },
+    });
   }
 
   return (

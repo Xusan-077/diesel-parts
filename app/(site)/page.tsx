@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getLocale } from "@/lib/i18n/server-locale";
 import { canonicalPath } from "@/lib/seo";
-import { HOME_ROW_SIZE } from "@/lib/product-collections";
-import { getProductsForHomeRows } from "@/lib/api/product-repository";
+import { readHomeProducts } from "@/lib/api/home-products";
 import { safeRead } from "@/lib/api/safe-read";
+import { HOME_ROW_SIZE } from "@/lib/product-collections";
 import { Hero } from "@/components/marketing/hero";
 import { TrustBadges } from "@/components/marketing/trust-badges";
 import { CategoryGrid } from "@/components/marketing/category-grid";
 import { BrandGrid } from "@/components/marketing/brand-grid";
 import { FeatureGrid } from "@/components/marketing/feature-grid";
-import { ProductRow } from "@/components/marketing/product-row";
+import { HomeProductRow } from "@/components/marketing/home-product-row";
 import { CtaBanner } from "@/components/marketing/cta-banner";
 import { Reveal } from "@/components/marketing/reveal";
 import { Container } from "@/components/ui/container";
@@ -28,24 +28,38 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function HomePage() {
   const lang = await getLocale();
   const dict = getDictionary(lang);
+
   /*
    * The home page is mostly hard-coded marketing copy — a hero, four trust
    * badges, a "why us" grid, an about paragraph and a call to action, none of
    * which need a database. Letting one unreachable catalog query take all of
-   * that down with a 500 was the wrong trade, so the three product rows are
-   * read as something the page can lose.
+   * that down with a 500 was the wrong trade, so the product rows are read as
+   * something the page can lose.
+   *
+   * The rows themselves are client components backed by `/api/products/home`,
+   * and this read is what seeds them. It buys two things a pure client fetch
+   * gives up: the cards are in the HTML, which is what a crawler indexes and
+   * what a visitor sees before any JavaScript runs, and the first visit costs
+   * no request at all. React Query still owns them afterwards — it is what
+   * refetches when the seed goes stale and what the "try again" button calls,
+   * so a row whose read failed can recover without reloading the page.
+   *
+   * One read for all three rows, and one seed: they share a query key, so the
+   * payload below is written into the cache once however many rows read it.
    */
-  const rows = await safeRead("home rows", () => getProductsForHomeRows(HOME_ROW_SIZE), {
-    popular: [],
-    newest: [],
-    bestSellers: [],
-  });
-  const { popular, newest, bestSellers } = rows.data;
+  const home = await safeRead(
+    "home rows",
+    () => readHomeProducts(HOME_ROW_SIZE, lang),
+    undefined,
+  );
 
   const rowProps = {
-    // Every row shares the same failure, because they share one query.
-    unavailable: !rows.ok,
+    // Undefined when the read failed, which leaves the rows to try the API
+    // themselves rather than rendering a shop with nothing in it.
+    initialData: home.data,
     unavailableLabel: dict.common.productsUnavailable,
+    loadingLabel: dict.common.loading,
+    retryLabel: dict.common.retry,
     lang,
     viewAllHref: "/products",
     viewAllLabel: dict.common.viewAll,
@@ -80,7 +94,7 @@ export default async function HomePage() {
         </Reveal>
       </Container>
 
-      <ProductRow {...rowProps} title={dict.home.popularTitle} products={popular} />
+      <HomeProductRow {...rowProps} collection="popular" title={dict.home.popularTitle} />
 
       <Container as="section" className="py-16">
         <Reveal>
@@ -97,14 +111,14 @@ export default async function HomePage() {
         </div>
       </Container>
 
-      <ProductRow
+      <HomeProductRow
         {...rowProps}
+        collection="newest"
         title={dict.home.newTitle}
-        products={newest}
         ribbon={dict.home.newBadge}
       />
 
-      <section className="border-y border-border bg-surface-muted">
+      <section className="border-y border-border bg-background-subtle">
         <Container className="py-16">
           <Reveal>
             <h2 className="text-2xl font-semibold text-foreground">{dict.home.whyUsTitle}</h2>
@@ -116,10 +130,10 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      <ProductRow
+      <HomeProductRow
         {...rowProps}
+        collection="bestSellers"
         title={dict.home.bestSellersTitle}
-        products={bestSellers}
       />
 
       <Container as="section" className="py-16">

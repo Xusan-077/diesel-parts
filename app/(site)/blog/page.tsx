@@ -27,7 +27,7 @@ export default async function BlogPage() {
 
       <div className="mt-10 space-y-8">
         {blogPosts.map((post) => (
-          <article key={post.id} className="rounded-lg border border-border bg-surface-muted p-6">
+          <article key={post.id} className="rounded-lg border border-border bg-surface p-6">
             <p className="text-sm text-muted">
               {dict.blog.publishedOn}: {post.publishedAt}
             </p>

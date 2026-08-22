@@ -19,6 +19,21 @@ export interface Period {
 export const PERIOD_OPTIONS = [7, 30, 90] as const;
 export type PeriodDays = (typeof PERIOD_OPTIONS)[number];
 
+/**
+ * The analytics screen's own set, which starts at today.
+ *
+ * The dashboard deliberately does not offer a one-day window: it is the
+ * at-a-glance screen and a single day of a parts wholesaler's trade is mostly
+ * noise. The analytics screen is where someone goes to ask a specific question,
+ * and "what happened today" is one of them.
+ */
+export const ANALYTICS_PERIOD_OPTIONS = [1, 7, 30, 90] as const;
+export type AnalyticsPeriodDays = (typeof ANALYTICS_PERIOD_OPTIONS)[number];
+
+export function isAnalyticsPeriodDays(value: unknown): value is AnalyticsPeriodDays {
+  return ANALYTICS_PERIOD_OPTIONS.includes(Number(value) as AnalyticsPeriodDays);
+}
+
 export const DEFAULT_PERIOD_DAYS: PeriodDays = 30;
 
 export function isPeriodDays(value: unknown): value is PeriodDays {
@@ -101,4 +116,66 @@ export function cumulative(points: readonly DayPoint[]): DayPoint[] {
     total += point.value;
     return { day: point.day, value: total };
   });
+}
+
+/** How wide a custom range may be, so one URL cannot ask for a decade of days. */
+export const MAX_CUSTOM_DAYS = 366;
+
+/**
+ * A window the director picked by hand, as two `YYYY-MM-DD` strings.
+ *
+ * Returns null for anything that is not a usable range — an unparseable date,
+ * an end before its start, or a span past `MAX_CUSTOM_DAYS`. The caller falls
+ * back to the default window rather than rendering an error page: a mistyped
+ * query string should show the dashboard, not break it.
+ *
+ * `to` is treated as inclusive, which is what a person means by "1–31 avgust".
+ * Internally the window still ends on an exclusive bound, so the last day is
+ * counted whole rather than up to midnight of its own morning.
+ */
+export function buildCustomPeriod(from: string, to: string): Period | null {
+  const start = Date.parse(from + "T00:00:00.000Z");
+  const endInclusive = Date.parse(to + "T00:00:00.000Z");
+
+  if (Number.isNaN(start) || Number.isNaN(endInclusive) || endInclusive < start) {
+    return null;
+  }
+
+  const days = Math.round((endInclusive - start) / DAY_MS) + 1;
+  if (days > MAX_CUSTOM_DAYS) {
+    return null;
+  }
+
+  const fromDate = new Date(start);
+  const toDate = new Date(endInclusive + DAY_MS);
+  const previousFrom = new Date(start - days * DAY_MS);
+
+  return { from: fromDate, to: toDate, previousFrom, previousTo: fromDate, days };
+}
+
+/**
+ * Resolves the window from the URL: a custom range when both ends parse, the
+ * named day count otherwise.
+ *
+ * One function so every analytics query reads the same window from the same
+ * params — the alternative is each section deciding for itself and a page whose
+ * chart and table quietly disagree about which month they are describing.
+ */
+export function resolvePeriod(params: {
+  days?: string;
+  from?: string;
+  to?: string;
+}): { period: Period; custom: boolean } {
+  if (params.from !== undefined && params.to !== undefined) {
+    const custom = buildCustomPeriod(params.from, params.to);
+    if (custom !== null) {
+      return { period: custom, custom: true };
+    }
+  }
+
+  const days = isAnalyticsPeriodDays(params.days)
+    ? Number(params.days)
+    : DEFAULT_PERIOD_DAYS;
+
+  return { period: buildPeriod(days), custom: false };
 }

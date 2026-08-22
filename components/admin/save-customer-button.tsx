@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import axios from "axios";
 import { toast } from "sonner";
+import { useCreateCustomer } from "@/hooks/admin/use-admin-customers";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import { Button } from "@/components/ui/button";
 
@@ -44,10 +43,11 @@ export function SaveCustomerButton({
   message,
   saved,
 }: SaveCustomerButtonProps) {
-  const router = useRouter();
   const [created, setCreated] = useState<SavedCustomer | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+
+  const create = useCreateCustomer();
+  const busy = create.isPending;
 
   const existing = created ?? saved;
 
@@ -63,11 +63,10 @@ export function SaveCustomerButton({
   }
 
   async function save() {
-    setBusy(true);
     setError(null);
 
     try {
-      const { data } = await axios.post<{ id?: string }>("/api/v1/customers", {
+      const data = await create.mutateAsync({
         name: customerName,
         phone,
         email,
@@ -82,15 +81,19 @@ export function SaveCustomerButton({
         return;
       }
 
+      /*
+       * The button becomes a link to the new card, from local state rather
+       * than from a refetch: the mutation invalidates the customer lists, but
+       * this card's "already saved" answer came from a phone match resolved
+       * for the whole board, and waiting on that round trip would leave the
+       * seller pressing a button that had already worked.
+       */
       setCreated({ id: data.id, name: customerName });
       toast.success("Mijozlarga qo'shildi");
-      router.refresh();
-    } catch (error) {
-      const message = requestErrorMessage(error, "Saqlanmadi.");
-      setError(message);
-      toast.error(message);
-    } finally {
-      setBusy(false);
+    } catch (cause) {
+      const failed = requestErrorMessage(cause, "Saqlanmadi.");
+      setError(failed);
+      toast.error(failed);
     }
   }
 

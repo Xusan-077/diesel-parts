@@ -9,18 +9,35 @@
    these through Tailwind utilities (`bg-surface`, `text-muted`, `rounded-lg`)
    and never hardcode a value.
 
-   The neutral ramp is not grey. Every neutral is mixed at hue 57 — the brand
-   orange's own hue — with chroma held between 0.004 and 0.014. Light surfaces
-   pick up the warmth of catalogue paper, dark surfaces read as oiled steel,
-   and the accent lands as the saturated end of one continuous family instead
-   of an orange stapled onto a blue-grey shell. It costs nothing in contrast:
-   every pair below was measured, and every one clears WCAG AA.
+   This block is the base ramp, and it is the MARKETING SITE's ramp: the cool
+   neutral and the brand red that the storefront paints with, value for value.
+   It used to be a warm, paper-toned ramp mixed at hue 57 — right on its own
+   terms, and wrong the moment staff started moving between the two: the same
+   product, the same brand, two different companies' worth of colour. The
+   panel now reads as the same product as the site it sells from.
+
+   The site keeps its own copy of these values in the MARKETING SITE PALETTE
+   block below rather than inheriting them from here, and that duplication is
+   deliberate — see the substitution note in that block's header. What it buys
+   is that this block can be edited for the panel's sake without any chance of
+   moving the storefront.
+
+   Three families are NOT the site's and stay panel-shaped:
+     - the chrome group, still aliased to --surface. The site's frame is a dark
+       material; the panel's rail and top bar are a light one, and every child
+       inside them names an ordinary page token (`text-foreground`,
+       `border-border`). Handing the panel a dark --chrome would set all of it
+       near-black on near-black.
+     - status colour. --success/--danger/--warning are tuned against lightness
+       rather than against a neutral and measure the same on either ramp; the
+       site inherits them from here already.
+     - --accent-hover / --accent-active, which stay mixes. See the note on them.
 
    THE ONE RULE THAT FIXES THE OLD PALETTE:
-   orange means "you can act on this, or you are here". It is never a status.
-   Previously --accent-strong, --warning and --chart-series were all #b45309,
-   so an active link, a warning badge and the revenue line were the same
-   colour. They are now three separate tokens that cannot collide.
+   the accent means "you can act on this, or you are here". It is never a
+   status. Previously --accent-strong, --warning and --chart-series were all
+   #b45309, so an active link, a warning badge and the revenue line were the
+   same colour. They are now three separate tokens that cannot collide.
    ========================================================================== */
 
 :root {
@@ -34,32 +51,88 @@
      `surface-muted` is a recessed area inside it (table head, inset, well).
      Both themes keep that meaning — the old file inverted it between light
      and dark, which is why cards and panels disagreed from page to page. */
-  --background: #fbf8f6;      /* the page itself */
+  --background: #ffffff;      /* the page itself */
   --surface: #ffffff;         /* raised: cards, panels, menus, dialogs */
-  --surface-muted: #f4f0ee;   /* recessed: table heads, wells, meter tracks */
-  --surface-hover: #eee9e5;   /* pointer feedback on any of the above */
+  --surface-muted: #eef0f2;   /* recessed: table heads, wells, meter tracks */
+  --surface-hover: #f8f9fa;   /* pointer feedback on any of the above */
+
+  /* The site gives each of these a step of its own, and the panel takes them:
+       background-subtle  an alternating band across the full page width
+       surface-elevated   a thing that floats: menu, popover, dialog, drawer
+     `surface-elevated` needs no step on a white page — a dialog is told from
+     the page by its shadow and its border, not by a shade — so it is white
+     here and does step in the dark half below. */
+  --background-subtle: #f6f7f8;
+  --surface-elevated: #ffffff;
+  /* The header/footer material and the small palette that lives inside it.
+     The panel's chrome has always been --surface (see the `panel-chrome`
+     utility) with ordinary page foregrounds on top, so every one of these
+     resolves to what it already paints and nothing in the panel moves. Only
+     the marketing site gives the frame a material of its own — a dark one,
+     which is why the foregrounds have to be tokens rather than assumed. */
+  --chrome: var(--surface);
+  --chrome-surface: var(--surface-muted);
+  --chrome-hover: var(--surface-hover);
+  --chrome-border: var(--border-color);
+  --chrome-border-strong: var(--border-strong);
+  --chrome-foreground: var(--foreground);
+  --chrome-secondary: var(--text-secondary);
+  --chrome-muted: var(--muted);
+  --chrome-accent: var(--accent-strong);
+  /* See the `header-plate` utility. The panel has no marketing header, so
+     this resolves to the container the frame already is. */
+  --header-plate: var(--surface);
 
   /* Dividers are decorative and stay light. Anything that marks a *control*
      boundary — an input, a segmented control — uses --border-strong, which
      clears the 3:1 that WCAG 1.4.11 asks of user-interface components. */
-  --border-color: #e2ddd9;    /* 1.27:1 — divider, intentionally quiet */
-  --border-strong: #807974;   /* 4.28:1 on surface — control boundaries */
+  --border-color: #dde1e4;    /* 1.24:1 — divider, intentionally quiet */
+  --border-subtle: #e9ecef;   /* quieter still: a hairline inside a card */
+  /* The one neutral the panel does NOT take from the site. There the token is
+     a soft divider grey (#c7ccd1, 1.62:1 on white); here it is what an outline
+     button's edge is drawn with, and on that variant the border is the only
+     thing that says "control" — see components/ui/button.tsx. Held at the
+     ramp's own #7a8086 so it clears the 3:1 of WCAG 1.4.11 (3.99:1), which is
+     the same arrangement the warm panel ramp had before this ramp replaced
+     it: border-strong and field-border are one value in the panel. */
+  --border-strong: #7a8086;
 
-  --muted: #6f6761;           /* 4.60:1 on surface-hover, the worst case */
-  --foreground: #231d19;      /* 16.65:1 on surface */
+  --muted: #7a8086;           /* meta beside a figure — 3.99:1 on surface */
+  --foreground: #151719;      /* 17.97:1 on surface */
+  /* The step between --foreground and --muted: body copy that is not a
+     heading but is still meant to be read straight through. --muted clears
+     4.5:1 on nothing in this ramp, so any run of text longer than a caption
+     takes --text-secondary (8.15:1) instead. */
+  --text-secondary: #4b5055;
+  --text-disabled: #a8adb2;
 
   /* --- Accent: one hue, four jobs ----------------------------------------
-     The brand orange is untouched. What changed is that each job now has its
-     own token, so none of them can be mistaken for another. */
-  --accent: #f5841f;            /* FILL ONLY: primary button, active nav */
-  --accent-foreground: #231d19; /* 6.50:1 on the fill */
-  /* The fill is 2.56:1 against white — below the 3:1 a control boundary
-     needs. Buttons carry this 1px edge (3.53:1) so the shape is perceivable
-     without altering the brand orange itself. */
-  --accent-edge: #ce7011;
-  /* TEXT: links, prices, the active nav marker. 5.17:1 on surface. */
-  --accent-strong: #a85800;
-  --accent-subtle: #feeee2;     /* tint fill; --accent-strong reads 4.57:1 */
+     The site's accent family, value for value — the brand red on a fill, and
+     the deep orange-red it derives for text, edges and tints. Each job has a
+     token of its own, so none of them can be mistaken for another. */
+  --accent: #d90606;            /* FILL ONLY: primary button, active nav */
+  --accent-foreground: #f8fafc; /* 5.70:1 on the fill */
+  /* The fill is 5.24:1 against white and already clears the 3:1 a control
+     boundary needs; the edge is kept because it is what gives the button the
+     same silhouette in both themes. */
+  --accent-edge: #be3e18;
+  /* TEXT: links, prices, the active nav marker. 5.65:1 on surface. */
+  --accent-strong: #b83d18;
+  --accent-subtle: #fff0ea;     /* tint fill; --accent-strong reads 5.24:1 */
+
+  /* The pressed and hovered fills.
+     Until now a filled button hovered as `bg-accent/90` — the accent at 90%
+     alpha, which composites against whatever is behind it and therefore moves
+     *towards the page*: lighter in light mode, darker in dark. That is
+     backwards in one of the two themes, and it cannot be read by anything but
+     a background utility.
+     Expressed as a mix rather than a hex so the five accent sets below keep
+     working without each having to restate two more values, and mixed with
+     --surface specifically because that reproduces what `/90` painted — the
+     panel's buttons hover exactly as they did. The marketing site overrides
+     both with measured hexes and moves them the conventional way. */
+  --accent-hover: color-mix(in srgb, var(--accent) 90%, var(--surface));
+  --accent-active: color-mix(in srgb, var(--accent) 80%, var(--surface));
 
   /* --- Status ------------------------------------------------------------
      Separated from the accent and from each other by LIGHTNESS, not hue,
@@ -81,40 +154,113 @@
      emphasis pair, not a categorical palette: the current window carries the
      brand hue, the comparison window is deliberately neutral. Both clear 3:1
      against the surface they are drawn on. */
-  --chart-series: #bf5c00;    /* 4.42:1 on surface */
-  --chart-context: #6f6761;   /* 5.54:1 — meant to read as grey */
-  --chart-grid: #e2ddd9;
+  --chart-series: #b83d18;    /* 5.65:1 on surface */
+  --chart-context: #7a8086;   /* 3.99:1 — meant to read as grey */
+  --chart-grid: #dde1e4;
 
   /* --- Elevation ---------------------------------------------------------
      Depth comes from borders. Shadows are reserved for the three things that
      genuinely float above the page, and they are theme-swapped rather than
      reused, because a black shadow is invisible on a dark surface. */
-  --elevation-1: 0 1px 2px rgb(35 29 25 / 0.06), 0 1px 3px rgb(35 29 25 / 0.08);
-  --elevation-2: 0 2px 4px rgb(35 29 25 / 0.05), 0 8px 16px -4px rgb(35 29 25 / 0.10);
-  --elevation-3: 0 4px 8px rgb(35 29 25 / 0.06), 0 24px 48px -12px rgb(35 29 25 / 0.22);
+  --elevation-1: 0 1px 2px rgb(13 14 15 / 0.05);
+  --elevation-2:
+    0 2px 4px -2px rgb(13 14 15 / 0.05), 0 8px 16px -6px rgb(13 14 15 / 0.10);
+  --elevation-3:
+    0 4px 8px -4px rgb(13 14 15 / 0.06), 0 20px 40px -12px rgb(13 14 15 / 0.18);
+
+  /* --- Panel elevation: three named steps --------------------------------
+     The panel had the colours for depth and no rule about which one a given
+     box got, so a card, a well and a hover state were picked per call site.
+     Named here so a component asks for a *level*, not for a shade:
+
+       level 0  --background     the page
+       level 1  --surface        a card resting on it
+       level 2  --surface-hover  that card under the pointer
+
+     `--panel-edge-light` is the fourth part of it. On a dark page a drop
+     shadow has nothing to fall on, so the separation is carried by a hairline
+     of light along the card's top edge instead. */
+  /* A white hairline along the top of a white card is nothing but a rounding
+     error, and on this ramp the card and the page are both white. Off in
+     light mode; the dark half below still needs it. */
+  --panel-edge-light: transparent;
+  --panel-card-shadow: 0 1px 2px rgb(13 14 15 / 0.04);
+  --panel-card-shadow-hover:
+    0 2px 4px -2px rgb(13 14 15 / 0.05), 0 10px 20px -8px rgb(13 14 15 / 0.12);
+  /* The accent, at the strength where it reads as a lit edge and not as a
+     border. Only ever used on hover and on a focused card. */
+  --panel-edge-accent: color-mix(in srgb, var(--accent) 34%, var(--border-color));
+  --panel-wash: color-mix(in srgb, var(--accent) 5%, transparent);
+
+  /* --- Field ---------------------------------------------------------------
+     A field had a rail and no box, so on a busy screen it did not read as a
+     control at all — the complaint that started this pass. The box is back,
+     and these three tokens are what it is drawn from.
+
+     `--field-border` is deliberately stronger than `--border-color`: a divider
+     may be quiet, a control boundary may not. It is the same value as
+     `--border-strong` here (3.99:1 on white, clearing the 3:1 of WCAG
+     1.4.11), named separately so a later change to dividers cannot silently
+     thin every input in the panel — and because on the marketing ramp the two
+     genuinely differ: there `--border-strong` is a 1.62:1 divider grey and
+     only `--field-border` is heavy enough to be an empty input's only edge.
+
+     `--field-halo` is the focus bloom. It is mixed from `--accent` rather than
+     written as a fixed orange because the panel lets a director repaint the
+     accent; a hardcoded halo would strand every focused field on the old hue.
+     Kept under 30% so it reads as a glow around the border, not as a second
+     border competing with the one it surrounds. */
+  --field-border: #7a8086;
+  --field-halo: color-mix(in srgb, var(--accent) 26%, transparent);
+  --field-halo-danger: color-mix(in srgb, var(--danger) 22%, transparent);
+
+  /* --- Instrument marks ---------------------------------------------------
+     The gauge track and the chart's section hatch. Both are drawn from the
+     tokens above rather than from fixed rgba, so they re-step with the theme
+     instead of being written twice. */
+  --gauge-track: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --chart-grid-faint: color-mix(in srgb, var(--foreground) 7%, transparent);
+  /* Neutral, not the series hue. Where this period is ahead, the hatched
+     region lies *above* the previous curve and therefore on top of the current
+     series' own gradient fill — two washes of the same orange stacked, which
+     goes muddy exactly where the reader is trying to judge a distance. It also
+     says the right thing: the gap belongs to the comparison, not to either
+     line. */
+  --chart-hatch: color-mix(in srgb, var(--chart-context) 45%, transparent);
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: #13110f;
-  --surface: #1e1a17;
-  --surface-muted: #191513;
-  --surface-hover: #282320;
+  --background: #0b0d0e;
+  --background-subtle: #101315;
+  --surface: #151819;
+  /* Unlike the light half, a floating thing does step here: on a near-black
+     page a dialog that shares the card's colour has nothing to lift it. */
+  --surface-elevated: #202426;
+  --surface-muted: #101315;
+  --surface-hover: #1b1f21;
 
-  --border-color: #342f2b;
-  --border-strong: #78716b;   /* 3.60:1 on surface */
+  --border-color: #292e31;
+  --border-subtle: #202527;
+  --border-strong: #858c91;   /* 5.23:1 — see the light half */
 
-  --muted: #aaa099;           /* 6.07:1 on surface-hover, the worst case */
-  --foreground: #f2efed;
+  --muted: #858c91;           /* 5.23:1 on surface */
+  --foreground: #f5f6f7;      /* 16.50:1 on surface */
+  --text-secondary: #b5babe;  /* 9.12:1 on surface */
+  --text-disabled: #555b60;
 
-  --accent: #f5841f;
-  --accent-foreground: #1a1511;
-  /* On a dark surface the brand orange is already 6.75:1, so the edge is only
-     there to keep the button's silhouette identical across themes. */
-  --accent-edge: #ce7011;
-  --accent-strong: #f9a462;   /* 8.65:1 on surface */
-  --accent-subtle: #302116;
+  /* Lifted off the dark surface. The site's dark half still carries the older
+     orange where its light half went red; the panel follows it value for
+     value rather than inventing a dark red of its own, so the two apps keep
+     agreeing screen for screen. */
+  --accent: #ff6b2c;
+  --accent-foreground: #0d0e0f;
+  /* On a dark surface the fill is already well clear of 3:1, so the edge is
+     only there to keep the button's silhouette identical across themes. */
+  --accent-edge: #e95720;
+  --accent-strong: #ff8a5c;   /* 7.68:1 on surface */
+  --accent-subtle: #2a1710;
 
   --success: #7cd591;
   --success-surface: #17301d;
@@ -124,15 +270,423 @@
   --warning-surface: #312c0d;
 
   /* Re-stepped for the dark surface, not flipped. */
-  --chart-series: #ed8641;
-  --chart-context: #aaa099;
-  --chart-grid: #342f2b;
+  --chart-series: #ff8a5c;
+  --chart-context: #858c91;
+  --chart-grid: #292e31;
 
   /* Dark elevation needs a hairline of light as well as a shadow — a drop
      shadow alone disappears against a near-black page. */
   --elevation-1: 0 1px 2px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
   --elevation-2: 0 8px 20px -4px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
   --elevation-3: 0 24px 56px -12px rgb(0 0 0 / 0.70), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  /* The dark half of the panel's elevation. The top-edge hairline is doing
+     nearly all the work here — 5.5% white is the point at which a card reads
+     as raised at arm's length without becoming a visible stroke up close. */
+  --panel-edge-light: rgb(255 255 255 / 0.05);
+  --panel-card-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  --panel-card-shadow-hover: 0 10px 28px -10px rgb(0 0 0 / 0.75);
+  --panel-edge-accent: color-mix(in srgb, var(--accent) 38%, var(--border-color));
+  --panel-wash: color-mix(in srgb, var(--accent) 7%, transparent);
+
+  /* On a dark panel the same mix reads dimmer against the surface, so the
+     accent's share goes up. The field's edge is the ramp's own #858c91 at
+     5.23:1 — the same value `--border-strong` holds here, and separate from it
+     for the reason given in the light half. On the site's ramp the two part
+     company: `--border-strong` is #3a4145 there, a 1.72:1 divider. */
+  --field-border: #858c91;
+  --field-halo: color-mix(in srgb, var(--accent) 34%, transparent);
+  --field-halo-danger: color-mix(in srgb, var(--danger) 30%, transparent);
+
+  --gauge-track: color-mix(in srgb, var(--foreground) 11%, transparent);
+  --chart-grid-faint: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --chart-hatch: color-mix(in srgb, var(--chart-context) 42%, transparent);
+}
+
+/* ==========================================================================
+   ACCENT SETS
+   --------------------------------------------------------------------------
+   The panel lets a director repaint the one hue the chrome uses. Five sets,
+   the brand red plus four, chosen the way a workshop picks a paint code:
+   named for the system they belong to, not for the colour word.
+
+   The brand set has no block here — it is what `:root` already is, and since
+   `:root` now carries the storefront's own accent, "Brend" means literally
+   "the colour the website is". Its identifier is still `orange`, because that
+   string is in every director's localStorage and renaming it would silently
+   reset their choice; the label they read has always been "Brend".
+
+   What a set may change is exactly the four accent tokens and the chart's
+   current-series hue. What it may NOT change is status colour — --success,
+   --warning and --danger stay put in every set, because a status that moved
+   with a preference would stop meaning anything. Green and teal sets do put
+   the accent near the success hue; that is survivable only because every
+   status mark in the panel also carries a word, an arrow or an icon, which is
+   the rule the palette above already commits to.
+
+   In these four sets both --accent and --accent-edge are shared across
+   themes: a fill light enough to carry near-black label text at 4.5:1 in both
+   themes, and a 1px edge that clears 3:1 on white so the control's shape is
+   perceivable. Only the text tint, the wash and the chart hue re-step. The
+   brand set is the exception and re-steps the fill too, because the site it
+   copies does.
+
+   Specificity note: `:root[data-accent=…]` is (0,1,1) and beats `.dark`
+   (0,1,0), so every set MUST also carry a `.dark` half at (0,2,1) or a dark
+   panel would silently get the light tints.
+   ========================================================================== */
+
+/* Havo — hydraulic blue. */
+:root[data-accent="blue"] {
+  --accent: #4d95e8;
+  --accent-edge: #2b6fb8;
+  --accent-foreground: #101a24;
+  --accent-strong: #155ca6;   /* 6.73:1 on surface */
+  --accent-subtle: #e4eefb;
+  --chart-series: #1c6fc4;
+}
+
+:root[data-accent="blue"].dark {
+  --accent-foreground: #101a24;
+  --accent-strong: #7db6f2;   /* 7.92:1 on surface */
+  --accent-subtle: #152537;
+  --chart-series: #5aa0ec;
+}
+
+/* Sovutgich — coolant green. */
+:root[data-accent="green"] {
+  --accent: #3fb56d;
+  --accent-edge: #1f8a4c;
+  --accent-foreground: #0d1f14;
+  --accent-strong: #116135;   /* 7.54:1 on surface */
+  --accent-subtle: #dff3e6;
+  --chart-series: #177a42;
+}
+
+:root[data-accent="green"].dark {
+  --accent-foreground: #0d1f14;
+  --accent-strong: #6fd394;   /* 9.25:1 on surface */
+  --accent-subtle: #13291d;
+  --chart-series: #4cb877;
+}
+
+/* Siyoh — ink violet. */
+:root[data-accent="violet"] {
+  --accent: #9b81ee;
+  --accent-edge: #6b4bd0;
+  --accent-foreground: #1a1330;
+  --accent-strong: #5a3bbd;   /* 7.56:1 on surface */
+  --accent-subtle: #ece7fb;
+  --chart-series: #6b4bd0;
+}
+
+:root[data-accent="violet"].dark {
+  --accent-foreground: #1a1330;
+  --accent-strong: #b9a5f5;   /* 7.89:1 on surface */
+  --accent-subtle: #241d3d;
+  --chart-series: #9b81ee;
+}
+
+/* Bosim — pressure teal. */
+:root[data-accent="teal"] {
+  --accent: #38b8d1;
+  --accent-edge: #0f7d94;
+  --accent-foreground: #08222a;
+  --accent-strong: #0b6479;   /* 6.73:1 on surface */
+  --accent-subtle: #dcf0f5;
+  --chart-series: #0f7d94;
+}
+
+:root[data-accent="teal"].dark {
+  --accent-foreground: #08222a;
+  --accent-strong: #5ec9de;   /* 8.82:1 on surface */
+  --accent-subtle: #0d2830;
+  --chart-series: #3fb6cf;
+}
+
+/*
+ * A swatch has to paint the set it *offers*, not the one currently in force,
+ * so it carries its own `data-swatch` and re-declares the two tokens the chip
+ * draws with. Both are theme-independent in every set — the fill and its edge
+ * are shared across light and dark, exactly as the brand orange is — so this
+ * is five short rules rather than ten.
+ */
+/* "Brend" — the storefront's red. The one set whose fill re-steps with the
+   theme, so unlike the four below it needs a dark half of its own; without it
+   a director on a dark panel would be offered a red chip and handed an
+   orange accent. */
+[data-swatch="orange"] {
+  --accent: #d90606;
+  --accent-edge: #be3e18;
+  --accent-foreground: #f8fafc;
+}
+
+.dark [data-swatch="orange"] {
+  --accent: #ff6b2c;
+  --accent-edge: #e95720;
+  --accent-foreground: #0d0e0f;
+}
+
+[data-swatch="blue"] {
+  --accent: #4d95e8;
+  --accent-edge: #2b6fb8;
+  --accent-foreground: #101a24;
+}
+
+[data-swatch="green"] {
+  --accent: #3fb56d;
+  --accent-edge: #1f8a4c;
+  --accent-foreground: #0d1f14;
+}
+
+[data-swatch="violet"] {
+  --accent: #9b81ee;
+  --accent-edge: #6b4bd0;
+  --accent-foreground: #1a1330;
+}
+
+[data-swatch="teal"] {
+  --accent: #38b8d1;
+  --accent-edge: #0f7d94;
+  --accent-foreground: #08222a;
+}
+
+/* ==========================================================================
+   MARKETING SITE PALETTE
+   --------------------------------------------------------------------------
+   The storefront and the staff panel are two applications that happen to
+   share a component library. They are also looked at differently: the panel
+   is read for eight hours by someone who knows it, the site is read for two
+   minutes by someone deciding whether this supplier is credible. The warm,
+   paper-toned neutral above is right for the first and reads as slightly
+   yellowed on the second — so the site gets a cool, neutral ramp and a
+   brighter orange, and the panel is left exactly as it was.
+
+   Scoped by a `site-root` class on the storefront's <body>, mirroring the
+   `admin-root` class the panel already carries. Status colour is the only
+   family left alone: --success, --danger and --warning are tuned against
+   lightness rather than against the neutral they sit on, and they measure the
+   same on either ramp.
+
+   The mixed tokens at the foot of each block are restated rather than
+   inherited, and that is not redundancy. A custom property whose value
+   contains var() has that var() substituted at the element where the property
+   is *declared*, not where it is finally used — so `--field-halo`, declared on
+   :root as a mix of `var(--accent)`, computes against the panel's orange up on
+   <html> and inherits down here already mixed. Overriding `--accent` on <body>
+   cannot reach back and change it. Every derived token the storefront actually
+   paints with has to be re-declared in this scope, or the site gets a cool
+   palette with warm focus rings and washes.
+
+   Specificity: `.site-root` is (0,1,0), the same weight as the `:root` block
+   it overrides, and it wins on source order because it is further down this
+   file. `.dark .site-root` is (0,2,0) and clears `.dark`. The `[data-accent]`
+   sets are never in play here — that attribute is stamped by the panel only
+   (lib/admin/accent.ts), and the site has no accent picker.
+
+   Light mode is deliberately flat: white cards on a near-white page,
+   separated by a border rather than by a wash, and no backdrop-filter
+   anywhere. The three components that were frosted glass are now opaque.
+
+   Measured, worst case against the surface each one is used on:
+     foreground/surface        17.97:1      foreground/chrome       15.16:1
+     text-secondary/surface     8.15:1      text-secondary/chrome    6.87:1
+     accent-strong/surface      5.65:1      accent-strong/chrome     4.76:1
+     accent-foreground/accent   5.70:1      accent-edge/surface      5.40:1
+     muted/surface              3.99:1      muted/chrome             3.37:1
+   and in dark:
+     foreground/surface        16.50:1      text-secondary/surface   9.12:1
+     muted/surface              5.23:1      accent-strong/surface    7.68:1
+     accent-foreground/accent   6.80:1      accent-edge/surface      4.97:1
+
+   The last light pair is why the header and the footer set their copy in
+   `text-secondary` rather than `text-muted`. `--muted` is the palette's
+   description grey and clears 4.5:1 on nothing in this ramp — 3.99:1 on white,
+   3.37:1 on the chrome — which is survivable for a caption beside a figure and
+   not for a column of footer links, where it is the only text there is.
+   `--text-secondary` is the token that exists for body copy; the chrome uses
+   it, and `--muted` stays for meta.
+   ========================================================================== */
+
+.site-root {
+  /* --- Neutral ramp: cool, no warmth --------------------------------------
+     Four steps of depth on a white page, deepest last:
+       #ffffff  the page, and a card sitting on it (told apart by its border)
+       #f6f7f8  an alternating band across the full page width
+       #eef0f2  recessed inside a card — a well, a meter track, a table head
+       #e9ecef  the chrome: the header and the footer                        */
+  --background: #ffffff;        /* the page */
+  --background-subtle: #f6f7f8; /* an alternating band across it */
+  --surface: #ffffff;           /* cards and dialogs */
+  --surface-elevated: #ffffff;  /* menus and popovers — no step needed on white */
+  --surface-muted: #eef0f2;     /* recessed inside a card */
+  --surface-hover: #f8f9fa;
+
+  /* --- Chrome: a dark frame, in both themes -------------------------------
+     The header and the footer are one material, and it is dark whichever
+     theme the page is in. Two grey chromes were tried first — #eef0f2 and
+     then #e9ecef — and both failed the same way: at 1.1–1.2:1 against a white
+     page they are not a frame, they are a slightly dirty part of the page.
+     There is no light grey that reads as a frame against #ffffff, because the
+     page has already taken the top of the ramp. So the frame goes to the
+     other end and takes it decisively: 17.97:1 against the page.
+
+     It does not re-step for dark mode. Against a #0b0d0e page this same value
+     is the *lighter* of the two and still separates, so the site keeps one
+     header and one footer rather than two that have to be checked separately.
+
+     Because the chrome is dark while the light-mode page is not, everything
+     inside it needs its own foreground — `text-foreground` would be near-black
+     on near-black. That is what the rest of these tokens are: a small, closed
+     palette for the inside of the frame, measured against --chrome itself.
+       chrome-foreground  16.61:1   logo, headings, the active nav item
+       chrome-secondary    9.18:1   body copy: footer links, phone numbers
+       chrome-muted        5.27:1   meta: the copyright line
+       chrome-accent       7.74:1   links and the active marker
+     `--chrome-border-strong` carries a control's edge inside the frame and is
+     the one that has to clear 3:1 (WCAG 1.4.11); at 5.27:1 it does, where the
+     divider tone would have measured 1.73:1. */
+  --chrome: #151719FF;
+  --chrome-surface: #202426;        /* a control inside the frame: the search field */
+  --chrome-hover: #1b1f21;          /* pointer feedback on a chrome control */
+  --chrome-border: #292e31;         /* divider between the frame's rows */
+  --chrome-border-strong: #858c91;  /* a control's edge — 5.27:1 */
+  --chrome-foreground: #f5f6f7;
+  --chrome-secondary: #b5babe;
+  --chrome-muted: #858c91;
+  --chrome-accent: #ff8a5c;
+
+  /* Only the top bar wears that dark material now. The two rows under it —
+     the logo/search/actions row and the nav row — are a white plate that
+     reads as the top of the page rather than a band above it. See the
+     `header-plate` utility for how the palette inside them is swapped. */
+  --header-plate: #ffffff;
+
+  --border-color: #dde1e4;
+  --border-subtle: #e9ecef;
+  --border-strong: #c7ccd1;
+
+  --foreground: #151719FF;
+  --text-secondary: #4b5055;
+  --muted: #7a8086;
+  --text-disabled: #a8adb2;
+
+  /* --- Accent -------------------------------------------------------------
+     A brighter, redder orange than the panel's. Hover and active move *away*
+     from the page rather than towards it, which is why they are hexes here
+     and a mix in the block above.
+
+     The label on a filled button stays near-black. White on #f05a28 measures
+     3.39:1 — fine for a 24px headline, short of the 4.5:1 a 14px button label
+     needs — so the palette's own `black` token carries it at 5.70:1. */
+  --accent: #D90606FF;
+  --accent-hover: #d94a1f;
+  --accent-active: #be3e18;
+  --accent-edge: #be3e18;       /* 5.40:1 — the fill alone is 3.39:1 on white */
+  --accent-foreground: #F8FAFC;
+  --accent-strong: #b83d18;     /* links, prices, the active nav marker */
+  --accent-subtle: #fff0ea;
+
+  /* --- Control boundaries -------------------------------------------------
+     `--border-strong` is the palette's soft #c7ccd1, which is 1.62:1 on white
+     — right for a divider that wants to be seen and not noticed, and too
+     faint for the edge of an empty input, where the box is the only thing
+     saying a control is there. `--field-border` exists for exactly this split
+     (see the note in the :root block) and takes the ramp's own #7a8086 at
+     3.99:1, clearing the 3:1 of WCAG 1.4.11. */
+  --field-border: #7a8086;
+
+  /* --- Chart -------------------------------------------------------------- */
+  --chart-series: #b83d18;
+  --chart-context: #7a8086;
+  --chart-grid: #dde1e4;
+
+  /* --- Elevation ----------------------------------------------------------
+     Neutral-black rather than the panel's warm brown, and lighter: on a flat
+     white page the border is doing the separating and the shadow only has to
+     say "this floats". */
+  --elevation-1: 0 1px 2px rgb(13 14 15 / 0.05);
+  --elevation-2:
+    0 2px 4px -2px rgb(13 14 15 / 0.05), 0 8px 16px -6px rgb(13 14 15 / 0.10);
+  --elevation-3:
+    0 4px 8px -4px rgb(13 14 15 / 0.06), 0 20px 40px -12px rgb(13 14 15 / 0.18);
+
+  /* A white hairline along the top of a white card is nothing but a rounding
+     error. Off in light mode; the dark half below still needs it. */
+  --panel-edge-light: transparent;
+  --panel-card-shadow: 0 1px 2px rgb(13 14 15 / 0.04);
+  --panel-card-shadow-hover:
+    0 2px 4px -2px rgb(13 14 15 / 0.05), 0 10px 20px -8px rgb(13 14 15 / 0.12);
+
+  /* Derived — see the substitution note in this block's header. Same mixes as
+     :root; they have to be written again to be mixed from the values above. */
+  --field-halo: color-mix(in srgb, var(--accent) 26%, transparent);
+  --field-halo-danger: color-mix(in srgb, var(--danger) 22%, transparent);
+  --panel-edge-accent: color-mix(in srgb, var(--accent) 34%, var(--border-color));
+  --panel-wash: color-mix(in srgb, var(--accent) 5%, transparent);
+  --gauge-track: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --chart-grid-faint: color-mix(in srgb, var(--foreground) 7%, transparent);
+  --chart-hatch: color-mix(in srgb, var(--chart-context) 45%, transparent);
+}
+
+.dark .site-root {
+  --background: #0b0d0e;
+  --background-subtle: #101315;
+  --surface: #151819;
+  --surface-elevated: #202426;  /* menus and dialogs do step up here */
+  --surface-muted: #101315;
+  --surface-hover: #1b1f21;
+
+  /* No chrome overrides here on purpose — the frame is the same dark material
+     in both themes. See the note in the light block. */
+
+  /* The plate does step, though. A hard #ffffff header over a #0b0d0e page is
+     a flashlight, not a header; --surface is the same "this is the sheet the
+     page is written on" role the light theme's white is playing. */
+  --header-plate: var(--surface);
+
+  --border-color: #292e31;
+  --border-subtle: #202527;
+  --border-strong: #3a4145;
+
+  --foreground: #f5f6f7;
+  --text-secondary: #b5babe;
+  --muted: #858c91;
+  --text-disabled: #555b60;
+
+  /* Lifted off the dark surface, and hover goes lighter here — the same rule
+     as light mode, which is "move away from the page", pointing the other way. */
+  --accent: #ff6b2c;
+  --accent-hover: #ff7d45;
+  --accent-active: #e95720;
+  --accent-edge: #e95720;
+  --accent-foreground: #0d0e0f;
+  --accent-strong: #ff8a5c;
+  --accent-subtle: #2a1710;
+
+  --field-border: #858c91;      /* 5.23:1; the ramp's #3a4145 is 1.72:1 */
+
+  --chart-series: #ff8a5c;
+  --chart-context: #858c91;
+  --chart-grid: #292e31;
+
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --elevation-2: 0 8px 20px -4px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --elevation-3: 0 24px 56px -12px rgb(0 0 0 / 0.70), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  --panel-edge-light: rgb(255 255 255 / 0.05);
+  --panel-card-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  --panel-card-shadow-hover: 0 10px 28px -10px rgb(0 0 0 / 0.75);
+
+  /* Derived, at the dark ramp's percentages — the same mix reads dimmer
+     against a dark surface, so the accent's share goes up. */
+  --field-halo: color-mix(in srgb, var(--accent) 34%, transparent);
+  --field-halo-danger: color-mix(in srgb, var(--danger) 30%, transparent);
+  --panel-edge-accent: color-mix(in srgb, var(--accent) 38%, var(--border-color));
+  --panel-wash: color-mix(in srgb, var(--accent) 7%, transparent);
+  --gauge-track: color-mix(in srgb, var(--foreground) 11%, transparent);
+  --chart-grid-faint: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --chart-hatch: color-mix(in srgb, var(--chart-context) 42%, transparent);
 }
 
 /* ==========================================================================
@@ -198,6 +752,24 @@
   --radius-3xl: initial;
   --radius-4xl: initial;
 
+  /* --- Brand mark ---------------------------------------------------------
+     The red in the DieselParts logo, and the only colour in the file that is
+     not a role. Every other hue here answers "what is this element for"; this
+     one answers "whose mark is this", so it is deliberately kept out of the
+     accent family and out of the `.site-root` / `.admin-root` blocks — it is
+     the same red in both roots, in both themes, and a director repainting the
+     panel's accent (see the ACCENT REPAINT block) must not move it.
+
+     Sampled from public/android-chrome-512x512.png: the artwork carries a
+     gradient from #d30303 to #e70404 and this is its mean. Against the dark
+     chrome it measures 3.6:1, and against a white page 5.4:1 — a logotype is
+     exempt from WCAG 1.4.11 either way, but neither reading is marginal.
+
+     The other half of the mark takes `currentColor`, so the mark inherits
+     whatever foreground it is set on rather than needing a light and a dark
+     copy. See components/layout/brand-mark.tsx. */
+  --brand-red: #d90606;
+
   /* --- Spacing -----------------------------------------------------------
      The 4px base is unchanged, so no existing padding shifts. The rhythm the
      panel should hold to is six steps:
@@ -212,14 +784,31 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
   --color-surface-muted: var(--surface-muted);
   --color-surface-hover: var(--surface-hover);
+  --color-chrome: var(--chrome);
+  --color-chrome-surface: var(--chrome-surface);
+  --color-chrome-hover: var(--chrome-hover);
+  --color-chrome-border: var(--chrome-border);
+  --color-chrome-border-strong: var(--chrome-border-strong);
+  --color-chrome-foreground: var(--chrome-foreground);
+  --color-chrome-secondary: var(--chrome-secondary);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-accent: var(--chrome-accent);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  /* `text-secondary` / `text-disabled` rather than `text-text-secondary`. */
+  --color-secondary: var(--text-secondary);
+  --color-disabled: var(--text-disabled);
   --color-border: var(--border-color);
+  --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-strong: var(--accent-strong);
   --color-accent-subtle: var(--accent-subtle);
@@ -233,6 +822,8 @@
   --color-chart-series: var(--chart-series);
   --color-chart-context: var(--chart-context);
   --color-chart-grid: var(--chart-grid);
+  --color-field-border: var(--field-border);
+  --color-brand-red: var(--brand-red);
 
   /* Three elevations, aliased onto the keys the codebase already uses. */
   --shadow-xs: var(--elevation-1);
@@ -309,6 +900,102 @@
   font-size: var(--text-xs);
   line-height: var(--text-xs--line-height);
   font-weight: 400;
+}
+
+/*
+ * The headline figure on a KPI tile.
+ *
+ * The dashboard's problem was not that its numbers were small — they were
+ * `text-2xl`, the same step as the page's own <h1>. It was that a sum of money
+ * and a page title were set identically, so nothing on the screen claimed to
+ * be the thing you came to read. This is a separate step above the type scale,
+ * in the mono face, and it is the only place it is used.
+ *
+ * The size is fluid because the value is not: "1 897 471 900" is thirteen
+ * glyphs, and at four tiles across a 1400px shell each tile has ~214px of
+ * inner width. 1.625rem is the largest step that still sets that figure on one
+ * line; the floor keeps it dominant on a phone, where the tiles are full width.
+ */
+@utility type-figure {
+  font-family: var(--font-mono);
+  font-size: clamp(1.375rem, 0.85rem + 0.85vw, 1.625rem);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The second tier of figure — a count, not a sum. The dashboard's lower strip
+ * reports queue depths ("3 new requests"), and setting those at the same size
+ * as the period's revenue was most of why the screen read as flat: every
+ * number on it was shouting equally.
+ */
+@utility type-figure-sm {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A card that responds to the pointer. Level 1 → level 2, plus 2px of lift and
+ * an accent-tinted edge.
+ *
+ * The lift is inside a `no-preference` query rather than relying on the global
+ * reduced-motion rule: that rule collapses the *duration*, which turns a 2px
+ * glide into a 2px jump. Someone who asked for less motion gets none — the
+ * shadow and the edge still change, so the state is not lost.
+ */
+@utility panel-lift {
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    border-color: var(--panel-edge-accent);
+    box-shadow:
+      inset 0 1px 0 var(--panel-edge-light),
+      var(--panel-card-shadow-hover);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+/*
+ * The wash on a KPI tile: the accent, at 5–7%, rising from the corner the eye
+ * enters at. Not a gradient for its own sake — flat fills at level 1 are what
+ * made four identical rectangles read as a placeholder, and a wash gives each
+ * tile a lit corner without adding a second colour to the page.
+ */
+@utility panel-wash {
+  background-image: radial-gradient(
+    130% 150% at 0% 0%,
+    var(--panel-wash),
+    transparent 60%
+  );
+}
+
+/*
+ * Table rows that answer the pointer instead of being striped.
+ *
+ * Zebra striping spends a permanent background change on a problem the reader
+ * only has while tracking one row across. Hover solves it exactly when it is
+ * needed and leaves the table quiet the rest of the time.
+ */
+@utility row-hover {
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
 }
 
 /*
@@ -395,6 +1082,175 @@
   border: 1px solid var(--border-color);
   background-color: var(--surface);
   padding: calc(var(--spacing) * 6);
+  /*
+   * The hairline of light along the top edge is what separates level 1 from
+   * level 0 on a near-black page, where a drop shadow has nothing to fall on.
+   * Drawn as an inset shadow rather than a ::before so `panel` stays
+   * position-agnostic — several call sites nest positioned children in it.
+   */
+  box-shadow:
+    inset 0 1px 0 var(--panel-edge-light),
+    var(--panel-card-shadow);
+}
+
+/* ==========================================================================
+   PANEL CHROME
+   --------------------------------------------------------------------------
+   The rail's width and everything that folds with it.
+
+   Driven by a `data-rail` attribute on <html> rather than by React state, and
+   that is a rendering decision rather than a stylistic one: a blocking script
+   stamps the attribute before the first paint, so a director who collapsed the
+   rail yesterday never sees it open at 264px and snap shut once hydration
+   lands. React mirrors the attribute after mount for the aria state and owns
+   the toggle from then on.
+   ========================================================================== */
+
+.panel-frame {
+  --rail: 16.5rem; /* 264px — a two-word section label fits without truncating */
+}
+
+:root[data-rail="collapsed"] .panel-frame {
+  --rail: 4.5rem; /* 72px — a 40px target with the same 16px gutters either side */
+}
+
+/* Labels, group headings and the identity block fold away with the rail. */
+:root[data-rail="collapsed"] .rail-wide {
+  display: none;
+}
+
+/* A row with no label is a square, centred on the glyph. */
+:root[data-rail="collapsed"] .rail-row {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+/*
+ * With the rail folded, 72px cannot hold the monogram and the collapse control
+ * side by side, so the head stacks instead of squeezing. Reopening it is the
+ * one thing that must never become unreachable.
+ */
+:root[data-rail="collapsed"] .rail-head {
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+}
+
+/* The collapse control points the way it will move the rail. */
+.rail-chevron {
+  transition: transform 200ms ease;
+}
+
+:root[data-rail="collapsed"] .rail-chevron {
+  transform: rotate(180deg);
+}
+
+/*
+ * The chrome's own material.
+ *
+ * The rail and the top bar are one surface interrupted by the page, so they
+ * share a background and differ only in which edge carries the hairline. On a
+ * light theme that puts a white chrome around a warm page, which is the whole
+ * of the separation; on a dark one the chrome is the lighter of the two, for
+ * the same reason a card is.
+ */
+@utility panel-chrome {
+  background-color: var(--surface);
+}
+
+/*
+ * The header's lower two rows, as a light plate inside the dark frame.
+ *
+ * Those rows carry something like fifty `text-chrome-*` / `bg-chrome-*`
+ * classes between the logo, the search field, the actions, the mega-menu
+ * trigger, the mobile drawer and the nav. Repainting them one class at a time
+ * would mean every one of those components learning which half of the header
+ * it happens to be in.
+ *
+ * So the plate repaints the *palette* instead, scoped to its own subtree.
+ * Every child keeps naming the role it always named — "secondary copy inside
+ * the frame" — and the role now resolves to the value that reads on white.
+ * Nothing below this element changes, including the search overlay and the
+ * mobile drawer, which are rendered inside these rows and inherit the swap.
+ *
+ * The `:focus-visible` rule in the base layer keeps working for the same
+ * reason: it draws the ring in `--chrome-foreground`, which is inherited, so
+ * inside the plate it is near-black and outside it is near-white.
+ */
+@utility header-plate {
+  --chrome: var(--header-plate);
+  --chrome-surface: var(--surface-muted);
+  --chrome-hover: var(--surface-hover);
+  --chrome-border: var(--border-color);
+  --chrome-border-strong: var(--border-strong);
+  --chrome-foreground: var(--foreground);
+  --chrome-secondary: var(--text-secondary);
+  --chrome-muted: var(--muted);
+  --chrome-accent: var(--accent-strong);
+  background-color: var(--chrome);
+}
+
+/*
+ * The active section, as a filled plate.
+ *
+ * The previous marker was a 2px stroke on a spine rule with a tint behind it —
+ * accurate, and too quiet to find at a glance across a 264px column. This is
+ * the accent fill with its own 1px edge, the same pair the primary button
+ * wears, so "you are here" and "you can press this" are made of one material.
+ * The label sits in `--accent-foreground`, which every accent set defines to
+ * clear 4.5:1 against its own fill in both themes.
+ */
+@utility nav-plate {
+  border: 1px solid var(--accent-edge);
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: var(--panel-card-shadow);
+}
+
+/*
+ * The count on a chrome glyph.
+ *
+ * Not a bare dot: a director needs to know whether three things are waiting or
+ * thirty before deciding to open the page, and a dot answers neither. Capped
+ * at "9+" because the glyph is 40px and the badge may not become the control.
+ */
+@utility chrome-badge {
+  position: absolute;
+  top: -0.125rem;
+  right: -0.125rem;
+  display: grid;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  place-items: center;
+  border-radius: 9999px;
+  border: 2px solid var(--surface);
+  background-color: var(--accent);
+  padding-inline: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A paint chip in the accent picker.
+ *
+ * Drawn from the set's own custom properties rather than from a hex repeated
+ * in TypeScript, so a swatch cannot drift from the colour it promises. The
+ * ring is the selected state and it is a ring rather than a tick because the
+ * chips are 24px and a glyph inside one is unreadable.
+ */
+@utility paint-chip {
+  position: relative;
+  display: grid;
+  height: 1.5rem;
+  width: 1.5rem;
+  place-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--accent-edge);
+  background-color: var(--accent);
+  transition: box-shadow 150ms ease;
 }
 
 /* ==========================================================================
@@ -406,19 +1262,54 @@
  * inherited the text colour, which made it invisible on the orange CTAs.
  * One ring for every focusable element, drawn in the foreground colour so it
  * holds up on both themes and on top of the accent fill.
+ *
+ * Two things about this block are load-bearing.
+ *
+ * It is in `@layer base`, not unlayered. Unlayered rules outrank every layer,
+ * so as a bare `:focus-visible {}` this beat Tailwind's utilities outright:
+ * `focus:outline-none` on a control that already draws its own ring did
+ * nothing, and a field ended up wearing two rings at once — the black one
+ * struck through the middle of the orange one. In the base layer a utility can
+ * override it, which is what lets a control hand the ring to the field around
+ * it. See `fieldBox` in `components/ui/field-styles.ts`.
+ *
+ * It no longer sets `border-radius`. That was meant to soften the ring on
+ * square elements, but it applies to the *element*, not to the outline — and
+ * being unlayered it overrode `rounded-md` on whatever was focused, so every
+ * button, card and field snapped to 2px corners the moment it took focus. An
+ * outline already follows the element's own radius; there was nothing to fix.
  */
-:focus-visible {
-  outline: 2px solid var(--foreground);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
 
-/* On an accent fill the foreground ring is the near-black label colour, which
-   reads as a thickened border. White separates it from the orange. */
-.bg-accent:focus-visible,
-.bg-accent *:focus-visible {
-  outline-color: #ffffff;
-  box-shadow: 0 0 0 4px var(--accent);
+  /*
+   * Inside the marketing frame the ring has to invert with the material.
+   * `--foreground` is near-black, and the storefront's chrome is a dark bar on
+   * a white page — so the default ring would be drawn in near-black on
+   * near-black and a keyboard visitor would lose the header entirely. In the
+   * panel `--chrome-foreground` resolves to `--foreground`, so this rule is a
+   * no-op there rather than a second behaviour to keep track of.
+   *
+   * Declared before the accent rule below so that a filled orange button
+   * sitting in the chrome — the catalogue trigger — still takes the white ring
+   * that pairs with its own fill. The two selectors are the same weight, so
+   * source order is what settles it.
+   */
+  .bg-chrome:focus-visible,
+  .bg-chrome *:focus-visible {
+    outline-color: var(--chrome-foreground);
+  }
+
+  /* On an accent fill the foreground ring is the near-black label colour,
+     which reads as a thickened border. White separates it from the orange. */
+  .bg-accent:focus-visible,
+  .bg-accent *:focus-visible {
+    outline-color: #ffffff;
+    box-shadow: 0 0 0 4px var(--accent);
+  }
 }
 
 /*
@@ -447,20 +1338,18 @@
 }
 
 /*
- * Hero: the inspection lamp on a blueprint.
+ * Hero: a blueprint grid, and the module under the cursor.
  *
- * Three stacked layers on one element — the ruled grid, the tile the lamp is
- * over, and the lamp itself. All three read from `--lamp-x`/`--lamp-y`, which a
- * pointer handler writes once per frame; no layout or paint work is triggered
- * on move. Before the pointer arrives (and on touch, where it never does) the
- * defaults park the lamp off to one side so the grid still has a lit corner.
+ * Two layers on one element — the ruled grid, and the tile. The tile reads from
+ * `--tile-x`/`--tile-y`, which a pointer handler writes once per frame; no
+ * layout or paint work is triggered on move. Before the pointer arrives (and on
+ * touch, where it never does) `--tile-on: 0` leaves the grid on its own.
+ *
+ * There was a third layer: a 280px radial pool of orange trailing the cursor.
+ * It is gone. Every soft edge on this page has been taken out, and a glow is
+ * the one that mattered most — it sat directly behind the headline.
  */
 .hero-lamp {
-  /* Percentages so the resting position is sensible at any width. The pointer
-     handler overwrites these with px; both are valid gradient positions. */
-  --lamp-x: 24%;
-  --lamp-y: 32%;
-  --lamp-on: 0.55;
   /* Snapped tile origin. px only — JS does the rounding, since CSS `mod()`
      cannot take a percentage and a length. */
   --tile-x: 0px;
@@ -478,11 +1367,25 @@
     linear-gradient(to bottom, var(--border-color) 1px, transparent 1px);
   background-size: var(--lamp-module) var(--lamp-module);
 
-  /* The grid fades out toward the edges so it never hits a hard seam. */
+  /* The grid stops before the edges rather than being cut off mid-module.
+     This is a mask on 1px rules, not a blur — nothing behind it is softened,
+     the lines simply run out. */
   mask-image: radial-gradient(120% 100% at 50% 0%, #000 30%, transparent 100%);
 }
 
-/* Layer 2: the module the lamp is over, snapped to the grid. */
+/*
+ * Layer 2: the module under the cursor, snapped to the grid.
+ *
+ * This used to be the middle of three layers, under a 280px radial pool of
+ * orange that followed the pointer — the "lamp" the class is named for. The
+ * pool is gone: a soft glow is the one thing a flat white page cannot carry,
+ * because there is no depth anywhere else on the page for it to belong to, and
+ * it read as a smudge over the headline rather than as light.
+ *
+ * What is left is the part that was always the good idea — a hard-edged tile
+ * picking one module out of a technical drawing. Crisp at every edge, and it
+ * still answers the pointer.
+ */
 .hero-lamp::before {
   content: "";
   position: absolute;
@@ -493,20 +1396,6 @@
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   opacity: var(--tile-on);
   transition: opacity 200ms ease;
-}
-
-/* Layer 3: the lamp pool. */
-.hero-lamp::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    280px circle at var(--lamp-x) var(--lamp-y),
-    color-mix(in srgb, var(--accent) 22%, transparent),
-    transparent 70%
-  );
-  opacity: var(--lamp-on);
-  transition: opacity 300ms ease;
 }
 
 /*
@@ -602,6 +1491,566 @@ body {
  * price and count up in tabular figures. The marketing site does not load it and
  * keeps the zero-cost system stack, so the override is scoped to the panel.
  */
+/*
+ * JetBrains Mono ahead of Geist Mono, and only inside the panel.
+ *
+ * Both are good tabular faces; the difference is character. Geist Mono is the
+ * neutral one, which is the right call for a code block and the wrong one for
+ * a figure that is meant to be the loudest thing on the screen. JetBrains has
+ * the taller x-height and the squarer bowls of a bench printout, which is what
+ * the panel's numbers actually are. Geist Mono stays as the fallback so the
+ * panel never reflows to a system face while the new one loads, and the
+ * marketing site — which loads neither — keeps its zero-cost system stack.
+ */
 .admin-root {
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-mono:
+    var(--font-jetbrains-mono), var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+}
+
+/* ==========================================================================
+   TEXTURES  —  shared by the screens that paint their own ground
+   --------------------------------------------------------------------------
+   One static SVG turbulence tile, declared once. Both the 404 and the panel's
+   front door lay a film of grain over a near-black plate, and they used to
+   carry a byte-identical copy of this data URI each. Static on purpose:
+   regenerating or re-positioning grain per frame repaints the full plate,
+   which is the cost both screens are built to avoid. At this size the tile is
+   ~1KB inline and never hits the network.
+   ========================================================================== */
+
+:root {
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* ==========================================================================
+   THE PANEL'S FRONT DOOR  —  app/admin/login
+   --------------------------------------------------------------------------
+   The login screen is the one page in the panel that is not a working
+   surface, so it is the one page that gets a treatment of its own: two
+   columns, the console on the left and, beside it, a fixed dark material
+   carrying a drifting line field.
+
+   THE DOOR IS DARK IN BOTH THEMES, and that is the change this block records.
+   It used to be painted in ordinary panel tokens so the form side followed the
+   staff member's theme, which meant half the time the front door of a product
+   whose whole identity is a near-black workshop opened onto a white page. The
+   door now paints its own ground, exactly as the 404 does, and for the same
+   reason: it is the first screen of the panel and it is the one that has to
+   say whose panel it is. The theme switch that used to sit in its header went
+   with the light theme — the profile menu inside the panel still carries one,
+   so nothing is lost but the two-second preview.
+
+   Nothing here is a new component skin. `.door-console` redeclares the panel's
+   own role tokens — `--foreground`, `--accent`, `--danger` — at values that
+   hold on this plate, and every ordinary panel class inside it (`text-muted`,
+   `bg-accent`, `type-eyebrow`) then reads correctly without knowing it is on
+   the door. The two classes that are genuinely new, `.door-field` and
+   `.door-ignite`, exist because the door's fields and its one button carry an
+   animation the panel proper has no use for.
+
+   Every moving part is CSS. The boot-in, the focus line, the ignition flash
+   and the refusal shake are keyframes and transitions; the only JavaScript on
+   this screen's decoration is the pointer parallax, which writes two custom
+   properties on one element. That constraint is not a preference — see the
+   note in components/ui/background-paths.tsx for what a JS animation per
+   element did to this exact page.
+   ========================================================================== */
+
+.door-console {
+  /* The door's own plate, and the one hue on it. */
+  --door-void: #0d0e11;
+  --door-ignite: #f77d2a;   /* 7.28:1 on the plate */
+  --door-hairline: rgb(255 255 255 / 0.08);
+
+  /* The field edge. NOT the hairline above: WCAG 1.4.11 asks 3:1 of the
+     boundary of a control, and white at 8% measures 1.1:1 on this plate — the
+     hairline is for dividers, which are exempt, and this is for the one box
+     whose edge is the only evidence it exists. #5b6167 is the darkest grey
+     that clears the threshold here (3.02:1), so the door gets the quietest
+     legal field edge rather than the panel's own #858c91 at 5.55:1. */
+  --door-edge: #5b6167;
+
+  --foreground: #f4f6f7;      /* 17.0:1 on the plate */
+  --text-secondary: #b5babe;  /* 9.9:1 */
+  --muted: #8d9599;           /* 6.3:1 — labels, footnotes */
+  --border-color: var(--door-hairline);
+  --border-subtle: rgb(255 255 255 / 0.05);
+  --border-strong: rgb(255 255 255 / 0.16);
+  --surface-hover: rgb(255 255 255 / 0.06);
+
+  /* The accent is pinned to the brand orange rather than taken from the
+     director's accent repaint: the door is signage, not a working surface, and
+     a teal login screen would say nothing about this company. */
+  --accent: var(--door-ignite);
+  --accent-hover: #ff8f45;
+  --accent-active: #e06a1d;
+  --accent-foreground: #0d0e11;   /* 7.28:1 on the fill */
+  --accent-strong: var(--door-ignite);
+  --accent-edge: var(--door-ignite);
+
+  /* Pinned, not inherited: under the light theme `--danger` is #93001d, which
+     is invisible on this plate. The panel's dark red is used unchanged, and it
+     stays red — the accent means "focused" everywhere on this screen, so an
+     orange error border would be one field saying "you are typing here" and
+     "this is wrong" with the same pixel. */
+  --danger: #e05c5f;          /* 5.4:1 on the plate */
+
+  /* The mark's red is fixed everywhere else in the product (see --brand-red).
+     It is overridden here, and only here: the door has exactly one chroma and
+     a #d90606 ring beside a #f77d2a button reads as two brands. Delete this
+     line to put the logo back to the company red on the login screen. */
+  --brand-red: var(--door-ignite);
+
+  background-color: var(--door-void);
+  color: var(--foreground);
+}
+
+/* The film of grain, over the whole door. Lighter than the 404's 0.28: that
+   screen is a dead end and can afford to be a texture, this one is typed into. */
+.door-console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0.15;
+  mix-blend-mode: overlay;
+  background-image: var(--texture-grain);
+  background-repeat: repeat;
+}
+
+.door-material {
+  --door-ink: #f4f6f7;      /* 17.4:1 on the material */
+  --door-muted: #8d9599;    /* 5.8:1 — the byline and nothing else */
+
+  background-color: #08090a;
+  color: var(--door-ink);
+}
+
+/* The console has already repainted `--foreground` for its own plate; the
+   material states its ring too because it is a darker ground still. Nothing
+   here is focusable today; the rule is stated so that stays true if something
+   becomes focusable later. */
+.door-material :focus-visible {
+  outline-color: var(--door-ink);
+}
+
+/*
+ * The line field's drift.
+ *
+ * One transform per sheaf, and the two run against each other so the field
+ * breathes instead of sliding. This is deliberately CSS and not a JS
+ * animation: the artwork is 72 paths, and animating them individually is what
+ * made this screen stop responding — see the note in
+ * components/ui/background-paths.tsx.
+ *
+ * The whole rule sits behind `no-preference`, so a visitor who asks for less
+ * motion gets the field drawn and still rather than drawn and snapped to its
+ * end state, which is all the global reduce rule can do on its own.
+ */
+@keyframes door-drift {
+  from {
+    transform: translateX(-14px);
+  }
+  to {
+    transform: translateX(14px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .door-paths {
+    animation: door-drift 34s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .door-paths-reverse {
+    animation-direction: alternate-reverse;
+  }
+}
+
+/*
+ * The boot sequence: the console's contents arrive one after another, from the
+ * badge down to the footnote, over about half a second.
+ *
+ * Delays are `nth-child` and not an index passed in, because the order on
+ * screen *is* the source order — an index prop would be a second copy of it,
+ * free to drift. The form is a child of the stack and carries its own
+ * `.door-boot` with a `--door-boot-offset`, so its fields keep counting from
+ * where the heading above them stopped instead of restarting at zero.
+ *
+ * The whole thing is inside `no-preference`, and it has to be: `animation-fill-
+ * mode: both` holds an element at `opacity: 0` for the length of its delay, and
+ * the global reduce rule shortens durations but not delays. A staff member who
+ * asked for less motion would get a blank console for 400ms and then the lot at
+ * once.
+ */
+@keyframes door-boot-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .door-boot > * {
+    animation: door-boot-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--door-boot-offset, 0ms);
+  }
+
+  .door-boot > *:nth-child(2) {
+    animation-delay: calc(var(--door-boot-offset, 0ms) + 80ms);
+  }
+
+  .door-boot > *:nth-child(3) {
+    animation-delay: calc(var(--door-boot-offset, 0ms) + 160ms);
+  }
+
+  .door-boot > *:nth-child(4) {
+    animation-delay: calc(var(--door-boot-offset, 0ms) + 240ms);
+  }
+
+  .door-boot > *:nth-child(5) {
+    animation-delay: calc(var(--door-boot-offset, 0ms) + 320ms);
+  }
+
+  .door-boot > *:nth-child(n + 6) {
+    animation-delay: calc(var(--door-boot-offset, 0ms) + 400ms);
+  }
+}
+
+/*
+ * The door's field.
+ *
+ * The panel's `fieldBox` is not used here, and the reason is the focus
+ * indicator rather than the colour. `fieldBox` draws a 2px solid perimeter
+ * plus a halo; the door draws that *and* a line that runs along the foot of
+ * the box, left to right, as the field takes focus. Layering the door's line
+ * over the panel's ring meant two Tailwind `focus-within:shadow-[…]` utilities
+ * and this rule fighting over one property, with source order breaking the
+ * tie. One owner for the whole state instead.
+ *
+ * What is drawn at focus is still the perimeter the panel promises: 1px of
+ * border and 1px of solid shadow hard against it make the 2px WCAG 2.2 asks
+ * for, at 7.28:1, and the 4px bloom behind that is what makes it read as lit
+ * rather than outlined.
+ */
+.door-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--door-edge);
+  border-radius: var(--radius-md);
+  background-color: rgb(255 255 255 / 0.03);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.door-field:focus-within {
+  border-color: var(--door-ignite);
+  background-color: rgb(255 255 255 / 0.05);
+  box-shadow:
+    0 0 0 1px var(--door-ignite),
+    0 0 0 5px rgb(247 125 42 / 0.28);
+}
+
+/* A rejected field keeps its red under focus. Turning it orange the moment it
+   is refocused would read as "fixed" before the value has changed. */
+.door-field[data-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.door-field[data-invalid="true"]:focus-within {
+  box-shadow:
+    0 0 0 1px var(--danger),
+    0 0 0 5px rgb(224 92 95 / 0.28);
+}
+
+/* The line under the field, drawn from the left as focus lands. `scaleX` and
+   not `width`: a width transition lays the box out on every frame, a scale is
+   composited. The parent clips it, so it follows the rounded corners. */
+.door-field::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--door-ignite);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.door-field:focus-within::after {
+  transform: scaleX(1);
+}
+
+.door-field[data-invalid="true"]::after {
+  background-color: var(--danger);
+}
+
+/*
+ * The refusal shake.
+ *
+ * Fired by the form after a sign-in is refused, by setting `data-shake` — see
+ * components/admin/login-form.tsx for why the attribute is removed and set
+ * again rather than held in React state. Six stops rather than a decaying
+ * spring: this is a "no", and it should stop dead.
+ */
+@keyframes door-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-8px);
+  }
+  80% {
+    transform: translateX(8px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .door-form[data-shake] {
+    animation: door-shake 0.35s ease-in-out;
+  }
+}
+
+/*
+ * Ignition: the one button on the screen.
+ *
+ * The flash is a transition and not an animation, which is what makes it
+ * survive a real click. An animation on `:active` is cut off the instant the
+ * pointer comes up, and a press is usually shorter than the flash — so the
+ * sheet is snapped to full on press (`transition-duration: 0`) and fades out
+ * over 420ms on release, which is the shape of an ignition either way round.
+ */
+.door-ignite {
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color 160ms ease,
+    transform 120ms ease;
+}
+
+.door-ignite::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(120% 180% at 50% 50%, rgb(255 255 255 / 0.9), transparent 62%);
+  opacity: 0;
+  transition: opacity 420ms ease-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .door-ignite:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .door-ignite:active:not(:disabled)::after {
+    opacity: 0.5;
+    transition-duration: 0ms;
+  }
+}
+
+/*
+ * The door's two display sizes. They sit above `type-page`, which is the
+ * largest step the panel proper has — a table screen never needs this, and a
+ * front door is not a table screen. Geist, not a display face brought in for
+ * one page: the panel and the storefront are set in it, and a second family on
+ * the login screen would be the only place in the product where the type
+ * changes company. The weight is the door's own: 700 is the only place the
+ * panel goes past 600, and on a near-black plate a lighter cut of Geist at this
+ * size goes grey.
+ */
+.door-title {
+  font-size: clamp(2.5rem, 1.7rem + 3vw, 3.75rem);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+
+.door-quote {
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+/* The rule above the quote. It lengthens on hover — the one piece of pure
+   decoration on the screen, and it sits on the half of the door that holds
+   nothing to act on, so it cannot be mistaken for a control. */
+.door-dash {
+  display: block;
+  height: 2px;
+  width: 3rem;
+  background-color: var(--door-ignite);
+  transition: width 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.door-quote-block:hover .door-dash {
+  width: 6rem;
+}
+
+/* ==========================================================================
+   THE 404  —  app/(site)/not-found.tsx
+   --------------------------------------------------------------------------
+   A workshop screen: a dark plate, a film of grain over it, a slow CRT sweep,
+   and two gears turning behind everything. It is the one page on the site
+   that paints its own ground rather than the storefront's, so its values are
+   local and scoped to `.nf-scene` — nothing here can reach a marketing page.
+
+   Every moving part is CSS. The gears are transforms on two groups, the sweep
+   is a transform on one band, and the grain does not move at all. That is a
+   deliberate constraint after the login screen: a JS animation per element
+   repaints the whole plate on every frame and takes the page down with it.
+   The pointer parallax is the one thing JS touches, and it writes two custom
+   properties on a single element — see components/marketing/workshop-backdrop.tsx.
+   ========================================================================== */
+
+.nf-scene {
+  --nf-void: #0d0e11;
+  --nf-ink: #f2f3f5;
+  --nf-muted: #7d848b;      /* 5.1:1 on the plate */
+  --nf-orange: #f77d2a;     /* 7.4:1 on the plate */
+
+  /* Written by the pointer (see hooks/use-pointer-parallax.ts), read by the
+     gear layers. Declared here so the backdrop renders correctly before a
+     pointer has ever moved. */
+  --parallax-x: 0px;
+  --parallax-y: 0px;
+
+  background-color: var(--nf-void);
+  color: var(--nf-ink);
+}
+
+/* The app's ring is drawn in `--foreground`, which is near-black — invisible
+   on this plate. The one control here takes the orange instead. */
+.nf-scene :focus-visible {
+  outline-color: var(--nf-orange);
+}
+
+/* The film grain: the shared turbulence tile, laid over the plate. The tile
+   itself is declared once, in the TEXTURES block above. */
+.nf-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  mix-blend-mode: overlay;
+  background-image: var(--texture-grain);
+  background-repeat: repeat;
+}
+
+/*
+ * The CRT sweep: a soft band that crosses the plate top to bottom, plus the
+ * fixed scanline texture under it. The band is a single transformed element,
+ * which is the cheapest moving thing a page can have.
+ */
+.nf-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.028) 0px,
+    rgb(255 255 255 / 0.028) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.nf-sweep {
+  height: 18vh;
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(247 125 42 / 0.05) 45%,
+    rgb(247 125 42 / 0.12) 50%,
+    rgb(247 125 42 / 0.05) 55%,
+    transparent
+  );
+  transform: translate3d(0, -20vh, 0);
+}
+
+@keyframes nf-sweep {
+  from {
+    transform: translate3d(0, -20vh, 0);
+  }
+  to {
+    transform: translate3d(0, 120vh, 0);
+  }
+}
+
+@keyframes nf-spin {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+
+/*
+ * The gears turn around their own centres. `transform-box: fill-box` is what
+ * makes `transform-origin: center` mean the group's own box in SVG rather than
+ * the viewport's origin, and `rotate` is used instead of `transform` so the
+ * parallax on the wrapper and the rotation here never overwrite each other.
+ */
+.nf-gear {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nf-sweep {
+    animation: nf-sweep 9s linear infinite;
+  }
+
+  .nf-gear {
+    animation: nf-spin 110s linear infinite;
+  }
+
+  .nf-gear-fast {
+    animation-duration: 64s;
+  }
+
+  .nf-gear-reverse {
+    animation-direction: reverse;
+  }
+}
+
+/*
+ * The numeral: cut from a gradient and lit from below, so it reads as stamped
+ * into the plate rather than printed on it.
+ *
+ * `drop-shadow` and not `text-shadow`: the glyphs are a clipped background, so
+ * a text shadow would be drawn from the box behind them and ring the whole
+ * word. The filter follows the letterforms' own alpha, which is what makes the
+ * bevel land on the strokes.
+ */
+.nf-numeral {
+  font-family: var(--font-nf-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  font-size: clamp(7rem, 4rem + 20vw, 17rem);
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  background-image: linear-gradient(180deg, #ffa864 0%, var(--nf-orange) 42%, #8f3f10 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.85)) drop-shadow(0 -1px 0 rgb(255 255 255 / 0.10))
+    drop-shadow(0 12px 32px rgb(247 125 42 / 0.16));
 }

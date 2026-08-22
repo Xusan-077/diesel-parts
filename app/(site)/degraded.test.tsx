@@ -3,7 +3,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SiteError from "./error";
-import { ProductRow } from "@/components/marketing/product-row";
 import { BrandGrid } from "@/components/marketing/brand-grid";
 import { CategoryGrid } from "@/components/marketing/category-grid";
 import { stubObservers } from "@/lib/test/stub-observers";
@@ -17,6 +16,11 @@ import uz from "@/dictionaries/uz.json";
  * included, though only three of its eleven sections need the database at all.
  * These pin the two halves of the replacement — sections that degrade to a
  * notice, and a route-level boundary for the pages that cannot.
+ *
+ * The home page's product rows are no longer among the sections tested here:
+ * they read `/api/products/home` from the browser now, so their degradation is
+ * a failed request rather than a rejected server render, and it is pinned in
+ * `components/marketing/home-product-row.test.tsx` instead.
  */
 
 /** Every repository read rejects, the way an unreachable database behaves. */
@@ -25,73 +29,11 @@ vi.mock("@/lib/api/product-repository", () => {
   return { listBrands: unreachable, listCategories: unreachable };
 });
 
-/*
- * Mocked for the same reason and one more: it is the only import in this tree
- * that reaches `lib/db`, which throws at module scope without a DATABASE_URL.
- * Leaving it real would fail the suite on a missing env var rather than on the
- * behaviour under test.
- */
-vi.mock("@/lib/api/product-stats-repository", () => ({
-  getProductStats: () => Promise.reject(new Error("Server has closed the connection")),
-}));
-
 beforeAll(stubObservers);
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-});
-
-const carousel = {
-  prev: uz.common.carouselPrev,
-  next: uz.common.carouselNext,
-};
-
-function rowProps() {
-  return {
-    lang: "uz" as const,
-    title: uz.home.popularTitle,
-    viewAllHref: "/products",
-    viewAllLabel: uz.common.viewAll,
-    stock: uz.common.stock,
-    requestPriceLabel: uz.common.requestPrice,
-    actions: uz.productActions,
-    productDict: uz.product,
-    carousel,
-  };
-}
-
-describe("a product row whose read failed", () => {
-  it("keeps its heading and explains the gap", async () => {
-    render(
-      await ProductRow({
-        ...rowProps(),
-        products: [],
-        unavailable: true,
-        unavailableLabel: uz.common.productsUnavailable,
-      }),
-    );
-
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(uz.home.popularTitle);
-    expect(screen.getByRole("status").textContent).toBe(uz.common.productsUnavailable);
-  });
-
-  /*
-   * The distinction the whole design rests on: an empty collection and an
-   * unreadable one look identical in the data and mean opposite things to a
-   * visitor. A row with nothing in it stays hidden, exactly as it always did.
-   */
-  it("stays hidden when the read succeeded and the collection is simply empty", async () => {
-    const { container } = render(
-      await ProductRow({
-        ...rowProps(),
-        products: [],
-        unavailableLabel: uz.common.productsUnavailable,
-      }),
-    );
-
-    expect(container.innerHTML).toBe("");
-  });
 });
 
 describe("the reference grids", () => {

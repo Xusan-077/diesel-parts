@@ -151,6 +151,82 @@ export const COLUMN_EMPTY_TEXT: Record<InquiryColumn, string> = {
   lost: "Yo'qotilgan so'rov yo'q.",
 };
 
+/**
+ * One stage's ink as a badge.
+ *
+ * Only the two stages that are a *verdict* take a status colour. "Yangi",
+ * "Band qilingan" and "Jarayonda" are places in a pipeline, not judgements, and
+ * inking them would leave a list where every row shouts. What a live lead needs
+ * said about it — how long it has waited — is said by the rail down its left
+ * edge and by the words printed beside it.
+ */
+export const STAGE_TONE: Record<InquiryColumn, "default" | "success" | "danger"> = {
+  new: "default",
+  claimed: "default",
+  in_progress: "default",
+  won: "success",
+  lost: "danger",
+};
+
+/** The three stages where the lead is still somebody's job. */
+export const OPEN_COLUMNS: readonly InquiryColumn[] = ["new", "claimed", "in_progress"];
+
+/**
+ * What the list can be narrowed to.
+ *
+ * "Ochiq" is not a sixth stage — it is the three live ones together, and it is
+ * where the screen opens. Two reasons. It is the only view that answers "what
+ * is on my plate", which is the question the screen exists for; and it is the
+ * one view where claiming a lead does not make it vanish, because the row stays
+ * on screen and only its badge changes.
+ */
+export type InquiryFilter = "open" | InquiryColumn;
+
+export const INQUIRY_FILTERS: readonly InquiryFilter[] = ["open", ...INQUIRY_COLUMNS];
+
+export const FILTER_LABELS: Record<InquiryFilter, string> = {
+  open: "Ochiq",
+  ...COLUMN_LABELS,
+};
+
+export const FILTER_EMPTY_TEXT: Record<InquiryFilter, string> = {
+  open: "Ochiq so'rov yo'q. Saytdan so'rov kelganda shu yerda paydo bo'ladi.",
+  ...COLUMN_EMPTY_TEXT,
+};
+
+/** Which stages a filter draws from. One each, except "Ochiq". */
+export function filterColumns(filter: InquiryFilter): readonly InquiryColumn[] {
+  return filter === "open" ? OPEN_COLUMNS : [filter];
+}
+
+const COLUMN_RANK = Object.fromEntries(
+  INQUIRY_COLUMNS.map((column, index) => [column, index]),
+) as Record<InquiryColumn, number>;
+
+/**
+ * The order the list is worked in.
+ *
+ * Stage first, so a mixed view reads top to bottom the way the pipeline runs:
+ * nobody's leads, then the ones in hand, then what is already decided. Within a
+ * live stage the longest wait leads — that is the only ordering that puts the
+ * lead most at risk of being lost where the eye starts. Closed stages invert
+ * it, because a deal won in March is not more interesting than one won
+ * yesterday.
+ *
+ * Ties break on id so the order is total: two leads that arrived in the same
+ * millisecond must not swap places between two renders of the same data.
+ */
+export function compareCards(a: BoardCard, b: BoardCard): number {
+  const stage = COLUMN_RANK[a.column] - COLUMN_RANK[b.column];
+  if (stage !== 0) {
+    return stage;
+  }
+
+  const closed = a.column === "won" || a.column === "lost";
+  const age = closed ? a.ageHours - b.ageHours : b.ageHours - a.ageHours;
+  return age !== 0 ? age : a.id.localeCompare(b.id);
+}
+
 export interface BoardMove {
   status: InquiryStatus;
   /** Where the card lands. Derived here so the optimistic patch is one value. */

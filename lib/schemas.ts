@@ -189,6 +189,48 @@ export const discountDecisionSchema = z.object({
 
 export type DiscountDecisionInput = z.infer<typeof discountDecisionSchema>;
 
+/* ── Director panel: listings the browser refetches ──────────────────────── */
+
+/** One page of any panel listing. */
+const adminPageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
+
+/**
+ * The panel's own product listing.
+ *
+ * Deliberately not `parseProductQuery`: that one serves the public catalog,
+ * where inactive rows do not exist and stock is not a sort key. This is the
+ * director's view of the same table, and the two must not drift into each
+ * other — a public filter that accidentally accepted `includeInactive` would
+ * publish the archive.
+ */
+export const adminProductListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  page: adminPageSchema,
+  /** `1` from a query string; anything else reads as "active rows only". */
+  all: z
+    .enum(["0", "1"])
+    .default("0")
+    .transform((value) => value === "1"),
+  sort: z.enum(["stock", "name", "price"]).default("stock"),
+});
+
+export type AdminProductListQuery = z.infer<typeof adminProductListQuerySchema>;
+
+/** The moderation queue: every review, hidden ones included. */
+export const adminReviewListQuerySchema = z.object({
+  page: adminPageSchema,
+});
+
+export type AdminReviewListQuery = z.infer<typeof adminReviewListQuerySchema>;
+
+/** The audit trail, optionally narrowed to one kind of record. */
+export const auditListQuerySchema = z.object({
+  page: adminPageSchema,
+  entityType: z.string().min(1).max(60).optional(),
+});
+
+export type AuditListQuery = z.infer<typeof auditListQuerySchema>;
+
 /* ── Seller panel: inquiries, customers, orders ───────────────────────────── */
 
 /**
@@ -198,8 +240,8 @@ export type DiscountDecisionInput = z.infer<typeof discountDecisionSchema>;
  */
 const isoDateSchema = z.union([z.iso.datetime({ offset: true }), z.iso.date()]);
 
-/** One page of any seller listing. */
-const pageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
+/** One page of any seller listing. Same rule as `adminPageSchema` above. */
+const pageSchema = adminPageSchema;
 
 export const inquiryColumnSchema = z.enum(["new", "claimed", "in_progress", "won", "lost"]);
 

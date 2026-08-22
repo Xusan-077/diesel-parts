@@ -19,7 +19,7 @@ export function FeatureGrid({
       {items.map((item) => (
         <li
           key={item.title}
-          className="rounded-lg border border-border bg-surface-muted p-6 transition-colors hover:border-accent/50"
+          className="rounded-lg border border-border bg-surface p-6 transition-colors hover:border-accent/50"
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/10 text-accent-strong">
             <FeatureIcon icon={item.icon} size="md" />

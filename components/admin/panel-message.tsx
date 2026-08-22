@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BrandMark } from "@/components/layout/brand-mark";
 
 /**
  * The panel's standalone message screen — 404, the error boundary, anything
@@ -30,7 +31,13 @@ export function PanelMessage({
   return (
     <main className="admin-root grid min-h-dvh place-items-center bg-background px-6 py-16">
       <div className="w-full max-w-md">
-        <p className="type-eyebrow text-muted">{eyebrow}</p>
+        {/*
+          The mark is drawn, not fetched (components/layout/brand-mark.tsx),
+          which is what lets it appear on this screen at all: the one failure
+          this page exists for is the panel being unable to reach anything.
+        */}
+        <BrandMark className="h-9 text-foreground" />
+        <p className="type-eyebrow mt-6 text-muted">{eyebrow}</p>
         <h1 className="type-page mt-3 text-foreground">{title}</h1>
         <p className="type-body mt-2 text-muted">{description}</p>
 

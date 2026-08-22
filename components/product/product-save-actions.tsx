@@ -103,10 +103,10 @@ export function ProductSaveActions({
           aria-pressed={active}
           title={label}
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-sm transition-colors",
+            "flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
             active
               ? "border-accent bg-accent/15 text-accent-strong"
-              : "border-border bg-surface/90 text-muted hover:text-accent-strong",
+              : "border-border bg-surface text-muted hover:text-accent-strong",
             disabled && "cursor-not-allowed opacity-40 hover:text-muted"
           )}
         >

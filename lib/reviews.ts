@@ -31,6 +31,15 @@ export const REVIEW_AUTHOR_MAX = 60;
 /** Reviews per request. A log is read a screen at a time, not all at once. */
 export const REVIEWS_PAGE_SIZE = 5;
 
+/**
+ * Reviews per page in the moderation queue.
+ *
+ * Four times the public page: a visitor reads reviews, a director scans them
+ * looking for the one that has to come down, and that is a job twenty rows at
+ * a time rather than five.
+ */
+export const REVIEWS_MODERATION_PAGE_SIZE = 20;
+
 export type ReviewProblem = "rating" | "body_short" | "body_long" | "name";
 
 /**

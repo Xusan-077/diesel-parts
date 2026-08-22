@@ -2,7 +2,7 @@
  * Counting a headline figure up from zero.
  *
  * The figures on the home page are written into their own sentences —
- * "15+ yil tajriba", "10,000+ mahsulot" — rather than sitting in a numeric
+ * "30+ yil tajriba", "10,000+ mahsulot" — rather than sitting in a numeric
  * field, because that is how they read and how a translator wants them. So the
  * number has to be found in the string rather than handed over, and put back
  * formatted exactly as it was written: a count that ends on "10000" where the

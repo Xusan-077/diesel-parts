@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/locales";
+import type { HomeProductsResponse } from "@/lib/product-collections";
 import type { Product } from "@/lib/types";
 import { apiClient } from "./client";
 import type { ProductPage, ProductQuery } from "./product-query";
@@ -55,5 +57,29 @@ export async function fetchProducts(params: ProductListParams): Promise<ProductP
 
 export async function fetchProduct(slug: string): Promise<Product> {
   const response = await apiClient.get<Product>(`/products/${slug}`);
+  return response.data;
+}
+
+/** Stable key for the one request the three home rows share. */
+export function homeProductsQueryKey(params: HomeProductsParams) {
+  return ["home-products", params.lang, params.limit] as const;
+}
+
+export interface HomeProductsParams {
+  lang: Locale;
+  limit: number;
+}
+
+/**
+ * The home page's three collections. `lang` is in the query because the card
+ * captions carry a category name, which is localised server-side — the same
+ * reason `/api/products/by-ids` takes one.
+ */
+export async function fetchHomeProducts(
+  params: HomeProductsParams,
+): Promise<HomeProductsResponse> {
+  const response = await apiClient.get<HomeProductsResponse>("/products/home", {
+    params: { lang: params.lang, limit: params.limit },
+  });
   return response.data;
 }
