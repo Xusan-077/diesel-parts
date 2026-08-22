@@ -5,7 +5,7 @@ import type { GeoPoint } from "./map-links";
  * NEXT_PUBLIC_SITE_URL per environment so preview deploys do not emit
  * canonicals pointing at production.
  */
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dieselparts.uz";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://diesel-parts.uz";
 
 /** BCP-47 tags for the locale segments, for hreflang and og:locale. */
 export const OG_LOCALES = {
@@ -30,8 +30,8 @@ export const COMPANY_NAME = "Diesel Parts";
  * another company's real numbers, but they must not go live as-is.
  */
 export const SITE_PHONES: SitePhone[] = [
-  { display: "+998 90 000-00-00", tel: "+998900000000" },
-  { display: "+998 91 000-00-00", tel: "+998910000000" },
+  { display: "+998 97 425-27-00", tel: "+998974252700" },
+  { display: "+998 90 136-22-77", tel: "+998901362277" },
 ];
 
 /**

@@ -69,7 +69,7 @@
     "themeDark": "Dark mode"
   },
   "footer": {
-    "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 15 years.",
+    "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 30 years.",
     "linksTitle": "Links",
     "contactTitle": "Contact",
     "addressLabel": "Address",
@@ -77,7 +77,7 @@
     "phoneLabel": "Phone",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Business hours",
-    "hours": "Monday–Saturday: 9:00–18:00, Sunday: closed",
+    "hours": "Monday–Saturday: 9:00–23:00, Sunday: closed",
     "paymentTitle": "Payment methods",
     "mapTitle": "Find us on the map",
     "mapAlt": "Map showing our office location",
@@ -93,7 +93,7 @@
     "heroCtaQuote": "Request Quote",
     "trustBadges": [
       {
-        "title": "15+ Years Experience",
+        "title": "30+ Years Experience",
         "description": "Long-standing experience and trust in the industry"
       },
       {
@@ -252,7 +252,7 @@
     "statsTitle": "By the Numbers",
     "stats": [
       {
-        "value": "15+",
+        "value": "30+",
         "label": "years of experience"
       },
       {
@@ -281,7 +281,7 @@
     "addressTitle": "Address",
     "address": "114 Bog Street, Yangihayot District, Tashkent",
     "phoneTitle": "Phone",
-    "phone": "+998 71 200 00 00",
+    "phone": "+998 97 425 27 00",
     "emailTitle": "Email",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Business Hours",

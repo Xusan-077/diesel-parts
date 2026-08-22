@@ -73,11 +73,11 @@ describe("GET /api/reviews", () => {
    * reviews from exactly the people deciding whether to buy.
    */
   it("passes the session phone through so the reader's own entry is marked", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     listProductReviews.mockResolvedValue({ items: [] });
     await GET(get("productId=p-1"));
 
-    expect(listProductReviews).toHaveBeenCalledWith("p-1", 1, 5, "998901234567");
+    expect(listProductReviews).toHaveBeenCalledWith("p-1", 1, 5, "998931362277");
   });
 
   it("caps the page size so one request cannot pull every review", async () => {
@@ -94,7 +94,7 @@ describe("POST /api/reviews", () => {
   });
 
   it("writes the review for a signed-in caller who bought the part", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     upsertReview.mockResolvedValue({ id: "r-1" });
 
     const response = await POST(post(VALID));
@@ -109,18 +109,18 @@ describe("POST /api/reviews", () => {
    * constraint would be decoration.
    */
   it("takes the identity from the session, never from the body", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     upsertReview.mockResolvedValue({ id: "r-1" });
 
-    await POST(post({ ...VALID, authorPhone: "998900000000" }));
+    await POST(post({ ...VALID, authorPhone: "(998974252700)" }));
 
     expect(upsertReview).toHaveBeenCalledWith(
-      expect.objectContaining({ authorPhone: "998901234567" }),
+      expect.objectContaining({ authorPhone: "998931362277" }),
     );
   });
 
   it("rejects a rating outside the scale", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
 
     expect((await POST(post({ ...VALID, rating: 6 }))).status).toBe(400);
     expect((await POST(post({ ...VALID, rating: 0 }))).status).toBe(400);
@@ -129,19 +129,19 @@ describe("POST /api/reviews", () => {
   });
 
   it("rejects a body under the floor and over the ceiling", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
 
     expect((await POST(post({ ...VALID, body: "zo'r" }))).status).toBe(400);
     expect((await POST(post({ ...VALID, body: "a".repeat(1001) }))).status).toBe(400);
   });
 
   it("rejects a name of nothing but spaces", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     expect((await POST(post({ ...VALID, authorName: "   " }))).status).toBe(400);
   });
 
   it("rejects a body that is not JSON", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     const response = await POST(
       new Request("http://localhost/api/reviews", { method: "POST", body: "{" }),
     );
@@ -155,7 +155,7 @@ describe("POST /api/reviews", () => {
    * That is not a server fault and a 500 explains nothing.
    */
   it("answers a write against a vanished product with a 400, not a crash", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     upsertReview.mockRejectedValue(new Error("Foreign key constraint failed"));
 
     expect((await POST(post(VALID))).status).toBe(400);
@@ -168,7 +168,7 @@ describe("POST /api/reviews", () => {
    * a competitor with a phone number would do.
    */
   it("refuses a caller who has not bought the part", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     hasPurchasedProduct.mockResolvedValue(false);
 
     const response = await POST(post(VALID));
@@ -178,17 +178,17 @@ describe("POST /api/reviews", () => {
   });
 
   it("checks the purchase against the session phone and the named part", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     upsertReview.mockResolvedValue({ id: "r-1" });
 
-    await POST(post({ ...VALID, authorPhone: "998900000000" }));
+    await POST(post({ ...VALID, authorPhone: "998974252700" }));
 
     // The body's phone is ignored here for the same reason it is ignored below.
-    expect(hasPurchasedProduct).toHaveBeenCalledWith(VALID.productId, "998901234567");
+    expect(hasPurchasedProduct).toHaveBeenCalledWith(VALID.productId, "998931362277");
   });
 
   it("checks the purchase before writing, not after", async () => {
-    getSession.mockResolvedValue({ phone: "998901234567" });
+    getSession.mockResolvedValue({ phone: "998931362277" });
     hasPurchasedProduct.mockResolvedValue(false);
 
     await POST(post(VALID));

@@ -69,7 +69,7 @@
     "themeDark": "Qorong'i rejim"
   },
   "footer": {
-    "description": "15 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
+    "description": "30 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
     "linksTitle": "Havolalar",
     "contactTitle": "Aloqa",
     "addressLabel": "Manzil",
@@ -77,7 +77,7 @@
     "phoneLabel": "Telefon",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Ish vaqti",
-    "hours": "Dushanba–Shanba: 9:00–18:00, Yakshanba: dam olish kuni",
+    "hours": "Dushanba–Shanba: 9:00–23:00, Yakshanba: dam olish kuni",
     "paymentTitle": "To'lov usullari",
     "mapTitle": "Bizni xaritada toping",
     "mapAlt": "Ofisimiz joylashgan yerning xaritasi",
@@ -93,7 +93,7 @@
     "heroCtaQuote": "Narx so'rash",
     "trustBadges": [
       {
-        "title": "15+ yil tajriba",
+        "title": "30 yil tajriba",
         "description": "Sohada uzoq yillik tajriba va ishonch"
       },
       {
@@ -252,7 +252,7 @@
     "statsTitle": "Raqamlarda biz",
     "stats": [
       {
-        "value": "15+",
+        "value": "30+",
         "label": "yillik tajriba"
       },
       {
@@ -281,11 +281,11 @@
     "addressTitle": "Manzil",
     "address": "Toshkent shahri, Yangihayot tumani, Bog‘ ko‘chasi 114.",
     "phoneTitle": "Telefon",
-    "phone": "+998 71 200 00 00",
+    "phone": "+998 97 425 27 00",
     "emailTitle": "Email",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Ish vaqti",
-    "hours": "Dushanba - Shanba, 09:00 - 18:00"
+    "hours": "Dushanba - Shanba, 09:00 - 23:00"
   },
   "productActions": {
     "addToWishlist": "Saralanganlarga qo'shish",

@@ -296,7 +296,7 @@ Create `dictionaries/uz.json`:
     "menu": "Menyu"
   },
   "footer": {
-    "description": "15 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
+    "description": "30 yildan ortiq tajriba bilan og'ir texnika uchun OEM sifatidagi ehtiyot qismlarni dunyo bo'ylab yetkazib beramiz.",
     "linksTitle": "Havolalar",
     "contactTitle": "Aloqa",
     "addressLabel": "Manzil",
@@ -311,7 +311,7 @@ Create `dictionaries/uz.json`:
     "heroCtaCatalog": "Katalogni ko'rish",
     "heroCtaQuote": "Narx so'rash",
     "trustBadges": [
-      { "title": "15+ yil tajriba", "description": "Sohada uzoq yillik tajriba va ishonch" },
+      { "title": "30+ yil tajriba", "description": "Sohada uzoq yillik tajriba va ishonch" },
       { "title": "10,000+ mahsulot", "description": "Keng assortimentdagi ehtiyot qismlar" },
       { "title": "Jahon bo'ylab yetkazib berish", "description": "Xalqaro mijozlarga tez va ishonchli logistika" },
       { "title": "OEM sifat", "description": "Barcha mahsulotlar OEM standartlariga mos" }
@@ -377,7 +377,7 @@ Create `dictionaries/uz.json`:
     ],
     "statsTitle": "Raqamlarda biz",
     "stats": [
-      { "value": "15+", "label": "yillik tajriba" },
+      { "value": "30+", "label": "yillik tajriba" },
       { "value": "10,000+", "label": "mahsulot" },
       { "value": "30+", "label": "mamlakat" },
       { "value": "500+", "label": "hamkor" }
@@ -395,11 +395,11 @@ Create `dictionaries/uz.json`:
     "addressTitle": "Manzil",
     "address": "Toshkent sh., Chilonzor tumani, Bunyodkor shoh ko'chasi 12",
     "phoneTitle": "Telefon",
-    "phone": "+998 71 200 00 00",
+    "phone": "+998 97 425 27 00",
     "emailTitle": "Email",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Ish vaqti",
-    "hours": "Dushanba - Shanba, 09:00 - 18:00"
+    "hours": "Dushanba - Shanba, 09:00 - 23:00"
   },
   "requestQuote": {
     "title": "Narx so'rash",
@@ -476,7 +476,7 @@ Create `dictionaries/ru.json`:
     "menu": "Меню"
   },
   "footer": {
-    "description": "Более 15 лет поставляем запчасти OEM-качества для тяжёлой техники по всему миру.",
+    "description": "Более 30 лет поставляем запчасти OEM-качества для тяжёлой техники по всему миру.",
     "linksTitle": "Ссылки",
     "contactTitle": "Контакты",
     "addressLabel": "Адрес",
@@ -491,7 +491,7 @@ Create `dictionaries/ru.json`:
     "heroCtaCatalog": "Смотреть каталог",
     "heroCtaQuote": "Запросить цену",
     "trustBadges": [
-      { "title": "15+ лет опыта", "description": "Многолетний опыт и доверие в отрасли" },
+      { "title": "30+ лет опыта", "description": "Многолетний опыт и доверие в отрасли" },
       { "title": "10 000+ товаров", "description": "Широкий ассортимент запчастей" },
       { "title": "Доставка по всему миру", "description": "Быстрая и надёжная логистика для клиентов" },
       { "title": "OEM-качество", "description": "Все товары соответствуют стандартам OEM" }
@@ -557,7 +557,7 @@ Create `dictionaries/ru.json`:
     ],
     "statsTitle": "Мы в цифрах",
     "stats": [
-      { "value": "15+", "label": "лет опыта" },
+      { "value": "30+", "label": "лет опыта" },
       { "value": "10 000+", "label": "товаров" },
       { "value": "30+", "label": "стран" },
       { "value": "500+", "label": "партнёров" }
@@ -575,11 +575,11 @@ Create `dictionaries/ru.json`:
     "addressTitle": "Адрес",
     "address": "г. Ташкент, Чиланзарский район, проспект Бунёдкор 12",
     "phoneTitle": "Телефон",
-    "phone": "+998 71 200 00 00",
+    "phone": "+998 97 425 27 00",
     "emailTitle": "Email",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Часы работы",
-    "hours": "Понедельник - Суббота, 09:00 - 18:00"
+    "hours": "Понедельник - Суббота, 09:00 - 23:00"
   },
   "requestQuote": {
     "title": "Запросить цену",
@@ -656,7 +656,7 @@ Create `dictionaries/en.json`:
     "menu": "Menu"
   },
   "footer": {
-    "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 15 years.",
+    "description": "Delivering OEM-quality spare parts for heavy machinery worldwide for over 30 years.",
     "linksTitle": "Links",
     "contactTitle": "Contact",
     "addressLabel": "Address",
@@ -671,7 +671,7 @@ Create `dictionaries/en.json`:
     "heroCtaCatalog": "Browse Catalog",
     "heroCtaQuote": "Request Quote",
     "trustBadges": [
-      { "title": "15+ Years Experience", "description": "Long-standing experience and trust in the industry" },
+      { "title": "30+ Years Experience", "description": "Long-standing experience and trust in the industry" },
       { "title": "10,000+ Products", "description": "A wide assortment of spare parts" },
       { "title": "Worldwide Delivery", "description": "Fast, reliable logistics for international customers" },
       { "title": "OEM Quality", "description": "Every product meets OEM standards" }
@@ -737,7 +737,7 @@ Create `dictionaries/en.json`:
     ],
     "statsTitle": "By the Numbers",
     "stats": [
-      { "value": "15+", "label": "years of experience" },
+      { "value": "30+", "label": "years of experience" },
       { "value": "10,000+", "label": "products" },
       { "value": "30+", "label": "countries" },
       { "value": "500+", "label": "partners" }
@@ -755,7 +755,7 @@ Create `dictionaries/en.json`:
     "addressTitle": "Address",
     "address": "12 Bunyodkor Ave, Chilonzor District, Tashkent",
     "phoneTitle": "Phone",
-    "phone": "+998 71 200 00 00",
+    "phone": "+998 97 425 27 00",
     "emailTitle": "Email",
     "email": "info@dieselparts.uz",
     "hoursTitle": "Business Hours",
