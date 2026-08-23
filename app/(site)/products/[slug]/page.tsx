@@ -168,7 +168,7 @@ export default async function ProductDetailPage({
       ) : null}
 
       <div className="grid gap-12 lg:grid-cols-2">
-        <ProductGallery imageUrl={product.imageUrl} galleryAlt={dict.product.galleryAlt} />
+        <ProductGallery imageUrl={product.imageUrl} galleryAlt={product.name[lang]} />
 
         <div>
           <p className="text-sm text-muted">{brand?.name ?? ""}</p>
@@ -226,6 +226,7 @@ export default async function ProductDetailPage({
               categoryName={category?.name[lang] ?? ""}
               lang={lang}
               dict={dict.productActions}
+              requestPriceLabel={dict.common.requestPrice}
             />
             <InquiryDialog
               productId={product.id}

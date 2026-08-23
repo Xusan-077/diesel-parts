@@ -28,7 +28,13 @@ export default async function AccountWishlistPage() {
   return (
     <AccountPanelCard title={dict.account.profilePanel.nav.wishlist}>
       <div className="px-6 py-6">
-        <WishlistClient lang={lang} dict={dict.wishlist} stock={dict.common.stock} />
+        <WishlistClient
+          lang={lang}
+          dict={dict.wishlist}
+          cartDict={dict.productActions}
+          requestPriceLabel={dict.common.requestPrice}
+          stock={dict.common.stock}
+        />
       </div>
     </AccountPanelCard>
   );

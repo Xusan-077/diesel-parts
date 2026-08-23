@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { toast } from "sonner";
+import { motion } from "motion/react";
 import { MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-store";
 import { useSnapshotStore } from "@/lib/store/stores";
+import { MOTION } from "@/components/providers/motion-provider";
 import { MAX_QUANTITY, MIN_QUANTITY } from "@/lib/store/cart";
 import { Icon } from "@/components/ui/icon";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -91,7 +93,11 @@ export function ProductCartControl({
       {/* The fixed box the two states share. */}
       <div className="h-9">
         {inCart ? (
-          <div
+          <motion.div
+            key="stepper"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={MOTION.pop}
             role="group"
             aria-label={dict.quantity}
             className="flex h-9 w-full items-center rounded-md border border-accent bg-accent/10"
@@ -136,9 +142,13 @@ export function ProductCartControl({
             >
               <Icon icon={Plus} size="xs" />
             </button>
-          </div>
+          </motion.div>
         ) : (
-          <button
+          <motion.button
+            key="add"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={MOTION.pop}
             type="button"
             onClick={(event) => {
               event.preventDefault();
@@ -152,7 +162,7 @@ export function ProductCartControl({
           >
             <Icon icon={ShoppingCart} size="xs" className="hidden @[9rem]:block" />
             <span className="truncate">{dict.addToCart}</span>
-          </button>
+          </motion.button>
         )}
       </div>
     </div>

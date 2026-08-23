@@ -51,6 +51,8 @@
     "catalogError": "The catalog could not be loaded.",
     "catalogRetry": "Try again",
     "catalogEmpty": "The catalog is empty for now.",
+    "catalogShowMore": "{count} more",
+    "catalogViewAll": "View all",
     "searchPlaceholder": "Product, code or brand...",
     "searchLabel": "Search",
     "searchSuggestions": "Search results",
@@ -224,7 +226,6 @@
     "compatibleModelsTitle": "Compatible Models",
     "specificationsTitle": "Specifications",
     "relatedProductsTitle": "Related Products",
-    "galleryAlt": "Product image",
     "ratingLabel": "{rating} out of 5",
     "reviewCount": "{count} reviews",
     "reviewCountEmpty": "No reviews yet",
@@ -233,11 +234,13 @@
   "categories": {
     "title": "Category",
     "subtitle": "Products in this category",
+    "metaDescription": "Original and aftermarket parts in the {name} category — prices, availability and specs in the DieselParts catalog.",
     "productsInCategory": "products"
   },
   "brands": {
     "title": "Brand",
     "subtitle": "Products from this brand",
+    "metaDescription": "Spare parts from {name} — prices, availability and specs in the DieselParts catalog.",
     "productsFromBrand": "products"
   },
   "about": {

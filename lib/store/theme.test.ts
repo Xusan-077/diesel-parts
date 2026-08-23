@@ -131,13 +131,18 @@ describe("themeInitScript", () => {
     expect(run("light", true)).toBe(false);
   });
 
-  it("follows the machine when nothing is stored", () => {
-    expect(run(null, true)).toBe(true);
+  it("falls back to light when nothing is stored, whatever the machine says", () => {
+    expect(run(null, true)).toBe(false);
     expect(run(null, false)).toBe(false);
   });
 
-  it("falls back to the machine on a corrupt value instead of throwing", () => {
-    expect(run("{not json", true)).toBe(true);
+  it("falls back to light on a corrupt value instead of throwing", () => {
+    expect(run("{not json", true)).toBe(false);
     expect(run("{not json", false)).toBe(false);
+  });
+
+  it("still follows the machine when the stored choice is explicitly system", () => {
+    expect(run(JSON.stringify({ state: { theme: "system" } }), true)).toBe(true);
+    expect(run(JSON.stringify({ state: { theme: "system" } }), false)).toBe(false);
   });
 });

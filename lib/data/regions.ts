@@ -68,4 +68,4 @@ export const regions: Region[] = [
   },
 ];
 
-export const DEFAULT_REGION_ID = "navoiy";
+export const DEFAULT_REGION_ID = "tashkent-city";

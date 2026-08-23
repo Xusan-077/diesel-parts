@@ -15,6 +15,10 @@ export function ProductGallery({
   galleryAlt,
 }: {
   imageUrl: string | null;
+  /** The part's own name — this is the page's single most important image,
+   *  so its alt text names what it is a photograph of, the same way every
+   *  card in a grid already does, rather than a caption identical on all of
+   *  them ("Product image"). */
   galleryAlt: string;
 }) {
   return (
@@ -22,6 +26,7 @@ export function ProductGallery({
       src={imageUrl}
       alt={galleryAlt}
       fallbackIconSize="xl"
+      priority
       className="aspect-4/3 w-full rounded-lg border border-border"
     />
   );

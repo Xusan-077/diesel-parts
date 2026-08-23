@@ -7,10 +7,10 @@ export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
 /**
- * No stored choice means follow the operating system, which is what a visitor
- * who set their machine to dark already expects everywhere else.
+ * No stored choice means light — the storefront's default look regardless of
+ * the visitor's OS setting.
  */
-export const DEFAULT_THEME: Theme = "system";
+export const DEFAULT_THEME: Theme = "light";
 
 /**
  * The same key `next-themes` wrote to, deliberately. Keeping it means a

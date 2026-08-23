@@ -29,7 +29,13 @@ export default async function WishlistPage() {
       <p className="mt-2 text-muted">{dict.wishlist.subtitle}</p>
 
       <div className="mt-10">
-        <WishlistClient lang={lang} dict={dict.wishlist} stock={dict.common.stock} />
+        <WishlistClient
+          lang={lang}
+          dict={dict.wishlist}
+          cartDict={dict.productActions}
+          requestPriceLabel={dict.common.requestPrice}
+          stock={dict.common.stock}
+        />
       </div>
     </Container>
   );

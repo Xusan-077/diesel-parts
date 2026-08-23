@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { toast } from "sonner";
-import { Check, Heart, MessageCircle, Scale, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Heart, Scale, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCart, useCompare, useWishlist } from "@/hooks/use-store";
+import { useCompare, useWishlist } from "@/hooks/use-store";
 import { useSnapshotStore } from "@/lib/store/stores";
+import { ProductCartControl } from "@/components/product/product-cart-control";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import type { Product } from "@/lib/types";
@@ -63,6 +63,8 @@ interface ProductActionsProps {
   categoryName: string;
   lang: Locale;
   dict: Dictionary["productActions"];
+  /** Replaces the cart control's label when the part has no price yet. */
+  requestPriceLabel: string;
   className?: string;
 }
 
@@ -72,16 +74,14 @@ export function ProductActions({
   categoryName,
   lang,
   dict,
+  requestPriceLabel,
   className,
 }: ProductActionsProps) {
   const wishlist = useWishlist();
   const compare = useCompare();
-  const cart = useCart();
   const { record } = useSnapshotStore.getState();
 
   const productId = product.id;
-  // `null` swaps the cart button for a contact link.
-  const price = product.price;
 
   /**
    * Every list holds ids, and every list has a page that has to draw rows.
@@ -95,8 +95,6 @@ export function ProductActions({
 
   const inWishlist = wishlist.has(productId);
   const inCompare = compare.has(productId);
-  const inCart = cart.has(productId);
-  const cartQuantity = cart.quantityOf(productId);
   const compareBlocked = !inCompare && compare.isFull;
 
   return (
@@ -131,33 +129,20 @@ export function ProductActions({
         }}
       />
 
-      {price === null ? (
-        // No price set yet, so there is nothing to put in a cart.
-        <Link
-          href="/contact"
-          aria-label={dict.contact}
-          title={dict.contact}
-          className={cn(buttonClass, inactiveClass)}
-        >
-          <Icon icon={MessageCircle} />
-        </Link>
-      ) : (
-        <IconButton
-          // The checkmark alone made a second click look like a no-op, so the
-          // running quantity is drawn on the button the same way the header
-          // badge draws it. The label carries the number for screen readers,
-          // which is why the badge itself is aria-hidden.
-          label={inCart ? `${dict.inCart} (${cartQuantity})` : dict.addToCart}
-          icon={inCart ? Check : ShoppingCart}
-          active={inCart}
-          count={cartQuantity}
-          onClick={() => {
-            remember();
-            cart.add(productId);
-            toast.success(dict.toastCartAdded);
-          }}
-        />
-      )}
+      {/*
+        The same add-button-to-stepper control as the catalog card, so a part
+        does not owe the visitor two different cart affordances depending on
+        which page it is looked at from.
+      */}
+      <ProductCartControl
+        product={product}
+        brandName={brandName}
+        categoryName={categoryName}
+        lang={lang}
+        dict={dict}
+        requestPriceLabel={requestPriceLabel}
+        className="w-40"
+      />
     </div>
   );
 }

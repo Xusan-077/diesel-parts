@@ -58,16 +58,17 @@ afterEach(() => {
 });
 
 describe("the theme provider", () => {
-  it("follows the system when nothing is stored", () => {
+  it("defaults to light when nothing is stored", () => {
     renderToggle();
 
-    expect(useThemeStore.getState().theme).toBe("system");
+    expect(useThemeStore.getState().theme).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
     expect(screen.getByRole("button").getAttribute("aria-label")).toBe("Qorong‘i rejim");
   });
 
-  it("paints dark when the system asks for it", () => {
+  it("paints dark when explicitly set to follow a system that asks for it", () => {
     stubSystemDark(true);
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ state: { theme: "system" } }));
 
     renderToggle();
 
@@ -75,7 +76,8 @@ describe("the theme provider", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("keeps up when the system preference changes while the page is open", () => {
+  it("keeps up when the system preference changes while explicitly set to system", () => {
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ state: { theme: "system" } }));
     const media = stubSystemDark(false);
     renderToggle();
 
@@ -119,7 +121,7 @@ describe("the theme provider", () => {
 
     renderToggle();
 
-    expect(useThemeStore.getState().theme).toBe("system");
+    expect(useThemeStore.getState().theme).toBe("light");
     expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 });
@@ -146,6 +148,7 @@ describe("the toggle", () => {
   it("leaves system for the opposite of what is on screen", async () => {
     const user = userEvent.setup();
     stubSystemDark(true);
+    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ state: { theme: "system" } }));
     renderToggle();
 
     await user.click(screen.getByRole("button"));
