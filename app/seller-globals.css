@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/*
+ * Independent Tailwind entry point for the standalone seller panel
+ * (/login, /seller/*). Deliberately NOT the shared app/globals.css: the
+ * panel talks to a separate backend and was approved as its own system with
+ * its own tokens (background #0D0E11, accent #F77D2A) rather than the
+ * storefront/admin ramp — see the ACCENT REPAINT note in globals.css for why
+ * that ramp must not move for this panel's sake, and vice versa.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --background: #0d0e11;
+  --surface: #16181d;
+  --surface-muted: #1c1f26;
+  --surface-hover: #21242c;
+
+  --foreground: #f3f4f6;
+  --muted: #9aa0ac;
+  --disabled: #5b616e;
+
+  --border-color: #262a33;
+  --border-strong: #333844;
+
+  --accent: #f77d2a;
+  --accent-hover: color-mix(in srgb, var(--accent) 88%, black);
+  --accent-active: color-mix(in srgb, var(--accent) 76%, black);
+  --accent-foreground: #17110a;
+  --accent-subtle: color-mix(in srgb, var(--accent) 16%, var(--surface));
+
+  --danger: #f0553f;
+  --danger-surface: color-mix(in srgb, var(--danger) 16%, var(--surface));
+  --success: #3fb56d;
+  --success-surface: color-mix(in srgb, var(--success) 16%, var(--surface));
+  --warning: #e3b341;
+  --warning-surface: color-mix(in srgb, var(--warning) 16%, var(--surface));
+  --info: #4d95e8;
+  --info-surface: color-mix(in srgb, var(--info) 16%, var(--surface));
+}
+
+@theme {
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;   /* the spec's "≤8px" ceiling — nothing in the panel rounds past this */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-disabled: var(--disabled);
+  --color-border: var(--border-color);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --font-sans: var(--font-seller-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-seller-mono), ui-monospace, monospace;
+}
+
+.seller-root {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Uppercase micro-labels: table heads, form labels, stat eyebrows. */
+.seller-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

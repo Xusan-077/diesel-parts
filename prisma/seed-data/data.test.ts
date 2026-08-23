@@ -26,10 +26,16 @@ describe("mock data integrity", () => {
     }
   });
 
-  it("has 15 products with unique ids and slugs", () => {
-    expect(products).toHaveLength(15);
+  it("has 19 products with unique ids and slugs", () => {
+    expect(products).toHaveLength(19);
     expectUniqueSlugs(products);
     expect(new Set(products.map((p) => p.id)).size).toBe(products.length);
+  });
+
+  it("every product has a photo", () => {
+    for (const product of products) {
+      expect(product.imageUrl).toBeTruthy();
+    }
   });
 
   it("every product references a real brand and category", () => {
@@ -52,11 +58,10 @@ describe("mock data integrity", () => {
     }
   });
 
-  it("every product has at least one compatible model, one spec, and one image label", () => {
+  it("every product has at least one compatible model and one spec", () => {
     for (const product of products) {
       expect(product.compatibleModels.length).toBeGreaterThan(0);
       expect(product.specs.length).toBeGreaterThan(0);
-      expect(product.imageLabels.length).toBeGreaterThan(0);
     }
   });
 

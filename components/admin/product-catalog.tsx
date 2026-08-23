@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Archive, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Archive, ImageOff, Pencil, Plus, RotateCcw } from "lucide-react";
 import {
   useAdminProducts,
   useProductEditLoader,
@@ -10,8 +10,12 @@ import {
 } from "@/hooks/admin/use-admin-products";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import { formatInteger, formatSum } from "@/lib/analytics/format";
-import type { AdminProductPage, AdminProductRow } from "@/lib/api/product-write-repository";
-import type { AdminProductListQuery, ProductWriteInput } from "@/lib/schemas";
+import type {
+  AdminProductPage,
+  AdminProductRow,
+  ProductEditRecord,
+} from "@/lib/api/product-write-repository";
+import type { AdminProductListQuery } from "@/lib/schemas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/form-modal";
@@ -42,7 +46,7 @@ import {
 /** Which dialog is open, and about what. `null` is the resting state. */
 type Dialog =
   | { kind: "create" }
-  | { kind: "edit"; row: AdminProductRow; values: ProductWriteInput }
+  | { kind: "edit"; row: AdminProductRow; values: ProductEditRecord }
   | { kind: "archive"; row: AdminProductRow }
   | { kind: "restore"; row: AdminProductRow }
   | null;
@@ -137,6 +141,9 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
           <table className="w-full min-w-4xl text-left text-sm">
             <thead>
               <tr className="border-b border-border">
+                <th scope="col" className="type-eyebrow pb-2 text-muted">
+                  <span className="sr-only">Rasm</span>
+                </th>
                 <th scope="col" className="type-eyebrow pb-2 text-muted">Mahsulot</th>
                 <th scope="col" className="type-eyebrow pb-2 text-muted">SKU</th>
                 <th scope="col" className="type-eyebrow pb-2 text-muted">Brend</th>
@@ -158,6 +165,23 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                        is the panel's existing background treatment. */
                     className="group row-hover border-b border-border last:border-0"
                   >
+                    <td className="py-3 pr-3">
+                      {/* A thumbnail, or the same empty-photo mark the upload
+                          field shows — never a broken <img>, since most rows
+                          in an existing catalog have no photo yet. */}
+                      {product.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.imageUrl}
+                          alt=""
+                          className="size-10 rounded-md border border-border object-cover"
+                        />
+                      ) : (
+                        <div className="flex size-10 items-center justify-center rounded-md border border-dashed border-border text-muted">
+                          <ImageOff aria-hidden className="size-4" />
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 pr-3">
                       {/*
                         * The name opens the editor rather than navigating. It

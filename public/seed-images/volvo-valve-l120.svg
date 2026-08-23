@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" role="img" aria-label="Volvo L120 transmissiya klapani">
+  <rect width="400" height="400" fill="#111827" />
+  <rect width="400" height="6" fill="#1560bd" />
+  <circle cx="200" cy="150" r="54" fill="none" stroke="#1560bd" stroke-width="6" />
+  <circle cx="200" cy="150" r="18" fill="#1560bd" />
+  <g stroke="#1560bd" stroke-width="6">
+    <line x1="200" y1="80" x2="200" y2="96" />
+    <line x1="200" y1="204" x2="200" y2="220" />
+    <line x1="130" y1="150" x2="146" y2="150" />
+    <line x1="254" y1="150" x2="270" y2="150" />
+    <line x1="148" y1="98" x2="157" y2="112" />
+    <line x1="243" y1="188" x2="252" y2="202" />
+    <line x1="252" y1="98" x2="243" y2="112" />
+    <line x1="157" y1="188" x2="148" y2="202" />
+  </g>
+  <text font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f9fafb" text-anchor="middle"><tspan x="200" y="205">Volvo L120</tspan><tspan x="200" y="235">transmissiya klapani</tspan></text>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="15" fill="#1560bd" text-anchor="middle" letter-spacing="1">DP-VLV-L120</text>
+  <text x="200" y="370" font-family="Arial, sans-serif" font-size="13" fill="#9ca3af" text-anchor="middle" letter-spacing="2">VOLVO</text>
+</svg>

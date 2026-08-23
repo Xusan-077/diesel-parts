@@ -27,7 +27,6 @@ export const CSV_COLUMNS = [
   "categoryId",
   "brandId",
   "compatibleModels",
-  "imageLabels",
   "isActive",
 ] as const;
 
@@ -70,7 +69,6 @@ export function toCsv(rows: readonly CsvProduct[]): string {
       row.categoryId,
       row.brandId,
       row.compatibleModels.join(LIST_SEPARATOR),
-      row.imageLabels.join(LIST_SEPARATOR),
       row.isActive ? "1" : "0",
     ]
       .map((cell) => escapeCell(cell))
@@ -199,7 +197,6 @@ export function parseProductCsv(text: string): CsvParseResult {
       // Specs are nested and have no sensible flat column. An imported row keeps
       // whatever specs the product already had; a new one starts with none.
       specs: [],
-      imageLabels: splitList(cell("imageLabels")),
       isActive: cell("isActive") !== "0",
     };
 

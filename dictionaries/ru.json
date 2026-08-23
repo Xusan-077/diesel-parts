@@ -228,10 +228,7 @@
     "ratingLabel": "{rating} из 5",
     "reviewCount": "{count} отзывов",
     "reviewCountEmpty": "Нет отзывов",
-    "orderedCount": "Заказано {count} раз",
-    "imagePrev": "Предыдущее фото",
-    "imageNext": "Следующее фото",
-    "imageDot": "Фото {n}"
+    "orderedCount": "Заказано {count} раз"
   },
   "categories": {
     "title": "Категория",

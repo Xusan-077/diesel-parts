@@ -1,41 +1,28 @@
-"use client";
+import { ProductImage } from "@/components/product/product-image";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-
+/**
+ * The product page's own photo.
+ *
+ * One image per product today (`Product.imageUrl`), so this is a frame, not a
+ * browsable gallery — the thumbnail strip and active-frame state a multi-photo
+ * page would need are not built here. A `ProductImage` table backing several
+ * photos per product is a real future feature, not something this component
+ * should grow toward speculatively; the day it exists, this is the one place
+ * that changes.
+ */
 export function ProductGallery({
-  imageLabels,
+  imageUrl,
   galleryAlt,
 }: {
-  imageLabels: string[];
+  imageUrl: string | null;
   galleryAlt: string;
 }) {
-  const [active, setActive] = useState(0);
-
   return (
-    <div>
-      <div
-        role="img"
-        aria-label={`${galleryAlt} — ${imageLabels[active]}`}
-        className="flex aspect-4/3 items-center justify-center rounded-lg border border-border bg-linear-to-br from-surface-hover to-transparent text-lg text-muted"
-      >
-        {imageLabels[active]}
-      </div>
-      <div className="mt-3 flex gap-2">
-        {imageLabels.map((label, index) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setActive(index)}
-            className={cn(
-              "flex h-16 w-16 items-center justify-center rounded-md border text-xs text-muted",
-              index === active ? "border-accent text-accent-strong" : "border-border"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
+    <ProductImage
+      src={imageUrl}
+      alt={galleryAlt}
+      fallbackIconSize="xl"
+      className="aspect-4/3 w-full rounded-lg border border-border"
+    />
   );
 }

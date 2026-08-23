@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+npm-debug.log
+
+# Keep environment variables out of version control
+.env
+.env.local
+
+/generated/prisma

@@ -7,6 +7,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/icon";
+import { ProductImage } from "@/components/product/product-image";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { fetchProducts } from "@/lib/api/products";
 import { formatPrice } from "@/lib/format-price";
@@ -199,18 +200,12 @@ export function HeaderSearch({
                       index === active ? "bg-surface-hover" : "hover:bg-surface-hover"
                     )}
                   >
-                    {/*
-                      The catalog stores a caption per photograph, not the
-                      photograph — so the tile carries the caption, exactly as
-                      a product card does. It becomes a picture on the day the
-                      pictures arrive, and the row does not change shape.
-                    */}
-                    <span
-                      aria-hidden
-                      className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-hover text-[10px] leading-tight text-muted"
-                    >
-                      {product.imageLabels[0]}
-                    </span>
+                    <ProductImage
+                      src={product.imageUrl}
+                      alt=""
+                      fallbackIconSize="sm"
+                      className="h-11 w-11 shrink-0 rounded-md"
+                    />
 
                     {/* Two lines rather than an ellipsis: on a phone the name
                         is the only thing distinguishing "Doosan DX140…" from

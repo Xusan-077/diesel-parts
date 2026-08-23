@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" role="img" aria-label="Doosan DX225 gusenitsa zanjiri">
+  <rect width="400" height="400" fill="#111827" />
+  <rect width="400" height="6" fill="#003876" />
+  <circle cx="200" cy="150" r="54" fill="none" stroke="#003876" stroke-width="6" />
+  <circle cx="200" cy="150" r="18" fill="#003876" />
+  <g stroke="#003876" stroke-width="6">
+    <line x1="200" y1="80" x2="200" y2="96" />
+    <line x1="200" y1="204" x2="200" y2="220" />
+    <line x1="130" y1="150" x2="146" y2="150" />
+    <line x1="254" y1="150" x2="270" y2="150" />
+    <line x1="148" y1="98" x2="157" y2="112" />
+    <line x1="243" y1="188" x2="252" y2="202" />
+    <line x1="252" y1="98" x2="243" y2="112" />
+    <line x1="157" y1="188" x2="148" y2="202" />
+  </g>
+  <text font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f9fafb" text-anchor="middle"><tspan x="200" y="205">Doosan DX225 gusenitsa</tspan><tspan x="200" y="235">zanjiri</tspan></text>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="15" fill="#003876" text-anchor="middle" letter-spacing="1">DP-TRC-DX225</text>
+  <text x="200" y="370" font-family="Arial, sans-serif" font-size="13" fill="#9ca3af" text-anchor="middle" letter-spacing="2">DOOSAN</text>
+</svg>

@@ -58,7 +58,6 @@ function toRow(input: ProductWriteInput) {
     brandId: input.brandId,
     compatibleModels: input.compatibleModels,
     specs: input.specs as unknown as Prisma.InputJsonValue,
-    imageLabels: input.imageLabels,
     isActive: input.isActive,
   };
 }
@@ -193,6 +192,7 @@ export interface AdminProductRow {
   categoryName: string;
   brandName: string;
   isActive: boolean;
+  imageUrl: string | null;
 }
 
 export interface AdminProductPage {
@@ -261,6 +261,7 @@ export async function listProductsForAdmin(options: {
       categoryName: row.category.nameUz,
       brandName: row.brand.name,
       isActive: row.isActive,
+      imageUrl: row.imageUrl,
     })),
     total,
     page,
@@ -269,8 +270,18 @@ export async function listProductsForAdmin(options: {
   };
 }
 
+/**
+ * The write shape plus the one field that never goes through it: `imageUrl` is
+ * set only by the image-upload endpoints (see `setProductImage`), so the form
+ * needs it for the preview but must never round-trip it through
+ * `productWriteSchema` on save.
+ */
+export interface ProductEditRecord extends ProductWriteInput {
+  imageUrl: string | null;
+}
+
 /** One product in the shape the edit form expects. */
-export async function getProductForEdit(id: string): Promise<ProductWriteInput | null> {
+export async function getProductForEdit(id: string): Promise<ProductEditRecord | null> {
   const row = await prisma.product.findUnique({ where: { id } });
 
   if (row === null) {
@@ -290,7 +301,43 @@ export async function getProductForEdit(id: string): Promise<ProductWriteInput |
     brandId: row.brandId,
     compatibleModels: row.compatibleModels,
     specs: row.specs as unknown as ProductWriteInput["specs"],
-    imageLabels: row.imageLabels,
     isActive: row.isActive,
+    imageUrl: row.imageUrl,
   };
+}
+
+/** Just enough to know whether a product exists and what it was photographed with. */
+export async function findProductImageUrl(id: string): Promise<{ imageUrl: string | null } | null> {
+  return prisma.product.findUnique({ where: { id }, select: { imageUrl: true } });
+}
+
+/**
+ * Sets or replaces a product's photo. Split from `updateProduct` because it is
+ * reached from a different route with a different body — multipart, one file
+ * — and because a create can call it too, right after the row it points at
+ * first exists.
+ */
+export async function setProductImage(
+  id: string,
+  imageUrl: string,
+  actorId: string,
+): Promise<WriteResult<{ imageUrl: string }>> {
+  const before = await prisma.product.findUnique({ where: { id } });
+
+  if (before === null) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  const after = await prisma.product.update({ where: { id }, data: { imageUrl } });
+
+  await recordAudit({
+    userId: actorId,
+    action: "UPDATE",
+    entityType: "Product",
+    entityId: id,
+    before: auditSnapshot(before),
+    after: auditSnapshot(after),
+  });
+
+  return { ok: true, value: { imageUrl } };
 }

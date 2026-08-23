@@ -13,6 +13,7 @@ import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
+import { ProductImage } from "@/components/product/product-image";
 
 interface WishlistClientProps {
   lang: Locale;
@@ -65,9 +66,12 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
             key={product.id}
             className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center"
           >
-            <div className="flex h-20 w-full shrink-0 items-center justify-center rounded-md bg-linear-to-br from-surface-hover to-transparent text-xs text-muted sm:w-28">
-              {product.imageLabels[0]}
-            </div>
+            <ProductImage
+              src={product.imageUrl}
+              alt=""
+              fallbackIconSize="lg"
+              className="h-20 w-full shrink-0 rounded-md sm:w-28"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">

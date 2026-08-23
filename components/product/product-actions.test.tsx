@@ -24,7 +24,7 @@ function fixture(id: string): Product {
     compatibleModels: [],
     stockStatus: "available",
     specs: [],
-    imageLabels: ["Front"],
+    imageUrl: null,
   };
 }
 

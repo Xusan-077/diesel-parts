@@ -37,7 +37,7 @@ function product(id: string, overrides: Record<string, unknown> = {}) {
     compatibleModels: [],
     stockStatus: "available",
     specs: [],
-    imageLabels: [],
+    imageUrl: null,
     ...overrides,
   };
 }

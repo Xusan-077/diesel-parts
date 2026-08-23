@@ -228,10 +228,7 @@
     "ratingLabel": "5 tadan {rating}",
     "reviewCount": "{count} ta sharh",
     "reviewCountEmpty": "Sharh yo'q",
-    "orderedCount": "{count} marta buyurtma qilingan",
-    "imagePrev": "Oldingi rasm",
-    "imageNext": "Keyingi rasm",
-    "imageDot": "{n}-rasm"
+    "orderedCount": "{count} marta buyurtma qilingan"
   },
   "categories": {
     "title": "Kategoriya",

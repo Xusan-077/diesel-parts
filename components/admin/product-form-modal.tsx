@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCreateProduct, useUpdateProduct } from "@/hooks/admin/use-admin-products";
+import {
+  useCreateProduct,
+  useReplaceProductImage,
+  useUpdateProduct,
+} from "@/hooks/admin/use-admin-products";
 import { OFFLINE_MESSAGE, refusalPayload } from "@/lib/api/request-error";
 import { useFieldErrors, type FieldErrors } from "@/lib/forms/use-field-errors";
 import { productWriteSchema, type ProductWriteInput } from "@/lib/schemas";
@@ -12,6 +16,7 @@ import { FormField } from "@/components/ui/form-field";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ProductImageField } from "@/components/admin/product-image-field";
 
 export interface ReferenceOption {
   id: string;
@@ -78,7 +83,7 @@ function splitRefusal(error: unknown): { fields: FieldErrors; message: string | 
   };
 }
 
-const EMPTY: ProductWriteInput = {
+const EMPTY: ProductWriteInput & { imageUrl: string | null } = {
   sku: "",
   slug: "",
   oemNumbers: [],
@@ -91,8 +96,8 @@ const EMPTY: ProductWriteInput = {
   brandId: "",
   compatibleModels: [],
   specs: [],
-  imageLabels: [],
   isActive: true,
+  imageUrl: null,
 };
 
 /** Section heading inside the modal — the same eyebrow the pages use. */
@@ -110,7 +115,7 @@ export interface ProductFormModalProps {
   onOpenChange: (open: boolean) => void;
   /** Absent when creating; the form then POSTs instead of PATCHing. */
   productId?: string;
-  initial?: ProductWriteInput;
+  initial?: ProductWriteInput & { imageUrl?: string | null };
   categories: readonly ReferenceOption[];
   brands: readonly ReferenceOption[];
 }
@@ -145,9 +150,10 @@ export function ProductFormModal({
   });
   const [oem, setOem] = useState(listToLines(start.oemNumbers));
   const [models, setModels] = useState(listToLines(start.compatibleModels));
-  const [images, setImages] = useState(listToLines(start.imageLabels));
   const [priceText, setPriceText] = useState(start.price === null ? "" : String(start.price));
   const [message, setMessage] = useState<string | null>(null);
+  /** Staged locally until save; never sent unless the director actually picked one. */
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   /*
    * Two mutations rather than one with a branch: the create and the update are
@@ -159,7 +165,8 @@ export function ProductFormModal({
    */
   const create = useCreateProduct();
   const update = useUpdateProduct();
-  const saving = create.isPending || update.isPending;
+  const replaceImage = useReplaceProductImage();
+  const saving = create.isPending || update.isPending || replaceImage.isPending;
 
   /*
    * The value the schema actually judges, rebuilt on every keystroke. The three
@@ -171,7 +178,6 @@ export function ProductFormModal({
     ...form,
     oemNumbers: linesToList(oem),
     compatibleModels: linesToList(models),
-    imageLabels: linesToList(images),
     // Empty means "price not set", which the catalog renders as a contact
     // action. Coercing it to 0 would advertise a free part.
     price: priceText.trim() === "" ? null : Number(priceText),
@@ -201,9 +207,17 @@ export function ProductFormModal({
     }
 
     try {
-      await (productId
-        ? update.mutateAsync({ id: productId, values: payload })
-        : create.mutateAsync(payload));
+      if (productId) {
+        await update.mutateAsync({ id: productId, values: payload });
+        // A separate request, sent only when a new photo was actually picked:
+        // most saves touch none of the twenty fields' worth of text and would
+        // otherwise re-upload a photo that never changed.
+        if (imageFile) {
+          await replaceImage.mutateAsync({ id: productId, image: imageFile });
+        }
+      } else {
+        await create.mutateAsync({ values: payload, image: imageFile });
+      }
 
       toast.success(productId ? "O'zgarishlar saqlandi" : "Mahsulot qo'shildi");
       onOpenChange(false);
@@ -239,6 +253,17 @@ export function ProductFormModal({
       busy={saving}
       error={message}
     >
+      <Group title="Rasm">
+        <div className="max-w-64">
+          <ProductImageField
+            currentUrl={start.imageUrl ?? null}
+            file={imageFile}
+            onFileChange={setImageFile}
+            disabled={saving}
+          />
+        </div>
+      </Group>
+
       <Group title="Identifikatsiya">
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="SKU" required error={field.errorFor("sku")}>
@@ -418,37 +443,20 @@ export function ProductFormModal({
           />
         </FormField>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            label="Mos texnika"
-            hint="Har biri yangi qatorda"
-            multiline
-            error={field.errorFor("compatibleModels")}
-          >
-            <Textarea
-              value={models}
-              onChange={(e) => setModels(e.target.value)}
-              onBlur={() => field.touch("compatibleModels")}
-              rows={3}
-              placeholder={"Caterpillar 3126\nCaterpillar C7"}
-            />
-          </FormField>
-
-          <FormField
-            label="Rasm yorliqlari"
-            hint="Har biri yangi qatorda"
-            multiline
-            error={field.errorFor("imageLabels")}
-          >
-            <Textarea
-              value={images}
-              onChange={(e) => setImages(e.target.value)}
-              onBlur={() => field.touch("imageLabels")}
-              rows={3}
-              placeholder={"Old ko'rinish\nO'rnatilgan holda"}
-            />
-          </FormField>
-        </div>
+        <FormField
+          label="Mos texnika"
+          hint="Har biri yangi qatorda"
+          multiline
+          error={field.errorFor("compatibleModels")}
+        >
+          <Textarea
+            value={models}
+            onChange={(e) => setModels(e.target.value)}
+            onBlur={() => field.touch("compatibleModels")}
+            rows={3}
+            placeholder={"Caterpillar 3126\nCaterpillar C7"}
+          />
+        </FormField>
       </Group>
 
       <CheckboxField
