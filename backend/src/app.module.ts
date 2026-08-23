@@ -22,6 +22,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditModule } from './audit/audit.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
+import { DiscountRequestsModule } from './discount-requests/discount-requests.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { InquiriesModule } from './inquiries/inquiries.module';
     AuditModule,
     ReviewsModule,
     InquiriesModule,
+    DiscountRequestsModule,
   ],
   controllers: [AppController],
 })
