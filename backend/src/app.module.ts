@@ -21,6 +21,7 @@ import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditModule } from './audit/audit.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { InquiriesModule } from './inquiries/inquiries.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     DashboardModule,
     AuditModule,
     ReviewsModule,
+    InquiriesModule,
   ],
   controllers: [AppController],
 })
