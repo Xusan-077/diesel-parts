@@ -20,6 +20,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditModule } from './audit/audit.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { AuditModule } from './audit/audit.module';
     ReportsModule,
     DashboardModule,
     AuditModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
 })
