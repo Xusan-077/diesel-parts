@@ -224,7 +224,6 @@
     "compatibleModelsTitle": "Mos keladigan modellar",
     "specificationsTitle": "Texnik xususiyatlari",
     "relatedProductsTitle": "O'xshash mahsulotlar",
-    "galleryAlt": "Mahsulot rasmi",
     "ratingLabel": "5 tadan {rating}",
     "reviewCount": "{count} ta sharh",
     "reviewCountEmpty": "Sharh yo'q",
@@ -233,11 +232,13 @@
   "categories": {
     "title": "Kategoriya",
     "subtitle": "Ushbu kategoriyadagi mahsulotlar",
+    "metaDescription": "{name} bo'yicha original va analog ehtiyot qismlar — narxi, mavjudligi va texnik xususiyatlari bilan DieselParts katalogida.",
     "productsInCategory": "ta mahsulot"
   },
   "brands": {
     "title": "Brend",
     "subtitle": "Ushbu brenddagi mahsulotlar",
+    "metaDescription": "{name} brendiga tegishli ehtiyot qismlar — narxi, mavjudligi va texnik xususiyatlari bilan DieselParts katalogida.",
     "productsFromBrand": "ta mahsulot"
   },
   "about": {

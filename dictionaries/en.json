@@ -224,7 +224,6 @@
     "compatibleModelsTitle": "Compatible Models",
     "specificationsTitle": "Specifications",
     "relatedProductsTitle": "Related Products",
-    "galleryAlt": "Product image",
     "ratingLabel": "{rating} out of 5",
     "reviewCount": "{count} reviews",
     "reviewCountEmpty": "No reviews yet",
@@ -233,11 +232,13 @@
   "categories": {
     "title": "Category",
     "subtitle": "Products in this category",
+    "metaDescription": "Original and aftermarket parts in the {name} category — prices, availability and specs in the DieselParts catalog.",
     "productsInCategory": "products"
   },
   "brands": {
     "title": "Brand",
     "subtitle": "Products from this brand",
+    "metaDescription": "Spare parts from {name} — prices, availability and specs in the DieselParts catalog.",
     "productsFromBrand": "products"
   },
   "about": {

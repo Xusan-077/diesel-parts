@@ -224,7 +224,6 @@
     "compatibleModelsTitle": "Совместимые модели",
     "specificationsTitle": "Технические характеристики",
     "relatedProductsTitle": "Похожие товары",
-    "galleryAlt": "Изображение товара",
     "ratingLabel": "{rating} из 5",
     "reviewCount": "{count} отзывов",
     "reviewCountEmpty": "Нет отзывов",
@@ -233,11 +232,13 @@
   "categories": {
     "title": "Категория",
     "subtitle": "Товары в этой категории",
+    "metaDescription": "Оригинальные и аналоговые запчасти по категории «{name}» — цены, наличие и характеристики в каталоге DieselParts.",
     "productsInCategory": "товаров"
   },
   "brands": {
     "title": "Бренд",
     "subtitle": "Товары этого бренда",
+    "metaDescription": "Запчасти бренда {name} — цены, наличие и характеристики в каталоге DieselParts.",
     "productsFromBrand": "товаров"
   },
   "about": {

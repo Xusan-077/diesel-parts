@@ -36,7 +36,7 @@ export async function generateMetadata({
   const dict = getDictionary(lang);
   return {
     title: `${category.name[lang]} — ${dict.meta.siteName}`,
-    description: dict.categories.subtitle,
+    description: dict.categories.metaDescription.replace("{name}", category.name[lang]),
     alternates: canonicalPath(`/categories/${category.slug}`),
   };
 }

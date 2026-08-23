@@ -13,6 +13,7 @@ import { FeatureGrid } from "@/components/marketing/feature-grid";
 import { HomeProductRow } from "@/components/marketing/home-product-row";
 import { CtaBanner } from "@/components/marketing/cta-banner";
 import { Reveal } from "@/components/marketing/reveal";
+import { OrganizationJsonLd } from "@/components/marketing/organization-json-ld";
 import { Container } from "@/components/ui/container";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -86,6 +87,7 @@ export default async function HomePage() {
    */
   return (
     <main>
+      <OrganizationJsonLd footer={dict.footer} />
       <Hero home={dict.home} common={dict.common} lang={lang} />
 
       <Container as="section" className="py-20">

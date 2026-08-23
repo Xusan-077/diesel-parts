@@ -1,5 +1,15 @@
 import type { Product, Category, Brand } from "@/lib/types";
 import type { Locale } from "@/lib/i18n/locales";
+import { SITE_URL } from "@/lib/site-config";
+import { CURRENCY } from "@/lib/format-price";
+
+/** schema.org's `ItemAvailability` enum has no direct match for "limited" —
+ *  Google's own examples map a low-stock state to `LimitedAvailability`. */
+const AVAILABILITY: Record<Product["stockStatus"], string> = {
+  available: "https://schema.org/InStock",
+  limited: "https://schema.org/LimitedAvailability",
+  out_of_stock: "https://schema.org/OutOfStock",
+};
 
 export function ProductJsonLd({
   product,
@@ -21,6 +31,23 @@ export function ProductJsonLd({
     brand: { "@type": "Brand", name: brand.name },
     category: category.name[lang],
     description: product.description[lang],
+    // `null` on every row nobody has photographed yet — Google accepts a
+    // Product with no `image`, so it is left off rather than pointing at the
+    // fallback glyph, which is not a photograph of the part.
+    ...(product.imageUrl ? { image: `${SITE_URL}${product.imageUrl}` } : {}),
+    // Only priced rows get an `offers` block: a `Offer` with no `price` is
+    // invalid, and the "contact us" products genuinely have none to report.
+    ...(product.price !== null
+      ? {
+          offers: {
+            "@type": "Offer",
+            url: `${SITE_URL}/products/${product.slug}`,
+            priceCurrency: CURRENCY,
+            price: product.price,
+            availability: AVAILABILITY[product.stockStatus],
+          },
+        }
+      : {}),
   };
 
   return (

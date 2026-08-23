@@ -32,7 +32,7 @@ export async function generateMetadata({
   const dict = getDictionary(lang);
   return {
     title: `${brand.name} — ${dict.meta.siteName}`,
-    description: dict.brands.subtitle,
+    description: dict.brands.metaDescription.replace("{name}", brand.name),
     alternates: canonicalPath(`/brands/${brand.slug}`),
   };
 }
