@@ -96,7 +96,13 @@ model Product {
   brand            Brand       @relation(fields: [brandId], references: [id])
   compatibleModels String[]
   specs            Json
-  imageLabels      String[]
+  /// A photograph's URL, set only through the admin image-upload endpoints
+  /// (never through the general write form) — the same "server derives it"
+  /// treatment as stockStatus. Null on every row nobody has photographed yet;
+  /// the storefront falls back to a placeholder icon for those. One photo per
+  /// product today — a `ProductImage` table for a real multi-photo gallery is
+  /// a later feature this column does not imply.
+  imageUrl         String?
   isActive         Boolean     @default(true)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

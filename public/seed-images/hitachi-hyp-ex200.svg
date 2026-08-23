@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" role="img" aria-label="Hitachi EX200 gidravlik nasosi">
+  <rect width="400" height="400" fill="#111827" />
+  <rect width="400" height="6" fill="#e2231a" />
+  <circle cx="200" cy="150" r="54" fill="none" stroke="#e2231a" stroke-width="6" />
+  <circle cx="200" cy="150" r="18" fill="#e2231a" />
+  <g stroke="#e2231a" stroke-width="6">
+    <line x1="200" y1="80" x2="200" y2="96" />
+    <line x1="200" y1="204" x2="200" y2="220" />
+    <line x1="130" y1="150" x2="146" y2="150" />
+    <line x1="254" y1="150" x2="270" y2="150" />
+    <line x1="148" y1="98" x2="157" y2="112" />
+    <line x1="243" y1="188" x2="252" y2="202" />
+    <line x1="252" y1="98" x2="243" y2="112" />
+    <line x1="157" y1="188" x2="148" y2="202" />
+  </g>
+  <text font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#f9fafb" text-anchor="middle"><tspan x="200" y="205">Hitachi EX200</tspan><tspan x="200" y="235">gidravlik nasosi</tspan></text>
+  <text x="200" y="280" font-family="Arial, sans-serif" font-size="15" fill="#e2231a" text-anchor="middle" letter-spacing="1">DP-HYP-EX200</text>
+  <text x="200" y="370" font-family="Arial, sans-serif" font-size="13" fill="#9ca3af" text-anchor="middle" letter-spacing="2">HITACHI</text>
+</svg>

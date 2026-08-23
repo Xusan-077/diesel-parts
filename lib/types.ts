@@ -56,7 +56,14 @@ export interface Product {
   compatibleModels: string[];
   stockStatus: StockStatus;
   specs: ProductSpec[];
-  imageLabels: string[];
+  /**
+   * A photograph, set through the admin panel's upload endpoints. `null` on
+   * every row nobody has photographed yet — the storefront falls back to a
+   * placeholder icon rather than showing a broken image. Every product has
+   * exactly one; a `ProductImage` table for a real multi-photo gallery is a
+   * later feature, not implied by this field.
+   */
+  imageUrl: string | null;
 }
 
 export interface BlogPost {

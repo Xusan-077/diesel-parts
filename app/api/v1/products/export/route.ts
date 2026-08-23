@@ -29,7 +29,6 @@ export async function GET() {
     brandId: row.brandId,
     compatibleModels: row.compatibleModels,
     specs: [],
-    imageLabels: row.imageLabels,
     isActive: row.isActive,
   }));
 

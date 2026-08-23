@@ -15,7 +15,6 @@ function product(overrides: Partial<CsvProduct> = {}): CsvProduct {
     brandId: "cat",
     compatibleModels: ["CAT 320D"],
     specs: [],
-    imageLabels: ["Front"],
     isActive: true,
     ...overrides,
   };

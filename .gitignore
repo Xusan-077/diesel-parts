@@ -51,3 +51,8 @@ next-env.d.ts
 # SSH keypairs left behind by `railway connect Postgres --tunnel-only`, which
 # names its key after the command. Private material; never commit it.
 /railway connect Postgres*
+
+# director-uploaded product photos — written at runtime by the image-upload
+# endpoints, not build output. Seed photos live in /public/seed-images instead,
+# which IS committed, so a fresh checkout's catalog is never missing images.
+/public/uploads/

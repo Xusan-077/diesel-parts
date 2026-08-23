@@ -23,7 +23,7 @@ function product(id: string): Product {
     compatibleModels: [],
     stockStatus: "available",
     specs: [],
-    imageLabels: [],
+    imageUrl: null,
   };
 }
 

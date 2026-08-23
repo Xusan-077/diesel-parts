@@ -23,7 +23,7 @@ function row(overrides: Partial<ProductRow> = {}): ProductRow {
     brandId: "cat",
     compatibleModels: ["CAT 320D"],
     specs: [{ label: { uz: "a", ru: "b", en: "c" }, value: "Steel" }],
-    imageLabels: ["Front"],
+    imageUrl: null,
     isActive: true,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
@@ -63,5 +63,12 @@ describe("toProduct", () => {
   it("does not leak the raw name columns", () => {
     const product = toProduct(row());
     expect(product).not.toHaveProperty("nameUz");
+  });
+
+  it("passes the photo URL through, null included", () => {
+    expect(toProduct(row({ imageUrl: "/uploads/products/a.jpg" })).imageUrl).toBe(
+      "/uploads/products/a.jpg",
+    );
+    expect(toProduct(row({ imageUrl: null })).imageUrl).toBeNull();
   });
 });

@@ -215,53 +215,17 @@ describe("ProductCard as a grid cell", () => {
     ).toBeDefined();
   });
 
-  it("offers a dot per photograph when there is more than one", () => {
-    renderWith();
+  it("shows the product's own photograph when it has one", () => {
+    renderWith({ product: { ...product, imageUrl: "/uploads/products/a.jpg" } });
 
-    // The seed rows carry two or three captions each.
-    expect(product.imageLabels.length).toBeGreaterThan(1);
-    const dots = screen.getAllByRole("button", {
-      name: new RegExp(productDict.imageDot.replace("{n}", "[0-9]")),
-    });
-    expect(dots).toHaveLength(product.imageLabels.length);
+    const img = screen.getByRole("img", { name: product.name.uz }) as HTMLImageElement;
+    expect(img.src).toContain("/uploads/products/a.jpg");
   });
 
-  it("draws no dots and no arrows for a part with one photograph", () => {
-    renderWith({ product: { ...product, imageLabels: ["Front"] } });
+  it("falls back to a placeholder mark for a part with no photograph yet", () => {
+    renderWith({ product: { ...product, imageUrl: null } });
 
-    // A control that cannot move is worse than no control.
-    expect(screen.queryByRole("button", { name: productDict.imageNext })).toBeNull();
-    expect(
-      screen.queryByRole("button", {
-        name: new RegExp(productDict.imageDot.replace("{n}", "[0-9]")),
-      })
-    ).toBeNull();
-  });
-
-  it("moves through the photographs in place", async () => {
-    renderWith();
-    const followed = trackNavigation();
-
-    const [first, second] = product.imageLabels;
-    expect(screen.getByRole("img", { name: `${product.name.uz} — ${first}` })).toBeDefined();
-
-    await userEvent.click(screen.getByRole("button", { name: productDict.imageNext }));
-
-    expect(screen.getByRole("img", { name: `${product.name.uz} — ${second}` })).toBeDefined();
-    expect(followed()).toBe(0);
-  });
-
-  it("wraps back to the first photograph rather than hitting a wall", async () => {
-    renderWith();
-
-    const next = screen.getByRole("button", { name: productDict.imageNext });
-    for (const _ of product.imageLabels) {
-      await userEvent.click(next);
-    }
-
-    expect(
-      screen.getByRole("img", { name: `${product.name.uz} — ${product.imageLabels[0]}` })
-    ).toBeDefined();
+    expect(screen.queryByRole("img", { name: product.name.uz })).toBeNull();
   });
 
   it("asks for contact instead of a quantity when there is no price", () => {

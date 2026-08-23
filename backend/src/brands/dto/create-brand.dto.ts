@@ -1,0 +1,15 @@
+import { IsOptional, IsString, MinLength } from 'class-validator';
+
+export class CreateBrandDto {
+  @IsString()
+  @MinLength(1)
+  name: string;
+
+  @IsString()
+  @MinLength(1)
+  slug: string;
+
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+}

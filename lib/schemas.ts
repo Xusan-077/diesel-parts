@@ -129,7 +129,10 @@ export const productSpecSchema = z.object({
 /**
  * `stockStatus` is deliberately absent: the repository derives it from
  * stock/minStock on every write, so accepting it from a caller would let the
- * column drift away from the numbers it describes.
+ * column drift away from the numbers it describes. `imageUrl` is absent for
+ * the same reason it is not part of this list: it is set only by the
+ * dedicated image-upload endpoints (see `product-image-storage.ts`), never by
+ * this general write.
  */
 export const productWriteSchema = z.object({
   sku: z.string().min(1).max(64),
@@ -148,7 +151,6 @@ export const productWriteSchema = z.object({
   brandId: z.string().min(1),
   compatibleModels: z.array(z.string().min(1)).max(50),
   specs: z.array(productSpecSchema).max(30),
-  imageLabels: z.array(z.string().min(1)).max(10),
   isActive: z.boolean(),
 });
 

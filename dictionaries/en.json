@@ -228,10 +228,7 @@
     "ratingLabel": "{rating} out of 5",
     "reviewCount": "{count} reviews",
     "reviewCountEmpty": "No reviews yet",
-    "orderedCount": "Ordered {count} times",
-    "imagePrev": "Previous photo",
-    "imageNext": "Next photo",
-    "imageDot": "Photo {n}"
+    "orderedCount": "Ordered {count} times"
   },
   "categories": {
     "title": "Category",

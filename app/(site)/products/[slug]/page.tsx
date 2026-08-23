@@ -168,7 +168,7 @@ export default async function ProductDetailPage({
       ) : null}
 
       <div className="grid gap-12 lg:grid-cols-2">
-        <ProductGallery imageLabels={product.imageLabels} galleryAlt={dict.product.galleryAlt} />
+        <ProductGallery imageUrl={product.imageUrl} galleryAlt={dict.product.galleryAlt} />
 
         <div>
           <p className="text-sm text-muted">{brand?.name ?? ""}</p>

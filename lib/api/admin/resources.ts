@@ -1,4 +1,4 @@
-import type { AdminProductPage } from "@/lib/api/product-write-repository";
+import type { AdminProductPage, ProductEditRecord } from "@/lib/api/product-write-repository";
 import type { AuditEntryView, DiscountRequestView } from "@/lib/api/discount-repository";
 import type { CatalogAdminRow } from "@/lib/api/catalog-repository";
 import type { CustomerPage, CustomerRow } from "@/lib/api/customer-repository";
@@ -50,19 +50,49 @@ export async function fetchAdminProducts(
   return data;
 }
 
-/** The write payload behind one row, as the edit form wants it. */
-export async function fetchProductForEdit(id: string): Promise<ProductWriteInput> {
-  const { data } = await panelClient.get<{ product: ProductWriteInput }>("/products/" + id);
+/** The write payload behind one row, as the edit form wants it — plus its current photo. */
+export async function fetchProductForEdit(id: string): Promise<ProductEditRecord> {
+  const { data } = await panelClient.get<{ product: ProductEditRecord }>("/products/" + id);
   return data.product;
 }
 
-export async function createProduct(input: ProductWriteInput): Promise<{ id: string }> {
-  const { data } = await panelClient.post<{ id: string }>("/products", input);
+/**
+ * Plain JSON when there is no photo to attach yet; `multipart/form-data` when
+ * there is, with the same fields carried as a `data` part alongside the file.
+ * The `undefined` Content-Type below is what lets the browser compute the
+ * multipart boundary itself — the instance's default `application/json`
+ * would otherwise win and the server would receive an unparsable body.
+ */
+export async function createProduct(
+  input: ProductWriteInput,
+  image?: File | null,
+): Promise<{ id: string }> {
+  if (!image) {
+    const { data } = await panelClient.post<{ id: string }>("/products", input);
+    return data;
+  }
+
+  const form = new FormData();
+  form.set("data", JSON.stringify(input));
+  form.set("image", image);
+  const { data } = await panelClient.post<{ id: string }>("/products", form, {
+    headers: { "Content-Type": undefined },
+  });
   return data;
 }
 
 export async function updateProduct(id: string, input: ProductWriteInput): Promise<void> {
   await panelClient.patch("/products/" + id, input);
+}
+
+/** Replaces a product's photo alone, through its own single-file endpoint. */
+export async function replaceProductImage(id: string, image: File): Promise<{ imageUrl: string }> {
+  const form = new FormData();
+  form.set("image", image);
+  const { data } = await panelClient.patch<{ imageUrl: string }>("/products/" + id + "/image", form, {
+    headers: { "Content-Type": undefined },
+  });
+  return data;
 }
 
 /**

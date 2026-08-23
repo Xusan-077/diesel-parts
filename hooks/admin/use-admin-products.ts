@@ -10,10 +10,11 @@ import {
   createProduct,
   fetchAdminProducts,
   fetchProductForEdit,
+  replaceProductImage,
   restoreProduct,
   updateProduct,
 } from "@/lib/api/admin/resources";
-import type { AdminProductPage } from "@/lib/api/product-write-repository";
+import type { AdminProductPage, ProductEditRecord } from "@/lib/api/product-write-repository";
 import type { AdminProductListQuery, ProductWriteInput } from "@/lib/schemas";
 import { PANEL_STALE_MS, usePanelMutation } from "./use-panel-mutation";
 
@@ -59,7 +60,7 @@ export function useProductEditLoader() {
   const queryClient = useQueryClient();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const load = async (id: string): Promise<ProductWriteInput | null> => {
+  const load = async (id: string): Promise<ProductEditRecord | null> => {
     setLoadingId(id);
     try {
       return await queryClient.fetchQuery({
@@ -85,8 +86,8 @@ export function useProductEditLoader() {
  * so anything fired here would be a second copy of both.
  */
 export function useCreateProduct() {
-  return usePanelMutation<ProductWriteInput, { id: string }>({
-    run: createProduct,
+  return usePanelMutation<{ values: ProductWriteInput; image?: File | null }, { id: string }>({
+    run: ({ values, image }) => createProduct(values, image),
     invalidates: [adminKeys.products.all, adminKeys.audit.all],
   });
 }
@@ -97,6 +98,18 @@ export function useUpdateProduct() {
     // payloads included — so a saved edit invalidates the form's own copy too.
     run: ({ id, values }) => updateProduct(id, values),
     invalidates: [adminKeys.products.all, adminKeys.audit.all],
+  });
+}
+
+/**
+ * Replaces one product's photo. Separate from `useUpdateProduct` because it
+ * hits its own endpoint with its own body — see `PATCH /products/[id]/image`
+ * — and the form only calls it when a new file was actually chosen.
+ */
+export function useReplaceProductImage() {
+  return usePanelMutation<{ id: string; image: File }, { imageUrl: string }>({
+    run: ({ id, image }) => replaceProductImage(id, image),
+    invalidates: [adminKeys.products.all],
   });
 }
 

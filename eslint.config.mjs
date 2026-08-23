@@ -17,6 +17,10 @@ const eslintConfig = defineConfig([
     "**/node_modules/**",
     // Generated Prisma client is build output, not authored code.
     "prisma/generated/**",
+    // backend/ is its own separate NestJS project with its own eslint
+    // config and lint script (`npm run lint` in backend/) — this app's
+    // config doesn't know its decorator-based style and shouldn't lint it.
+    "backend/**",
   ]),
   {
     rules: {

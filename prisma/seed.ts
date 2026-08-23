@@ -8,6 +8,9 @@
  * Run with:  npm run db:seed
  * ==========================================================================*/
 import { hash } from "bcryptjs";
+import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { deriveStockStatus } from "@/lib/api/stock-status";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/prisma/generated/prisma/client";
@@ -15,6 +18,8 @@ import { catalogGroups } from "@/lib/data/catalog-menu";
 import { brands } from "@/prisma/seed-data/brands";
 import { categories } from "@/prisma/seed-data/categories";
 import { products } from "@/prisma/seed-data/products";
+import { buildProductImageSvg } from "@/prisma/seed-data/product-image";
+import type { Product } from "@/lib/types";
 
 const BCRYPT_COST = 12;
 
@@ -28,6 +33,30 @@ const STOCK_BY_STATUS = {
 const MIN_STOCK = 5;
 
 const DIRECTOR_EMAIL = "director@dieselparts.uz";
+
+const SEED_IMAGES_DIR = path.join(process.cwd(), "public", "seed-images");
+
+/**
+ * Writes a product's placeholder photo to `public/seed-images` if it is not
+ * already there. Never overwrites: a director may have replaced a seed photo
+ * with a real one through the admin upload, and re-running the seed must not
+ * regenerate over it — this only fills in what is missing.
+ */
+async function ensureSeedImage(product: Product, brandName: string): Promise<void> {
+  const filePath = path.join(SEED_IMAGES_DIR, product.id + ".svg");
+  if (existsSync(filePath)) {
+    return;
+  }
+
+  await mkdir(SEED_IMAGES_DIR, { recursive: true });
+  const svg = buildProductImageSvg({
+    name: product.name.uz,
+    sku: product.sku,
+    brandName,
+    brandId: product.brandId,
+  });
+  await writeFile(filePath, svg, "utf8");
+}
 
 async function seedDirector(): Promise<void> {
   const password = process.env.SEED_DIRECTOR_PASSWORD;
@@ -154,7 +183,11 @@ async function main(): Promise<void> {
 
   await seedCatalogTree();
 
+  const brandNameById = new Map(brands.map((brand) => [brand.id, brand.name]));
+
   for (const product of products) {
+    await ensureSeedImage(product, brandNameById.get(product.brandId) ?? product.brandId);
+
     const stock = STOCK_BY_STATUS[product.stockStatus];
     const fields = {
       slug: product.slug,
@@ -178,7 +211,7 @@ async function main(): Promise<void> {
       compatibleModels: product.compatibleModels,
       // ProductSpec[] in the domain, Json in the column.
       specs: product.specs as unknown as Prisma.InputJsonValue,
-      imageLabels: product.imageLabels,
+      imageUrl: product.imageUrl,
     };
     await prisma.product.upsert({
       where: { id: product.id },

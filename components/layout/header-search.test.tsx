@@ -33,7 +33,7 @@ function product(patch: Partial<Product> = {}): Product {
     compatibleModels: [],
     stockStatus: "available",
     specs: [],
-    imageLabels: ["Front"],
+    imageUrl: null,
     ...patch,
   };
 }

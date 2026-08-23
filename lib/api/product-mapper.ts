@@ -29,7 +29,7 @@ export function toProduct(row: ProductRow): Product {
     compatibleModels: row.compatibleModels,
     stockStatus: row.stockStatus,
     specs: row.specs as unknown as ProductSpec[],
-    imageLabels: row.imageLabels,
+    imageUrl: row.imageUrl,
   };
 }
 
