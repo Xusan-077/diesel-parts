@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -81,13 +80,10 @@ export class CustomersService {
 
   async create(dto: CreateCustomerDto) {
     // Customer.phone is intentionally not unique (see schema doc-comment: a
-    // company switchboard can be shared by several contacts), so this is a
-    // best-effort duplicate warning rather than a DB-enforced constraint.
-    const existing = await this.prisma.customer.findFirst({
-      where: { phone: dto.phone },
-    });
-    if (existing)
-      throw new ConflictException('A customer with this phone already exists');
+    // company switchboard can be shared by several contacts, and a seller
+    // must be able to create a second card for a different contact at the
+    // same number). A shared phone number across multiple Customer rows is
+    // expected, valid data, so no duplicate check happens here.
     return this.prisma.customer.create({ data: dto });
   }
 
