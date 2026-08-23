@@ -140,13 +140,15 @@ describe('ReviewsService', () => {
       const prisma = makePrisma({ review: { upsert } });
       const service = new ReviewsService(prisma);
 
-      const result = await service.upsert({
-        productId: 'prod-1',
-        authorPhone: '998901234567',
-        rating: 5,
-        body: 'Great part',
-        authorName: 'Ali',
-      });
+      const result = await service.upsert(
+        {
+          productId: 'prod-1',
+          rating: 5,
+          body: 'Great part',
+          authorName: 'Ali',
+        },
+        '998901234567',
+      );
 
       expect(upsert).toHaveBeenCalledWith({
         where: {
@@ -185,13 +187,15 @@ describe('ReviewsService', () => {
       const prisma = makePrisma({ review: { upsert } });
       const service = new ReviewsService(prisma);
 
-      await service.upsert({
-        productId: 'prod-1',
-        authorPhone: '998901234567',
-        rating: 3,
-        body: 'Changed my mind',
-        authorName: 'Ali',
-      });
+      await service.upsert(
+        {
+          productId: 'prod-1',
+          rating: 3,
+          body: 'Changed my mind',
+          authorName: 'Ali',
+        },
+        '998901234567',
+      );
 
       expect(upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -211,13 +215,15 @@ describe('ReviewsService', () => {
       const service = new ReviewsService(prisma);
 
       await expect(
-        service.upsert({
-          productId: 'missing-product',
-          authorPhone: '998901234567',
-          rating: 5,
-          body: 'Great part',
-          authorName: 'Ali',
-        }),
+        service.upsert(
+          {
+            productId: 'missing-product',
+            rating: 5,
+            body: 'Great part',
+            authorName: 'Ali',
+          },
+          '998901234567',
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -227,13 +233,15 @@ describe('ReviewsService', () => {
       const service = new ReviewsService(prisma);
 
       await expect(
-        service.upsert({
-          productId: 'prod-1',
-          authorPhone: '998901234567',
-          rating: 5,
-          body: 'Great part',
-          authorName: 'Ali',
-        }),
+        service.upsert(
+          {
+            productId: 'prod-1',
+            rating: 5,
+            body: 'Great part',
+            authorName: 'Ali',
+          },
+          '998901234567',
+        ),
       ).rejects.toThrow('db down');
     });
   });

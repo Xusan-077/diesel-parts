@@ -23,20 +23,17 @@ const trim = ({ value }: { value: unknown }) =>
 /**
  * Writes this person's review of this part — the body PUT /reviews accepts.
  *
- * `authorPhone` is a plain field here rather than derived from a session: the
- * backend has no concept of a customer session, so the Next.js layer is the
- * one that reads the OTP-verified phone out of its cookie and passes it
- * along. It must never be trusted as *who may write* without that upstream
- * check — this DTO only shapes the request, it does not authorize it.
+ * `authorPhone` is deliberately not a field here: it is not a value the
+ * caller gets to assert. The controller sources it from
+ * `@VerifiedPhone()`, which `InternalServiceGuard` set after verifying an
+ * HMAC signature proving the call came from Next.js's own server-side code
+ * (which itself checked the OTP session) — see
+ * `backend/src/common/guards/internal-service.guard.ts`.
  */
 export class UpsertReviewDto {
   @IsString()
   @IsNotEmpty()
   productId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  authorPhone!: string;
 
   @IsInt()
   @Min(1)

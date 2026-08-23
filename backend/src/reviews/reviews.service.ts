@@ -140,9 +140,16 @@ export class ReviewsService {
    *
    * `isApproved` is deliberately not touched on update: a director who took a
    * review down must not have that undone by the author editing it.
+   *
+   * `authorPhone` is a separate parameter rather than a DTO field: it comes
+   * from `InternalServiceGuard`/`@VerifiedPhone()` in the controller, not
+   * from the request body — see `UpsertReviewDto`.
    */
-  async upsert(dto: UpsertReviewDto): Promise<PublicReview> {
-    const { productId, authorPhone, rating, body, authorName } = dto;
+  async upsert(
+    dto: UpsertReviewDto,
+    authorPhone: string,
+  ): Promise<PublicReview> {
+    const { productId, rating, body, authorName } = dto;
 
     try {
       const row = await this.prisma.review.upsert({

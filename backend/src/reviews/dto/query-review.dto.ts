@@ -41,32 +41,30 @@ export class QueryReviewDto extends PaginationDto {
   authorPhone?: string;
 }
 
-/** `GET /reviews/mine` — this person's review of this part, for seeding the form. */
+/**
+ * `GET /reviews/mine` — this person's review of this part, for seeding the
+ * form. `authorPhone` is not a field here: it is sourced from
+ * `@VerifiedPhone()` (`InternalServiceGuard`), not the query string — see
+ * `backend/src/common/guards/internal-service.guard.ts`.
+ */
 export class OwnReviewQueryDto {
   @IsString()
   @IsNotEmpty()
   productId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  authorPhone!: string;
 }
 
 /**
  * `GET /reviews/purchase-check` — whether this phone has a completed order
- * for this product. An invalid phone is not a validation error here: the
- * service treats it the same as "no purchase found" (see
- * `ReviewsService.hasPurchased`), so this DTO only requires the field to be
- * present.
+ * for this product. `phone` is not a field here: it is sourced from
+ * `@VerifiedPhone()` (`InternalServiceGuard`), not the query string — see
+ * `backend/src/common/guards/internal-service.guard.ts`. An invalid phone is
+ * not a validation error: the service treats it the same as "no purchase
+ * found" (see `ReviewsService.hasPurchased`).
  */
 export class PurchaseCheckQueryDto {
   @IsString()
   @IsNotEmpty()
   productId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  phone!: string;
 }
 
 /**
