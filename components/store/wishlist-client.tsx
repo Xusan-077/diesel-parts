@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { StockBadge } from "@/components/product/stock-badge";
 import { StoreEmpty } from "@/components/store/store-empty";
-import { useCart, useWishlist } from "@/hooks/use-store";
+import { useWishlist } from "@/hooks/use-store";
 import { useResolvedProducts } from "@/hooks/use-resolved-products";
 import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
+import { ProductCartControl } from "@/components/product/product-cart-control";
 import { formatPrice } from "@/lib/format-price";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
@@ -18,12 +19,14 @@ import { ProductImage } from "@/components/product/product-image";
 interface WishlistClientProps {
   lang: Locale;
   dict: Dictionary["wishlist"];
+  /** For the cart control shared with the catalog card and the product page. */
+  cartDict: Dictionary["productActions"];
+  requestPriceLabel: string;
   stock: Dictionary["common"]["stock"];
 }
 
-export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
+export function WishlistClient({ lang, dict, cartDict, requestPriceLabel, stock }: WishlistClientProps) {
   const wishlist = useWishlist();
-  const cart = useCart();
   const { items, isLoading, isSuccess } = useResolvedProducts(wishlist.ids, lang);
   usePruneMissing(wishlist.ids, items, isSuccess, wishlist.remove);
 
@@ -95,26 +98,20 @@ export function WishlistClient({ lang, dict, stock }: WishlistClientProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              {product.price === null ? (
-                <Link
-                  href="/contact"
-                  className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/60 hover:text-accent-strong"
-                >
-                  <Icon icon={MessageCircle} />
-                  {dict.contact}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    cart.add(product.id);
-                    toast.success(dict.toastCartAdded);
-                  }}
-                  className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
-                >
-                  {dict.addToCart}
-                </button>
-              )}
+              {/*
+                The same add-button-to-stepper control as the catalog card and
+                the product page, so a saved part behaves the same way from
+                every screen it can be added to the cart from.
+              */}
+              <ProductCartControl
+                product={product}
+                brandName={brandName}
+                categoryName={categoryName}
+                lang={lang}
+                dict={cartDict}
+                requestPriceLabel={requestPriceLabel}
+                className="w-40"
+              />
               <button
                 type="button"
                 onClick={() => {

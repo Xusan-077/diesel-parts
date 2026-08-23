@@ -47,6 +47,7 @@ function renderBoth(productId = "p-1") {
         categoryName="Forsunka"
         lang="uz"
         dict={productActions}
+        requestPriceLabel={common.requestPrice}
       />
     </>
   );
@@ -93,10 +94,8 @@ describe("header cart badge", () => {
     await userEvent.click(screen.getByRole("button", { name: productActions.addToCart }));
     expect(cartBadge()).toBe("1");
 
-    // Topping the same part up is still one part in the cart.
-    await userEvent.click(
-      screen.getByRole("button", { name: `${productActions.inCart} (1)` })
-    );
+    // Topping the same part up from the stepper is still one part in the cart.
+    await userEvent.click(screen.getByRole("button", { name: productActions.increase }));
     expect(cartBadge()).toBe("1");
 
     act(() => useCartStore.getState().add("p-2"));

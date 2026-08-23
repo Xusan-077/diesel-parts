@@ -226,6 +226,7 @@ export default async function ProductDetailPage({
               categoryName={category?.name[lang] ?? ""}
               lang={lang}
               dict={dict.productActions}
+              requestPriceLabel={dict.common.requestPrice}
             />
             <InquiryDialog
               productId={product.id}

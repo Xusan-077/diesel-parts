@@ -51,6 +51,8 @@
     "catalogError": "The catalog could not be loaded.",
     "catalogRetry": "Try again",
     "catalogEmpty": "The catalog is empty for now.",
+    "catalogShowMore": "{count} more",
+    "catalogViewAll": "View all",
     "searchPlaceholder": "Product, code or brand...",
     "searchLabel": "Search",
     "searchSuggestions": "Search results",

@@ -51,6 +51,8 @@
     "catalogError": "Katalogni yuklab bo'lmadi.",
     "catalogRetry": "Qayta urinish",
     "catalogEmpty": "Katalog hozircha bo'sh.",
+    "catalogShowMore": "Yana {count}",
+    "catalogViewAll": "Barchasini ko'rish",
     "searchPlaceholder": "Mahsulot, kod yoki brend...",
     "searchLabel": "Qidirish",
     "searchSuggestions": "Qidiruv natijalari",

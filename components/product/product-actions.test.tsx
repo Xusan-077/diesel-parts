@@ -8,9 +8,10 @@ import type { Product } from "@/lib/types";
 import dictionary from "@/dictionaries/uz.json";
 
 const dict = dictionary.productActions;
+const requestPriceLabel = dictionary.common.requestPrice;
 
 /** A catalog row is now the unit `ProductActions` works on, not a bare id. */
-function fixture(id: string): Product {
+function fixture(id: string, overrides: Partial<Product> = {}): Product {
   return {
     id,
     slug: id,
@@ -25,6 +26,7 @@ function fixture(id: string): Product {
     stockStatus: "available",
     specs: [],
     imageUrl: null,
+    ...overrides,
   };
 }
 
@@ -36,21 +38,22 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-function renderActions(id = "p-1") {
+function renderActions(id = "p-1", overrides: Partial<Product> = {}) {
   return render(
     <ProductActions
-      product={fixture(id)}
+      product={fixture(id, overrides)}
       brandName="CAT"
       categoryName="Forsunka"
       lang="uz"
       dict={dict}
+      requestPriceLabel={requestPriceLabel}
     />
   );
 }
 
 afterEach(cleanup);
 
-describe("ProductActions cart button", () => {
+describe("ProductActions cart control", () => {
   it("adds the product on the first click", async () => {
     renderActions();
 
@@ -59,24 +62,32 @@ describe("ProductActions cart button", () => {
     expect(useCartStore.getState().items).toEqual([{ productId: "p-1", quantity: 1 }]);
   });
 
-  it("tops the same line up on every further click", async () => {
+  it("puts the stepper in the button's place once it is in the cart", async () => {
     renderActions();
 
     await userEvent.click(screen.getByRole("button", { name: dict.addToCart }));
-    await userEvent.click(screen.getByRole("button", { name: `${dict.inCart} (1)` }));
-    await userEvent.click(screen.getByRole("button", { name: `${dict.inCart} (2)` }));
 
-    expect(useCartStore.getState().items).toEqual([{ productId: "p-1", quantity: 3 }]);
+    expect(screen.getByRole("group", { name: dict.quantity })).toBeDefined();
+    expect(screen.queryByRole("button", { name: dict.addToCart })).toBeNull();
   });
 
-  it("shows the running quantity once there is more than one", async () => {
+  it("edits the cart quantity directly from the stepper", async () => {
     renderActions();
 
     await userEvent.click(screen.getByRole("button", { name: dict.addToCart }));
-    expect(screen.queryByText("1")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: dict.increase }));
 
-    await userEvent.click(screen.getByRole("button", { name: `${dict.inCart} (1)` }));
-    expect(screen.getByText("2")).toBeDefined();
+    expect(useCartStore.getState().items).toEqual([{ productId: "p-1", quantity: 2 }]);
+  });
+
+  it("steps off the last one back to the add button", async () => {
+    renderActions();
+
+    await userEvent.click(screen.getByRole("button", { name: dict.addToCart }));
+    await userEvent.click(screen.getByRole("button", { name: dict.removeFromCart }));
+
+    expect(useCartStore.getState().items).toEqual([]);
+    expect(screen.getByRole("button", { name: dict.addToCart })).toBeDefined();
   });
 
   it("keeps two products on two lines", async () => {
@@ -88,6 +99,7 @@ describe("ProductActions cart button", () => {
           categoryName="Forsunka"
           lang="uz"
           dict={dict}
+          requestPriceLabel={requestPriceLabel}
         />
         <ProductActions
           product={fixture("p-2")}
@@ -95,6 +107,7 @@ describe("ProductActions cart button", () => {
           categoryName="Turbo"
           lang="uz"
           dict={dict}
+          requestPriceLabel={requestPriceLabel}
         />
       </>
     );
@@ -118,5 +131,12 @@ describe("ProductActions cart button", () => {
       lang: "uz",
       entry: { brandName: "CAT", categoryName: "Forsunka" },
     });
+  });
+
+  it("asks for contact instead of a quantity when there is no price", () => {
+    renderActions("p-1", { price: null });
+
+    expect(screen.queryByRole("button", { name: dict.addToCart })).toBeNull();
+    expect(screen.getByRole("link", { name: requestPriceLabel })).toBeDefined();
   });
 });

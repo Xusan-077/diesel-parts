@@ -51,6 +51,8 @@
     "catalogError": "Не удалось загрузить каталог.",
     "catalogRetry": "Повторить",
     "catalogEmpty": "Каталог пока пуст.",
+    "catalogShowMore": "Ещё {count}",
+    "catalogViewAll": "Смотреть все",
     "searchPlaceholder": "Товар, код или бренд...",
     "searchLabel": "Поиск",
     "searchSuggestions": "Результаты поиска",
