@@ -52,7 +52,7 @@ describe("the panel's error boundary", () => {
     render(<AdminError error={error} reset={vi.fn()} />);
 
     expect(screen.getByRole("link", { name: "Kirish sahifasi" }).getAttribute("href")).toBe(
-      "/admin/login",
+      "/director/login",
     );
   });
 });

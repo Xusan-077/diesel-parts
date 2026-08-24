@@ -17,14 +17,14 @@ const SELLER_ROLES: readonly StaffRole[] = ["SELLER", "DIRECTOR"];
  * been built yet reads as a broken panel, not as a roadmap.
  */
 export const ADMIN_NAV: readonly AdminNavItem[] = [
-  { href: "/admin/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/analytics", label: "Analitika", roles: ["DIRECTOR"] },
-  { href: "/admin/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/categories", label: "Kategoriyalar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/reviews", label: "Sharhlar", roles: ["DIRECTOR"] },
-  { href: "/admin/director/audit", label: "Amallar tarixi", roles: ["DIRECTOR"] },
+  { href: "/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
+  { href: "/director/analytics", label: "Analitika", roles: ["DIRECTOR"] },
+  { href: "/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
+  { href: "/director/categories", label: "Kategoriyalar", roles: ["DIRECTOR"] },
+  { href: "/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
+  { href: "/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },
+  { href: "/director/reviews", label: "Sharhlar", roles: ["DIRECTOR"] },
+  { href: "/director/audit", label: "Amallar tarixi", roles: ["DIRECTOR"] },
   { href: "/admin/seller/inquiries", label: "So'rovlar", roles: SELLER_ROLES },
   { href: "/admin/seller/customers", label: "Mijozlar", roles: SELLER_ROLES },
   { href: "/admin/seller/orders", label: "Buyurtmalar", roles: SELLER_ROLES },
@@ -69,7 +69,7 @@ export const SELLER_BOTTOM_NAV: readonly BottomNavItem[] = [
 /**
  * Which entry a path belongs to, by longest match.
  *
- * Every director page sits under /admin/director, so a plain prefix test would
+ * Every director page sits under /director, so a plain prefix test would
  * light up the dashboard entry on the products page too and two sections would
  * claim to be current at once. Shared by both navigations so they can never
  * disagree about where the reader is.

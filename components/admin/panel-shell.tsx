@@ -53,7 +53,7 @@ export async function PanelShell({
   const alerts: PanelAlert[] = (
     [
       {
-        href: "/admin/director/discounts",
+        href: "/director/discounts",
         label: dict.topbar.approvals,
         count: counts.pendingDiscounts,
         kind: "approvals",

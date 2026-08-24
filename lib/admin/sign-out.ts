@@ -1,5 +1,5 @@
 import axios from "axios";
-import { ADMIN_LOGIN_PATH } from "@/lib/auth/roles";
+import { STAFF_LOGIN_PATH } from "@/lib/auth/roles";
 
 /**
  * Ending the session, in one place.
@@ -26,7 +26,7 @@ export async function signOutOfPanel(router: {
     // Swallowed on purpose: the cookie either cleared or it did not, and
     // either way the staff member is leaving the panel.
   } finally {
-    router.replace(ADMIN_LOGIN_PATH);
+    router.replace(STAFF_LOGIN_PATH);
     router.refresh();
   }
 }

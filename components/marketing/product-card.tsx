@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductImage } from "@/components/product/product-image";
+import { ProductCardImage } from "@/components/product/product-card-image";
 import { ProductCartControl } from "@/components/product/product-cart-control";
 import { ProductSaveActions } from "@/components/product/product-save-actions";
 import { ProductStatsRow } from "@/components/product/product-stats-row";
@@ -83,10 +83,11 @@ export function ProductCard({
     */
     <article className="group @container relative flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg motion-reduce:hover:translate-y-0">
       <div className="relative">
-        <ProductImage
+        <ProductCardImage
           src={product.imageUrl}
           alt={product.name[lang]}
-          fallbackIconSize="xl"
+          zoomLabel={productDict.zoomLabel}
+          closeLabel={productDict.zoomCloseLabel}
           className="aspect-4/3 w-full"
         />
 

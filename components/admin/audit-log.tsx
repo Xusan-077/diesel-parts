@@ -92,7 +92,7 @@ export function AuditLog({
     if (nextType) params.set("type", nextType);
     if (next.page && next.page > 1) params.set("page", String(next.page));
     const search = params.toString();
-    return "/admin/director/audit" + (search ? "?" + search : "");
+    return "/director/audit" + (search ? "?" + search : "");
   };
 
   if (list.isPending) {

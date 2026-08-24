@@ -1,24 +1,29 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { del, put } from "@vercel/blob";
 
 /**
- * Disk storage for director-uploaded product photos.
+ * Vercel Blob storage for director-uploaded product photos.
  *
- * Local disk rather than S3/MinIO: neither is configured for this project (see
- * .env.example), and the app runs as a persistent Railway service rather than
- * on serverless functions, so a file written here survives to answer the next
- * request. Revisit this the day the app moves to a host with an ephemeral or
- * read-only filesystem — at that point these are the only two functions that
- * would need to change.
+ * This app's root deploy is Vercel (see docs/deploy-checklist.md) — a
+ * serverless platform, not a persistent host. A function instance's
+ * filesystem is ephemeral outside `/tmp`, and `public/` is published as an
+ * immutable snapshot at build time, so a runtime `writeFile` into
+ * `public/uploads/...` never becomes reachable in production even when it
+ * momentarily succeeds. That mismatch (an earlier version of this file
+ * assumed a persistent Railway-style host) was root-caused as the reason
+ * product photos rendered locally but 404'd in production — see the
+ * 2026-08-24 incident notes in docs/deploy-checklist.md.
  *
- * Pure validation is exported separately from the disk-touching functions so
- * it can be tested without a filesystem, the same split `product-csv.ts` uses.
+ * Blob works identically from `next dev` and from Vercel, so there is no
+ * longer a local/production split to account for.
+ *
+ * Pure validation is exported separately from the network-touching functions
+ * so it can be tested without a live token, the same split `product-csv.ts`
+ * uses.
  */
 
-/** Relative to `public/`, so the saved path is also the public URL's path. */
-const UPLOAD_DIR = "uploads/products";
+const UPLOAD_PREFIX = "products/";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -34,7 +39,7 @@ export type ImageValidation =
   | { ok: true; extension: string }
   | { ok: false; message: string };
 
-/** No I/O — checks the two things a route can know before touching disk. */
+/** No I/O — checks the two things a route can know before uploading. */
 export function validateImageFile(file: File): ImageValidation {
   const extension = ALLOWED_TYPES[file.type];
   if (!extension) {
@@ -49,10 +54,19 @@ export function validateImageFile(file: File): ImageValidation {
   return { ok: true, extension };
 }
 
+/** Only a URL Blob actually issued is safe to hand back to `del()`. */
+function isManagedBlobUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Writes the file under `public/uploads/products` and returns the URL a
- * `<img>` tag can use directly. Throws `InvalidImageError` on a rejected file
- * — the route maps that to a 400 rather than a 500.
+ * Uploads the file to the public Blob store and returns the URL a `<img>`
+ * tag can use directly. Throws `InvalidImageError` on a rejected file — the
+ * route maps that to a 400 rather than a 500.
  */
 export async function saveProductImage(file: File): Promise<string> {
   const validation = validateImageFile(file);
@@ -60,35 +74,32 @@ export async function saveProductImage(file: File): Promise<string> {
     throw new InvalidImageError(validation.message);
   }
 
-  const dir = path.join(process.cwd(), "public", UPLOAD_DIR);
-  await mkdir(dir, { recursive: true });
+  const pathname = UPLOAD_PREFIX + randomUUID() + "." + validation.extension;
+  const blob = await put(pathname, file, {
+    access: "public",
+    addRandomSuffix: false,
+  });
 
-  const filename = randomUUID() + "." + validation.extension;
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(dir, filename), bytes);
-
-  return "/" + UPLOAD_DIR + "/" + filename;
+  return blob.url;
 }
 
 /**
  * Best-effort cleanup of a replaced or archived product's old photo.
  *
- * Silent on any failure, including "already gone": deleting the file is a
- * disk-space nicety, never something a write should fail over. Scoped to
- * `UPLOAD_DIR` on purpose, so a URL pointing anywhere else — a seed photo
- * under `/seed-images`, or a stray value from before this feature existed —
- * is left alone rather than unlinked.
+ * Silent on any failure, including "already gone": deleting the blob is a
+ * storage-space nicety, never something a write should fail over. Scoped to
+ * this project's Blob store on purpose, so a URL pointing anywhere else — a
+ * seed photo under `/seed-images`, or a pre-migration relative
+ * `/uploads/products/...` path left over in the database — is left alone
+ * rather than passed to `del()`.
  */
 export async function deleteProductImage(imageUrl: string | null | undefined): Promise<void> {
-  if (!imageUrl || !imageUrl.startsWith("/" + UPLOAD_DIR + "/")) {
+  if (!imageUrl || !isManagedBlobUrl(imageUrl)) {
     return;
   }
 
-  const filename = path.basename(imageUrl);
-  const filePath = path.join(process.cwd(), "public", UPLOAD_DIR, filename);
-
   try {
-    await unlink(filePath);
+    await del(imageUrl);
   } catch {
     // Already gone, or never existed — nothing to do.
   }

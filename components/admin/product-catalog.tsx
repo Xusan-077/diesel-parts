@@ -396,7 +396,7 @@ function Pager({
     if (query.all) params.set("all", "1");
     if (next > 1) params.set("page", String(next));
     const search = params.toString();
-    return "/admin/director/products" + (search ? "?" + search : "");
+    return "/director/products" + (search ? "?" + search : "");
   };
 
   return (

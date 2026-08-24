@@ -30,7 +30,7 @@ export function SellerAuthGate({ children }: { children: React.ReactNode }) {
       .catch(() => {
         if (cancelled) return;
         clear();
-        router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+        router.replace(`/seller/login?next=${encodeURIComponent(pathname)}`);
       });
 
     return () => {

@@ -49,15 +49,21 @@ describe("deleteProductImage", () => {
     await expect(deleteProductImage(undefined)).resolves.toBeUndefined();
   });
 
-  it("does nothing for a URL outside the upload directory", async () => {
-    // Guards seed photos under /seed-images from ever being unlinked by an
-    // image replace or archive — this call must not touch disk at all.
+  it("does nothing for a URL outside the managed Blob store", async () => {
+    // Guards seed photos under /seed-images, and any relative
+    // /uploads/products/... path left over from before this store existed,
+    // from ever being passed to del() — this call must not touch the
+    // network at all.
     await expect(deleteProductImage("/seed-images/cat-injector.svg")).resolves.toBeUndefined();
-  });
-
-  it("resolves for a non-existent uploaded file rather than throwing", async () => {
     await expect(
       deleteProductImage("/uploads/products/does-not-exist.jpg"),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does nothing for a URL on an unrelated host", async () => {
+    // Only *.public.blob.vercel-storage.com is ours to delete from.
+    await expect(
+      deleteProductImage("https://example.com/products/photo.jpg"),
     ).resolves.toBeUndefined();
   });
 });

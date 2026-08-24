@@ -41,7 +41,7 @@ describe("LoginForm", () => {
   it("posts the credentials and lands on the requested page", async () => {
     const user = userEvent.setup();
     post.mockResolvedValue({ data: { success: true, redirectTo: "/admin" } });
-    render(<LoginForm next="/admin/director/products" />);
+    render(<LoginForm next="/director/products" />);
 
     await signIn(user);
 
@@ -51,7 +51,7 @@ describe("LoginForm", () => {
       email: "direktor@dieselparts.uz",
       password: "parol123",
     });
-    expect(replace).toHaveBeenCalledWith("/admin/director/products");
+    expect(replace).toHaveBeenCalledWith("/director/products");
     expect(refresh).toHaveBeenCalled();
   });
 

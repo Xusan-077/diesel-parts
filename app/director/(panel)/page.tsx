@@ -118,7 +118,7 @@ export default async function DirectorDashboardPage({
         actions={
           <PeriodToggle
             days={days}
-            hrefFor={(option) => "/admin/director?days=" + option}
+            hrefFor={(option) => "/director?days=" + option}
             label={t.periodLabel}
             labels={dict.period}
           />
@@ -260,7 +260,7 @@ export default async function DirectorDashboardPage({
             title={t.stockTitle}
             description={t.stockDescription}
             meta={lowStock.length > 0 ? String(lowStock.length) : undefined}
-            action={<SeeAllLink href="/admin/director/products" label={t.seeAll} />}
+            action={<SeeAllLink href="/director/products" label={t.seeAll} />}
           >
             {lowStock.length === 0 ? (
               <PanelListEmpty message={t.stockEmpty} icon={Package} />
@@ -295,7 +295,7 @@ export default async function DirectorDashboardPage({
           <PanelSection
             title={t.sellersTitle}
             description={t.sellersDescription}
-            action={<SeeAllLink href="/admin/director/users" label={t.seeAll} />}
+            action={<SeeAllLink href="/director/users" label={t.seeAll} />}
           >
             {sellers.length === 0 ? (
               <PanelListEmpty message={t.sellersEmpty} icon={Users} />

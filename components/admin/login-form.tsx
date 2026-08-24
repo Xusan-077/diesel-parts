@@ -12,7 +12,7 @@ import { requestErrorMessage } from "@/lib/api/request-error";
 import { staffLoginSchema, type StaffLoginInput } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { controlVariants } from "@/components/ui/field-styles";
+import { controlVariants, fieldBox } from "@/components/ui/field-styles";
 import { cn } from "@/lib/utils";
 
 interface LoginResponse {
@@ -24,15 +24,17 @@ interface LoginResponse {
 /**
  * The panel's front door.
  *
- * The fields are not `FormField`s, and this is the one screen where that is
- * the right call: a door field is 56px tall, carries its own glyph and, in the
- * password's case, a control of its own on the right — none of which the
- * form layer's label-above-a-40px-box layout has a slot for. The control skin
- * is still that layer's `controlVariants`, so the type, the placeholder colour
- * and the disabled state stay the panel's; the box around it is `.door-field`,
- * because the door's focus state is a line drawn along the foot of the box and
- * layering that over `fieldBox`'s ring left two rules fighting for one
- * property. See the FRONT DOOR block in app/globals.css.
+ * The fields are not `FormField`s: a door field is 48px tall and carries its
+ * own glyph and, in the password's case, a control of its own on the right —
+ * none of which the form layer's label-above-a-40px-box layout has a slot
+ * for. Both the box (`fieldBox`) and the control skin (`controlVariants`) are
+ * the panel's ordinary field pieces, just taken to the door's own size — see
+ * the FRONT DOOR block in app/globals.css.
+ *
+ * No stagger, no flash: this screen used to bring itself on in a staggered
+ * boot sequence and light its button on every press, both dropped so this
+ * door and the seller panel's (components/seller/login-form.tsx) read as the
+ * same minimal design rather than two different productions.
  */
 export function LoginForm({ next }: { next: string | null }) {
   const router = useRouter();
@@ -99,15 +101,14 @@ export function LoginForm({ next }: { next: string | null }) {
          function that render itself calls. */
       onSubmit={(event) => void handleSubmit(onSubmit, refuse)(event)}
       /* Cleared once the shake has run, so the next refusal can set it again.
-         The name is checked because `animationend` bubbles: the boot sequence
-         above runs on this element and on every field inside it. */
+         The name is checked because `animationend` bubbles from every field
+         inside the form, and none of them are named `door-shake`. */
       onAnimationEnd={(event) => {
         if (event.animationName === "door-shake") {
           form.current?.removeAttribute("data-shake");
         }
       }}
-      className="door-form door-boot mt-8 space-y-6"
-      style={{ "--door-boot-offset": "320ms" } as React.CSSProperties}
+      className="door-form space-y-6"
       noValidate
     >
       <DoorField label="Email" glyph={Mail} error={errors.email ? "To'g'ri email kiriting." : null}>
@@ -160,16 +161,9 @@ export function LoginForm({ next }: { next: string | null }) {
         ) : null}
       </div>
 
-      {/* The panel's own primary button, taken to the door's height and given
-          the ignition flash: the fill, the edge and every state stay the ones
-          every other action in the panel wears — on this screen the tokens
-          under them are the door's. */}
-      <Button
-        type="submit"
-        size="lg"
-        className="door-ignite h-14 w-full"
-        disabled={isSubmitting}
-      >
+      {/* The panel's own primary button, plain: fill, edge and hover are the
+          ones every other filled button in the panel already wears. */}
+      <Button type="submit" size="lg" className="h-12 w-full" disabled={isSubmitting}>
         {isSubmitting ? "Kirilmoqda…" : "Kirish"}
       </Button>
 
@@ -205,10 +199,7 @@ function DoorField({ label, glyph, error, children }: DoorFieldProps) {
       <label htmlFor={id} className="type-eyebrow mb-2 block text-muted">
         {label}
       </label>
-      {/* `data-invalid` and not a class: the state is read by `.door-field`'s
-          own rules, and an attribute keeps the refused colours in one place
-          rather than splitting them between here and the stylesheet. */}
-      <div data-invalid={invalid} className="door-field h-14 gap-3 px-4">
+      <div className={cn(fieldBox({ invalid }), "h-12 gap-3 px-4")}>
         <Icon icon={glyph} size="md" className={invalid ? "text-danger" : "text-muted"} />
         {children(id, invalid)}
       </div>

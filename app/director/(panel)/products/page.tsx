@@ -75,7 +75,7 @@ export default async function DirectorProductsPage({
       }
     }
     const query = next.toString();
-    return "/admin/director/products" + (query ? "?" + query : "");
+    return "/director/products" + (query ? "?" + query : "");
   };
 
   return (

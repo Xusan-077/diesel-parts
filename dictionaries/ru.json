@@ -229,7 +229,9 @@
     "ratingLabel": "{rating} из 5",
     "reviewCount": "{count} отзывов",
     "reviewCountEmpty": "Нет отзывов",
-    "orderedCount": "Заказано {count} раз"
+    "orderedCount": "Заказано {count} раз",
+    "zoomLabel": "Увеличить изображение",
+    "zoomCloseLabel": "Закрыть"
   },
   "categories": {
     "title": "Категория",

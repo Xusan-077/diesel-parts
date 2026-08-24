@@ -4,7 +4,7 @@ import type { AdminNavItem } from "@/lib/auth/admin-nav";
  * The panel's sections, gathered into the four jobs a director actually does.
  *
  * The sidebar used to split on the route prefix — everything under
- * `/admin/director` in one pile, everything under `/admin/seller` in another —
+ * `/director` in one pile, everything under `/admin/seller` in another —
  * which is the authorisation boundary, not a working one. It put the products
  * catalogue next to the audit log because both are director-only, and it put
  * orders in a different group from the discounts that gate them.
@@ -21,14 +21,10 @@ export type NavGroupId = "overview" | "catalog" | "sales" | "management";
 
 /** Group order, and the routes each one claims. */
 const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
-  { id: "overview", hrefs: ["/admin/director", "/admin/director/analytics", "/admin/seller"] },
+  { id: "overview", hrefs: ["/director", "/director/analytics", "/admin/seller"] },
   {
     id: "catalog",
-    hrefs: [
-      "/admin/director/products",
-      "/admin/director/categories",
-      "/admin/director/discounts",
-    ],
+    hrefs: ["/director/products", "/director/categories", "/director/discounts"],
   },
   {
     id: "sales",
@@ -36,7 +32,7 @@ const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
   },
   {
     id: "management",
-    hrefs: ["/admin/director/users", "/admin/director/reviews", "/admin/director/audit"],
+    hrefs: ["/director/users", "/director/reviews", "/director/audit"],
   },
 ];
 
