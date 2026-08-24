@@ -284,11 +284,13 @@ export function CarouselDots({ className, ...props }: React.ComponentProps<"div"
               aria-hidden
               className={cn(
                 // The active marker stretches rather than swelling, so the row
-                // keeps its baseline as the hero moves through it.
+                // keeps its baseline as the hero moves through it. Narrower on
+                // a phone, where the strip sits centred under a full-bleed
+                // banner rather than sharing the row with the arrows.
                 "block h-0.5 rounded-full transition-all duration-300",
                 current
-                  ? "w-8 bg-accent"
-                  : "w-4 bg-border-strong group-hover/dot:bg-muted"
+                  ? "w-6 bg-accent sm:w-8"
+                  : "w-3 bg-border-strong group-hover/dot:bg-muted sm:w-4"
               )}
             />
           </button>

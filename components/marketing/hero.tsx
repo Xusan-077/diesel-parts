@@ -31,15 +31,18 @@ import { HeroSlide } from "./hero-slide";
 /*
  * The frame.
  *
- * The hero used to run edge to edge and end in a hairline rule, which is the
- * arrangement that reads as "this photograph is the top of the site". It is
- * now a card on the page instead: same gutter as every section below it, a
- * real border on all four sides, and the page's white showing round it.
+ * Above `sm` it is a card on the page: same gutter as every section below it,
+ * a real border on all four sides, and the page's white showing round it —
+ * that framed treatment hands the first screen back to the page, so the white
+ * header plate above it and the trust badges below it read as one document
+ * rather than as chrome wrapped around a poster.
  *
- * That trade is deliberate. A full-bleed hero owns the first screen and the
- * header floats on top of it; a framed one hands the first screen back to the
- * page, so the white header plate above it and the trust badges below it read
- * as one document rather than as chrome wrapped around a poster.
+ * On a phone the card is dropped for a full-bleed banner instead — no side
+ * gutter, no border, no radius (the `Container` this sits in loses its own
+ * padding at the same breakpoint, in the component below). A 358px-wide card
+ * with 16px of white on each side reads as a thumbnail on a 390px screen; the
+ * picture and its headline earn the whole width there the way they do not
+ * need to once there is a multi-column page around them.
  *
  * Losing the viewport as a height source means the frame has to name one, and
  * it names a floor rather than a fixed height — a long headline in Russian
@@ -50,10 +53,10 @@ import { HeroSlide } from "./hero-slide";
  * the frame (or of the carousel item) so the stretch reaches it.
  */
 const FRAME =
-  "relative flex overflow-hidden rounded-xl border border-border min-h-[26rem] sm:min-h-[30rem] lg:min-h-[34rem]";
+  "relative flex overflow-hidden min-h-[20rem] sm:min-h-[30rem] sm:rounded-xl sm:border sm:border-border lg:min-h-[34rem]";
 
 /** Matches the slide's own gutter, so the controls line up with the copy. */
-const FRAME_GUTTER = "px-6 sm:px-10 lg:px-14";
+const FRAME_GUTTER = "px-5 sm:px-10 lg:px-14";
 
 export function Hero({
   home,
@@ -66,7 +69,7 @@ export function Hero({
 }) {
   if (heroSlides.length <= 1) {
     return (
-      <Container className="pt-6 sm:pt-8">
+      <Container className="px-0 pt-0 sm:pt-8">
         <div className={FRAME}>
           <HeroSlide slide={heroSlides[0]} home={home} lang={lang} priority />
         </div>
@@ -75,7 +78,7 @@ export function Hero({
   }
 
   return (
-    <Container className="pt-6 sm:pt-8">
+    <Container className="px-0 pt-0 sm:pt-8">
       <Carousel
         labels={{
           region: home.heroCarouselLabel,
@@ -105,10 +108,16 @@ export function Hero({
           both the only control that says how many slides there are and the only
           way to reach one directly; the arrows are for pointer and keyboard
           users and appear from `sm` up.
+
+          Centred on a phone — with the arrows hidden there is nothing on the
+          other end of `justify-between` to balance against, so the row reads
+          as left-aligned rather than as the deliberately centred marker strip
+          under a full-bleed banner. `sm:justify-between` restores the spread
+          once the arrows join them.
         */}
         <div
           className={cn(
-            "pointer-events-none absolute inset-x-0 bottom-6 flex items-center justify-between gap-4",
+            "pointer-events-none absolute inset-x-0 bottom-4 flex items-center justify-center gap-4 sm:bottom-6 sm:justify-between",
             FRAME_GUTTER
           )}
         >

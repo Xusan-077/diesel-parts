@@ -114,7 +114,11 @@ export function ProductFilters({
           onChange={(event) => onChange("search", event.target.value)}
           placeholder={dict.searchPlaceholder}
           aria-label={dict.searchLabel}
-          className={cn(controlVariants({ variant: "box" }), "h-9 pl-8")}
+          // `text-base` below `lg`: this panel is a bottom sheet on a phone
+          // (see FilterDrawer), and a sub-16px input there makes iOS Safari
+          // zoom the page in on focus. The sidebar copy above `lg` keeps the
+          // panel's usual `text-sm`, where there is no touch zoom to guard.
+          className={cn(controlVariants({ variant: "box" }), "h-9 pl-8 text-base lg:text-sm")}
         />
       </div>
 

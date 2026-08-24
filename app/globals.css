@@ -79,6 +79,7 @@
   --chrome-secondary: var(--text-secondary);
   --chrome-muted: var(--muted);
   --chrome-accent: var(--accent-strong);
+  --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
   /* See the `header-plate` utility. The panel has no marketing header, so
      this resolves to the container the frame already is. */
   --header-plate: var(--surface);
@@ -555,6 +556,11 @@
   --chrome-secondary: #b5babe;
   --chrome-muted: #858c91;
   --chrome-accent: #ff8a5c;
+  /* The search field's focus ring on this material: a solid 2px line plus a
+     soft bloom around it, the same two-layer shape `--field-halo` gives every
+     other field on the site (see the note on it below) — a hard ring alone
+     read as too stark against the dark chrome. */
+  --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
 
   /* Only the top bar wears that dark material now. The two rows under it —
      the logo/search/actions row and the nav row — are a white plate that
@@ -1186,6 +1192,7 @@
   --chrome-secondary: var(--text-secondary);
   --chrome-muted: var(--muted);
   --chrome-accent: var(--accent-strong);
+  --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
   background-color: var(--chrome);
 }
 

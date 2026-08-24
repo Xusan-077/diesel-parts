@@ -12,6 +12,7 @@ import {
   useCartStore,
   useCompareStore,
   useProfileStore,
+  useSearchHistoryStore,
   useWishlistStore,
 } from "@/lib/store/stores";
 import { useLanguageStore } from "@/lib/store/language-store";
@@ -109,6 +110,14 @@ export function useLanguage(serverLanguage: Locale) {
   const { setLanguage } = useLanguageStore.getState();
 
   return { language: hydrated ? language : serverLanguage, setLanguage };
+}
+
+/** Recent terms from the header search, most recent first. */
+export function useSearchHistory() {
+  const terms = useSearchHistoryStore((state) => state.terms);
+  const { add, clear } = useSearchHistoryStore.getState();
+
+  return { terms, add, clear };
 }
 
 /**

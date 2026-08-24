@@ -1,6 +1,7 @@
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeaderMain } from "./header-main";
+import type { HotOfferLabels } from "./header-search";
 import { HeaderNav } from "./header-nav";
 import { HeaderShell } from "./header-shell";
 import { HeaderTopbar } from "./header-topbar";
@@ -14,6 +15,8 @@ interface HeaderProps {
   viewAllLabel: string;
   /** Shown in a search suggestion whose part has no price yet. */
   requestPriceLabel: string;
+  /** The home page's row titles, for the search dropdown's hot-offer chips. */
+  hotOfferLabels: HotOfferLabels;
   account: Dictionary["account"];
   /** The signed-in visitor's number, or null. See `HeaderActions`. */
   phone: string | null;
@@ -27,6 +30,7 @@ export function Header({
   closeLabel,
   viewAllLabel,
   requestPriceLabel,
+  hotOfferLabels,
   account,
   phone,
 }: HeaderProps) {
@@ -42,6 +46,7 @@ export function Header({
         closeLabel={closeLabel}
         viewAllLabel={viewAllLabel}
         requestPriceLabel={requestPriceLabel}
+        hotOfferLabels={hotOfferLabels}
         account={account}
         phone={phone}
       />

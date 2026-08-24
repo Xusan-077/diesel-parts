@@ -32,15 +32,26 @@ describe("FloatingContactWidget", () => {
     ).toBe("false");
   });
 
-  it("opens the panel and marks the trigger expanded", async () => {
+  it("opens the panel and hides the trigger behind it", async () => {
     const { user } = setup();
+    // Captured before the click: the trigger is never unmounted, only
+    // hidden, so this reference is still good once the panel is open.
+    const trigger = screen.getByRole("button", { name: support.open });
 
-    await user.click(screen.getByRole("button", { name: support.open }));
+    await user.click(trigger);
 
     expect(screen.getByRole("dialog", { name: support.title })).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: support.title }).getAttribute("aria-expanded")
-    ).toBe("true");
+    /*
+     * The trigger used to rename itself to the panel's title and morph into
+     * a second close button once open — a floating X sitting right below the
+     * panel's own, close enough on a phone to read as one smudged control.
+     * It steps out of the accessibility tree instead now, so a normal query
+     * can no longer find it, though it is still there, inert, for focus to
+     * land back on once the panel closes.
+     */
+    expect(screen.queryByRole("button", { name: support.open })).toBeNull();
+    expect(trigger.getAttribute("aria-hidden")).toBe("true");
+    expect(trigger.getAttribute("tabindex")).toBe("-1");
   });
 
   /*

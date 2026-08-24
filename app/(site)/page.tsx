@@ -96,7 +96,12 @@ export default async function HomePage() {
         </Reveal>
       </Container>
 
-      <HomeProductRow {...rowProps} collection="popular" title={dict.home.popularTitle} />
+      <HomeProductRow
+        {...rowProps}
+        collection="popular"
+        title={dict.home.popularTitle}
+        id="popular"
+      />
 
       <Container as="section" className="py-16">
         <Reveal>
@@ -118,6 +123,7 @@ export default async function HomePage() {
         collection="newest"
         title={dict.home.newTitle}
         ribbon={dict.home.newBadge}
+        id="newest"
       />
 
       <section className="border-y border-border bg-background-subtle">
@@ -136,6 +142,7 @@ export default async function HomePage() {
         {...rowProps}
         collection="bestSellers"
         title={dict.home.bestSellersTitle}
+        id="best-sellers"
       />
 
       <Container as="section" className="py-16">

@@ -38,6 +38,12 @@ interface HomeProductRowProps {
   initialData?: HomeProductsResponse;
   /** Corner label applied to every card in this row. */
   ribbon?: string;
+  /**
+   * Anchors this row for the search dropdown's hot-offer chips, which link to
+   * `/#<id>` from anywhere on the site. `scroll-mt` keeps the jump from
+   * landing the heading under the sticky header.
+   */
+  id?: string;
 }
 
 /**
@@ -78,6 +84,7 @@ export function HomeProductRow({
   retryLabel,
   initialData,
   ribbon,
+  id,
 }: HomeProductRowProps) {
   const { products, meta, stats, isPending, isError, retry } = useHomeProducts(
     collection,
@@ -87,7 +94,7 @@ export function HomeProductRow({
 
   if (isPending) {
     return (
-      <Container as="section" className="py-16">
+      <Container as="section" id={id} className="scroll-mt-24 py-16 lg:scroll-mt-40">
         <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
         <HomeProductRowSkeleton label={loadingLabel} />
       </Container>
@@ -96,7 +103,7 @@ export function HomeProductRow({
 
   if (isError) {
     return (
-      <Container as="section" className="py-16">
+      <Container as="section" id={id} className="scroll-mt-24 py-16 lg:scroll-mt-40">
         <h2 className="text-2xl font-semibold text-foreground">{title}</h2>
         <DataUnavailable className="mt-8" message={unavailableLabel} />
         <div className="mt-4 text-center">
@@ -117,7 +124,7 @@ export function HomeProductRow({
   }
 
   return (
-    <Container>
+    <Container id={id} className="scroll-mt-24 lg:scroll-mt-40">
       <ProductCarousel
         lang={lang}
         title={title}
