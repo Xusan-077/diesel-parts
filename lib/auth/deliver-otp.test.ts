@@ -3,11 +3,12 @@ import type { SmsResult } from "./eskiz";
 
 const sendSms = vi.fn<(phone: string, message: string) => Promise<SmsResult>>();
 const isEskizConfigured = vi.fn<() => boolean>();
+const buildOtpMessage = vi.fn<(code: string) => string>();
 
 vi.mock("./eskiz", () => ({
   sendSms,
   isEskizConfigured,
-  buildOtpMessage: (code: string) => `code ${code}`,
+  buildOtpMessage,
 }));
 
 const { deliverOtp } = await import("./deliver-otp");
@@ -22,6 +23,8 @@ function setNodeEnv(value: string) {
 beforeEach(() => {
   sendSms.mockReset();
   isEskizConfigured.mockReset();
+  buildOtpMessage.mockReset();
+  buildOtpMessage.mockImplementation((code) => `code ${code}`);
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -65,6 +68,28 @@ describe("deliverOtp with Eskiz configured", () => {
     sendSms.mockResolvedValue({ delivered: false, reason: "failed", detail: "test mode" });
 
     await expect(deliverOtp(PHONE, CODE)).resolves.toEqual({ delivered: false });
+  });
+});
+
+describe("deliverOtp with a misconfigured template", () => {
+  beforeEach(() => {
+    isEskizConfigured.mockReturnValue(true);
+    buildOtpMessage.mockImplementation(() => {
+      throw new Error("ESKIZ_SMS_TEMPLATE has no {code} placeholder");
+    });
+  });
+
+  it("never calls sendSms, and never leaks the code, in production", async () => {
+    setNodeEnv("production");
+    await expect(deliverOtp(PHONE, CODE)).resolves.toEqual({ delivered: false });
+    expect(sendSms).not.toHaveBeenCalled();
+    expect(console.error).toHaveBeenCalledWith(expect.stringContaining("{code}"));
+  });
+
+  it("still unblocks local development via the console fallback", async () => {
+    setNodeEnv("development");
+    await expect(deliverOtp(PHONE, CODE)).resolves.toEqual({ delivered: true, devCode: CODE });
+    expect(sendSms).not.toHaveBeenCalled();
   });
 });
 

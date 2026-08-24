@@ -28,12 +28,19 @@ export async function deliverOtp(phone: string, code: string): Promise<OtpDelive
     return { delivered: true, devCode: code };
   }
 
-  const result = await sendSms(phone, buildOtpMessage(code));
-  if (result.delivered) {
-    return { delivered: true };
+  try {
+    const result = await sendSms(phone, buildOtpMessage(code));
+    if (result.delivered) {
+      return { delivered: true };
+    }
+    console.error(`[auth] Eskiz delivery failed for ${phone}: ${result.detail ?? result.reason}`);
+  } catch (error) {
+    // A misconfigured ESKIZ_SMS_TEMPLATE (missing the {code} placeholder) —
+    // see buildOtpMessage's doc comment. Treated the same as an Eskiz-side
+    // send failure below: never let a real phone receive a static code, but
+    // don't block local development over it either.
+    console.error(`[auth] ${error instanceof Error ? error.message : "Invalid OTP template"}`);
   }
-
-  console.error(`[auth] Eskiz delivery failed for ${phone}: ${result.detail ?? result.reason}`);
 
   if (isProduction) {
     return { delivered: false };

@@ -12,10 +12,28 @@ export function isEskizConfigured(): boolean {
   return Boolean(process.env.ESKIZ_EMAIL && process.env.ESKIZ_PASSWORD);
 }
 
+const DEFAULT_TEMPLATE =
+  "DieselParts.uz saytiga kirish uchun tasdiqlash kodi: {code}. Kodni hech kimga bermang!";
+
+/**
+ * `{code}` is a literal substring match, not a regex group — so a template
+ * that doesn't contain it (Eskiz's dashboard shows its own approved wording
+ * with a sample digit sequence, e.g. "kodi: 0000", which reads as a value to
+ * paste back rather than a placeholder to keep) silently sends that sample
+ * unchanged instead of the real one-time code. That shipped a real OTP SMS
+ * with a static, never-changing "0000" once already — see the 2026-08-24
+ * incident note in docs/deploy-checklist.md. Failing loudly here means a
+ * misconfigured template blocks the send (`deliverOtp` logs and reports
+ * non-delivery) instead of quietly handing every user the same code.
+ */
 export function buildOtpMessage(code: string): string {
-  const template =
-    process.env.ESKIZ_SMS_TEMPLATE ??
-    "DieselParts: tasdiqlash kodi {code}. Kod 5 daqiqa amal qiladi.";
+  const template = process.env.ESKIZ_SMS_TEMPLATE ?? DEFAULT_TEMPLATE;
+  if (!template.includes("{code}")) {
+    throw new Error(
+      "ESKIZ_SMS_TEMPLATE has no {code} placeholder — refusing to send a static, non-OTP message. " +
+        "Keep Eskiz's approved wording but replace its sample digits with the literal text \"{code}\".",
+    );
+  }
   return template.replace("{code}", code);
 }
 
