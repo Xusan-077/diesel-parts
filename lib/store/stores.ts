@@ -12,6 +12,7 @@ import {
 import { parseIdList, removeId, toggleId } from "./collection";
 import { EMPTY_PROFILE, parseProfile, type Profile } from "@/lib/account/profile";
 import { normalizePersistedValue } from "./persist-storage";
+import { addSearchTerm, parseSearchHistory } from "./search-history";
 import {
   forgetSnapshot,
   parseSnapshots,
@@ -193,6 +194,39 @@ export const useProfileStore = create<ProfileState>()(
   )
 );
 
+interface SearchHistoryState {
+  terms: string[];
+  add: (term: string) => void;
+  clear: () => void;
+}
+
+type SearchHistorySlice = Pick<SearchHistoryState, "terms">;
+
+/**
+ * The header search's recent terms. Client-owned like the cart and wishlist —
+ * this is a per-browser convenience, not something a customer's account
+ * carries between devices.
+ */
+export const useSearchHistoryStore = create<SearchHistoryState>()(
+  persist(
+    (set) => ({
+      terms: [],
+      add: (term) => set((state) => ({ terms: addSearchTerm(state.terms, term) })),
+      clear: () => set({ terms: [] }),
+    }),
+    {
+      ...SKIP_HYDRATION,
+      name: "diesel-parts:search-history",
+      storage: createStorage<SearchHistorySlice>("terms"),
+      partialize: (state): SearchHistorySlice => ({ terms: state.terms }),
+      merge: (persisted, current): SearchHistoryState => ({
+        ...current,
+        terms: parseSearchHistory((persisted as SearchHistorySlice | undefined)?.terms),
+      }),
+    }
+  )
+);
+
 /** Called once after mount to load persisted state without a render mismatch. */
 export function rehydrateStores(): void {
   void useWishlistStore.persist.rehydrate();
@@ -200,4 +234,5 @@ export function rehydrateStores(): void {
   void useCartStore.persist.rehydrate();
   void useSnapshotStore.persist.rehydrate();
   void useProfileStore.persist.rehydrate();
+  void useSearchHistoryStore.persist.rehydrate();
 }

@@ -2,7 +2,7 @@ import { CatalogMegaMenu } from "@/components/catalog/catalog-mega-menu";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { HeaderActions } from "./header-actions";
-import { HeaderSearch } from "./header-search";
+import { HeaderSearch, type HotOfferLabels } from "./header-search";
 import { HeaderSearchDialog } from "./header-search-dialog";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-nav";
@@ -17,6 +17,8 @@ interface HeaderMainProps {
   viewAllLabel: string;
   /** Shown in a suggestion row whose part has no price yet. */
   requestPriceLabel: string;
+  /** The home page's row titles, for the search dropdown's hot-offer chips. */
+  hotOfferLabels: HotOfferLabels;
   account: Dictionary["account"];
   phone: string | null;
 }
@@ -29,6 +31,7 @@ export function HeaderMain({
   closeLabel,
   viewAllLabel,
   requestPriceLabel,
+  hotOfferLabels,
   account,
   phone,
 }: HeaderMainProps) {
@@ -73,6 +76,7 @@ export function HeaderMain({
           lang={lang}
           header={header}
           requestPriceLabel={requestPriceLabel}
+          hotOfferLabels={hotOfferLabels}
           className="hidden min-w-0 flex-1 lg:block"
         />
 
@@ -95,6 +99,7 @@ export function HeaderMain({
           lang={lang}
           header={header}
           requestPriceLabel={requestPriceLabel}
+          hotOfferLabels={hotOfferLabels}
           closeLabel={closeLabel}
           className="ml-auto lg:hidden"
         />

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HeaderSearch } from "./header-search";
 import { MIN_QUERY_LENGTH, SUGGESTION_LIMIT } from "@/lib/search-suggest";
+import { useSearchHistoryStore } from "@/lib/store/stores";
 import type { Product } from "@/lib/types";
 import dictionary from "@/dictionaries/uz.json";
 
@@ -16,7 +17,12 @@ vi.mock("@/lib/api/products", () => ({
   fetchProducts: (...args: unknown[]) => fetchProducts(...args),
 }));
 
-const { header, common } = dictionary;
+const { header, common, home } = dictionary;
+const hotOfferLabels = {
+  popular: home.popularTitle,
+  bestSellers: home.bestSellersTitle,
+  newest: home.newTitle,
+};
 
 function product(patch: Partial<Product> = {}): Product {
   const id = patch.id ?? "p-1";
@@ -54,7 +60,12 @@ function renderSearch() {
 
   render(
     <QueryClientProvider client={client}>
-      <HeaderSearch lang="uz" header={header} requestPriceLabel={common.requestPrice} />
+      <HeaderSearch
+        lang="uz"
+        header={header}
+        requestPriceLabel={common.requestPrice}
+        hotOfferLabels={hotOfferLabels}
+      />
     </QueryClientProvider>
   );
 
@@ -64,6 +75,8 @@ function renderSearch() {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  localStorage.clear();
+  useSearchHistoryStore.setState({ terms: [] });
 });
 
 describe("header search", () => {
@@ -199,5 +212,68 @@ describe("header search", () => {
     await userEvent.clear(field);
 
     await waitFor(() => expect(screen.queryByRole("option")).toBeNull());
+  });
+
+  describe("before anything is typed", () => {
+    it("offers an empty-history message and the three hot-offer shortcuts on focus", async () => {
+      const field = renderSearch();
+
+      await userEvent.click(field);
+
+      expect(await screen.findByText(header.searchHistoryEmpty)).toBeTruthy();
+      expect(screen.getByRole("link", { name: hotOfferLabels.popular })).toHaveProperty(
+        "href",
+        expect.stringContaining("/#popular")
+      );
+      expect(screen.getByRole("link", { name: hotOfferLabels.bestSellers })).toHaveProperty(
+        "href",
+        expect.stringContaining("/#best-sellers")
+      );
+      expect(screen.getByRole("link", { name: hotOfferLabels.newest })).toHaveProperty(
+        "href",
+        expect.stringContaining("/#newest")
+      );
+      // Not a search, so it must not be queued as a request.
+      expect(fetchProducts).not.toHaveBeenCalled();
+    });
+
+    it("does not show product suggestions before there is something to match on", async () => {
+      const field = renderSearch();
+
+      await userEvent.click(field);
+
+      expect(screen.queryByRole("option")).toBeNull();
+    });
+  });
+
+  describe("search history", () => {
+    it("remembers a query run with Enter and offers it back on the next focus", async () => {
+      respondWith([product()]);
+      const field = renderSearch();
+
+      await userEvent.type(field, "CAT 950");
+      await screen.findAllByRole("option");
+      await userEvent.keyboard("{Enter}");
+
+      cleanup();
+      const nextField = renderSearch();
+      await userEvent.click(nextField);
+
+      const historyLink = await screen.findByRole("link", { name: /CAT 950/ });
+      expect(historyLink).toHaveProperty("href", expect.stringContaining("/products?q=CAT%20950"));
+    });
+
+    it("does not remember a hot-offer visit as a search", async () => {
+      const field = renderSearch();
+      await userEvent.click(field);
+
+      await userEvent.click(screen.getByRole("link", { name: hotOfferLabels.newest }));
+
+      cleanup();
+      const nextField = renderSearch();
+      await userEvent.click(nextField);
+
+      expect(await screen.findByText(header.searchHistoryEmpty)).toBeTruthy();
+    });
   });
 });

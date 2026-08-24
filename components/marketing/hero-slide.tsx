@@ -106,7 +106,13 @@ export function HeroSlide({
           aligned to. */}
       <div
         className={cn(
-          "relative flex flex-1 flex-col justify-center px-6 py-16 sm:px-10 sm:py-20 lg:px-14",
+          // Mobile keeps this compact — a phone pays for every line of this
+          // block in scroll before it reaches the carousel controls, let alone
+          // the page below. `sm` and up restore the original roomier rhythm.
+          // The bottom keeps more room than the top: the dot markers sit
+          // `bottom-6` inside the frame (see FRAME_GUTTER in hero.tsx), and a
+          // symmetric squeeze would run the CTA row straight into them.
+          "relative flex flex-1 flex-col justify-center px-5 pt-6 pb-14 sm:px-10 sm:py-20 lg:px-14",
           // Centred on the grid, left over a photograph. `items-start` so the
           // buttons sit under the type rather than spanning the frame.
           hasImage ? "items-start text-left" : "text-center"
@@ -131,7 +137,7 @@ export function HeroSlide({
 
         <h1
           className={cn(
-            "hero-rise mt-5 max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl",
+            "hero-rise mt-3 max-w-3xl text-balance text-3xl font-semibold tracking-tight sm:mt-5 sm:text-5xl lg:text-6xl",
             // The photograph slides cap the measure tighter: the right half of
             // the frame belongs to the part, so the type has to clear it.
             hasImage ? "max-w-xl text-chrome-foreground lg:max-w-2xl" : "mx-auto text-foreground"
@@ -143,7 +149,7 @@ export function HeroSlide({
 
         <p
           className={cn(
-            "hero-rise mt-6 max-w-2xl text-pretty text-lg",
+            "hero-rise mt-3 max-w-2xl text-pretty text-base sm:mt-6 sm:text-lg",
             hasImage ? "max-w-lg text-chrome-secondary" : "mx-auto text-muted"
           )}
           style={{ animationDelay: "220ms" }}
@@ -153,7 +159,7 @@ export function HeroSlide({
 
         <div
           className={cn(
-            "hero-rise mt-10 flex flex-wrap items-center gap-4",
+            "hero-rise mt-6 flex flex-wrap items-center gap-4 sm:mt-10",
             hasImage ? "justify-start" : "justify-center"
           )}
           style={{ animationDelay: "300ms" }}

@@ -5,26 +5,31 @@ import { AnimatePresence, motion } from "motion/react";
 import { Phone, X } from "lucide-react";
 import { MOTION } from "@/components/providers/motion-provider";
 import { Icon } from "@/components/ui/icon";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 import { SUPPORT_CONTACT, telegramHref } from "@/lib/site-config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 /*
  * The widget paints itself dark in both themes rather than reading the page
- * tokens. It is not page content — it floats over whatever is underneath, the
- * way a support chip does everywhere else on the web — and holding it dark is
- * what keeps the brand orange at full strength on the light catalogue paper.
+ * tokens most of it sits on — it is not page content, it floats over whatever
+ * is underneath, the way a support chip does everywhere else on the web — but
+ * it is the site's *own* dark material now: `bg-chrome`, `bg-chrome-surface`,
+ * `text-chrome-foreground` and the rest, the same tokens the header and
+ * footer paint with. This used to be a separate warm hex ramp chosen to read
+ * as "not borrowed from another site" on its own terms; now that the site has
+ * a dark material of its own — the chrome — matching it *is* what reads as
+ * this site's, so the widget takes it directly. `--chrome` does not re-step
+ * between light and dark theme (see the note on it in globals.css) and this
+ * component is never nested inside `.header-plate`, so it keeps resolving to
+ * the true dark frame regardless of the page's own theme, same as before.
  *
- * The values are the dark ramp from globals.css dropped one step, so the plate
- * reads as sitting above a dark page rather than dissolving into it. They are
- * deliberately warm (the site's hue 57) and not the blue-black a floating card
- * usually defaults to: a cool near-black over this warm neutral ramp reads as a
- * component borrowed from another site.
+ * `--success` is the one token left out: it re-steps per theme (a light-mode
+ * green would all but disappear on this permanently dark plate), and there is
+ * no chrome-scoped equivalent to reach for instead. This is `--success`'s own
+ * dark-theme value, held as a literal rather than a variable for that reason.
  */
-const PLATE = {
-  base: "#0f0d0b",
-  raised: "#17140f",
-  online: "#7cd591",
-} as const;
+const STATUS_ONLINE = "#7cd591";
 
 /**
  * Telegram's own mark. Lucide ships a generic paper plane, which reads as
@@ -56,18 +61,18 @@ function ChannelRow({ href, external, label, hint, children }: ChannelRowProps) 
     <a
       href={href}
       {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
-      className="group relative flex items-center gap-3 px-4 py-3.5 outline-none transition-colors hover:bg-[#17140f] focus-visible:bg-[#17140f]"
+      className="group relative flex items-center gap-3 px-4 py-3.5 outline-none transition-colors hover:bg-chrome-surface focus-visible:bg-chrome-surface"
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-[#f5841f] transition-transform duration-150 group-hover:scale-y-100 group-focus-visible:scale-y-100"
+        className="absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-chrome-accent transition-transform duration-150 group-hover:scale-y-100 group-focus-visible:scale-y-100"
       />
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#221c17] text-[#f5841f]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-chrome-hover text-chrome-accent">
         {children}
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-[0.8125rem] font-medium text-[#f2efed]">{label}</span>
-        <span className="mt-0.5 block truncate text-xs text-[#aaa099]">{hint}</span>
+        <span className="block truncate text-[0.8125rem] font-medium text-chrome-foreground">{label}</span>
+        <span className="mt-0.5 block truncate text-xs text-chrome-secondary">{hint}</span>
       </span>
     </a>
   );
@@ -83,11 +88,20 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Below this the panel is the bottom sheet described on its className, not
+  // the corner card — see the scroll-lock effect below, the only behaviour
+  // here with no CSS equivalent.
+  const isMobileSheet = useMediaQuery("(max-width: 639px)");
 
   /*
    * Escape closes and returns focus to the button; a pointer landing anywhere
-   * outside closes too. The panel is dismissable furniture rather than a modal,
-   * so it never traps focus or locks the page behind it.
+   * outside closes too. Above `sm` the panel stays dismissable furniture
+   * rather than a modal — it never traps focus, and this is the only thing
+   * that closes it on an outside click, since there is no backdrop there to
+   * catch the pointer first. Below `sm` it is a bottom sheet with its own
+   * backdrop and scroll lock (see the next effect and the panel's className),
+   * closer to a modal, but this listener still catches Escape and a stray
+   * pointer down on the sheet's own chrome the same way.
    */
   useEffect(() => {
     if (!open) {
@@ -116,8 +130,52 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
     };
   }, [open]);
 
+  /*
+   * Below `sm` the panel becomes a bottom sheet over live page content (see
+   * the panel's className), so it locks the page behind it the way a sheet
+   * does everywhere else on the site. Above `sm` it stays the small corner
+   * card the doc comment describes — content is still visible around it, so
+   * that breakpoint keeps scrolling live.
+   */
+  useEffect(() => {
+    if (!open || !isMobileSheet) {
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open, isMobileSheet]);
+
   return (
     <>
+      {/*
+        Below `sm` the panel is a bottom sheet over a page still showing
+        product cards behind it — see the panel's className — so it earns a
+        backdrop the small corner card above `sm` never needed (that one still
+        leaves the page around it visible and dismisses on an outside click
+        instead, per the doc comment). Tied to `open` rather than rendered
+        unconditionally, and a tap on it closes the same way the panel's own
+        close button does.
+      */}
+      <AnimatePresence>
+        {open ? (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={MOTION.fade}
+            onClick={() => {
+              setOpen(false);
+              triggerRef.current?.focus();
+            }}
+            className="fixed inset-0 z-50 bg-black/60 sm:hidden"
+          />
+        ) : null}
+      </AnimatePresence>
+
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -126,33 +184,36 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
             id={panelId}
             role="dialog"
             aria-label={support.title}
-            initial={{ opacity: 0, scale: 0.94, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.94, y: 8 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
             transition={MOTION.pop}
-            style={{ transformOrigin: "bottom right", background: PLATE.base }}
             /*
-             * Pinned to both gutters below `sm`, so a narrow phone gets a panel
-             * the width of its screen minus 2rem and never one that runs off
-             * the right edge; from `sm` up it settles to a fixed column.
+             * Below `sm` this is a bottom sheet: flush to both edges and the
+             * screen's own bottom, height-capped and scrollable rather than
+             * floating above the trigger, so it takes only the lower part of
+             * the screen instead of the corner card's old inset-x-4/bottom-22
+             * placement riding high enough to cover most of the hero banner.
+             * From `sm` up it is that corner card again — a small popover
+             * with the page still visible and interactive around it.
              */
-            className="fixed inset-x-4 bottom-22 z-60 overflow-hidden rounded-lg text-left shadow-[0_24px_56px_-12px_rgb(0_0_0/0.7)] ring-1 ring-white/8 sm:left-auto sm:w-84"
+            className="fixed inset-x-0 bottom-0 z-60 max-h-[75vh] overflow-x-hidden overflow-y-auto rounded-t-lg bg-chrome text-left shadow-[0_24px_56px_-12px_rgb(0_0_0/0.7)] ring-1 ring-white/8 sm:inset-x-auto sm:left-auto sm:right-4 sm:bottom-22 sm:w-84 sm:max-h-none sm:overflow-hidden sm:rounded-lg"
           >
             {/* The plate's edge: the one wide stroke of orange in the widget. */}
-            <div aria-hidden className="h-0.5 w-full bg-[#f5841f]" />
+            <div aria-hidden className="h-0.5 w-full bg-chrome-accent" />
 
             <div className="flex items-start justify-between gap-3 px-4 py-3.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#f2efed]">{support.title}</p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-[#aaa099]">
+                <p className="truncate text-sm font-semibold text-chrome-foreground">{support.title}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-chrome-secondary">
                   <span className="relative flex h-1.5 w-1.5 shrink-0">
                     <span
                       className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden"
-                      style={{ background: PLATE.online }}
+                      style={{ background: STATUS_ONLINE }}
                     />
                     <span
                       className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                      style={{ background: PLATE.online }}
+                      style={{ background: STATUS_ONLINE }}
                     />
                   </span>
                   {support.status}
@@ -165,17 +226,22 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
                   setOpen(false);
                   triggerRef.current?.focus();
                 }}
-                className="-mr-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#aaa099] outline-none transition-colors hover:bg-[#221c17] hover:text-[#f2efed] focus-visible:ring-2 focus-visible:ring-[#f5841f]"
+                // `h-10 w-10` matches the close/trigger buttons in the header
+                // search dialog — a 44px touch target would need to either
+                // overlap the title above it or push past the card's own
+                // padding, and 40px is the size the rest of the site already
+                // settled on for an icon-only dismiss control.
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-chrome-secondary outline-none transition-colors hover:bg-chrome-hover hover:text-chrome-foreground focus-visible:ring-2 focus-visible:ring-chrome-accent"
               >
                 <Icon icon={X} />
               </button>
             </div>
 
-            <p className="border-t border-[#2b2521] px-4 py-3.5 text-[0.8125rem] leading-relaxed text-[#aaa099]">
+            <p className="border-t border-chrome-border px-4 py-3.5 text-[0.8125rem] leading-relaxed text-chrome-secondary">
               {support.greeting}
             </p>
 
-            <div className="border-t border-[#2b2521]">
+            <div className="border-t border-chrome-border">
               <ChannelRow
                 href={telegramHref(SUPPORT_CONTACT.telegramUsername)}
                 external
@@ -184,7 +250,7 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
               >
                 <TelegramGlyph className="h-4.5 w-4.5" />
               </ChannelRow>
-              <div aria-hidden className="mx-4 border-t border-[#2b2521]" />
+              <div aria-hidden className="mx-4 border-t border-chrome-border" />
               <ChannelRow
                 href={`tel:${SUPPORT_CONTACT.phone.tel}`}
                 label={support.call}
@@ -196,14 +262,11 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
 
             {/* The stamp on the plate: label left, value right, set the way
                 every spec row in the catalogue reads. */}
-            <div
-              style={{ background: PLATE.raised }}
-              className="flex items-center justify-between gap-3 border-t border-[#2b2521] px-4 py-2.5"
-            >
-              <span className="text-[0.625rem] uppercase tracking-[0.14em] text-[#7b736d]">
+            <div className="flex items-center justify-between gap-3 border-t border-chrome-border bg-chrome-surface px-4 py-2.5">
+              <span className="text-[0.625rem] uppercase tracking-[0.14em] text-chrome-muted">
                 {support.responseLabel}
               </span>
-              <span className="text-[0.625rem] uppercase tracking-[0.14em] text-[#aaa099]">
+              <span className="text-[0.625rem] uppercase tracking-[0.14em] text-chrome-secondary">
                 {support.responseValue}
               </span>
             </div>
@@ -214,74 +277,56 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(true)}
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        /*
-         * The trigger is a disclosure, so once the panel is open its name is
-         * the panel's — "DieselParts Support, expanded". Labelling it "close"
-         * would give it the same accessible name as the panel's own X and
-         * leave a screen-reader user with two identical buttons.
-         */
-        aria-label={open ? support.title : support.open}
-        style={{ background: PLATE.base }}
-        className="fixed bottom-4 right-4 z-60 flex h-14 w-14 items-center justify-center rounded-full shadow-[0_8px_24px_-4px_rgb(0_0_0/0.5)] outline-none ring-1 ring-white/10 transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-[#f5841f] motion-reduce:hover:scale-100"
+        aria-label={support.open}
+        // Hidden rather than left in place once the panel is open: it used
+        // to morph into a second X sitting right below the panel's own close
+        // button — two controls doing the same thing, close enough on a
+        // phone that they read as one smudged shape rather than two. The
+        // panel's X, the backdrop and Escape are the close paths now, so the
+        // launcher only ever needs to mean "open" — and it steps out of the
+        // tab order while it's invisible rather than leaving a focusable gap.
+        aria-hidden={open || undefined}
+        tabIndex={open ? -1 : undefined}
+        className={cn(
+          "fixed bottom-4 right-4 z-60 flex h-14 w-14 items-center justify-center rounded-full bg-chrome shadow-[0_8px_24px_-4px_rgb(0_0_0/0.5)] outline-none ring-1 ring-white/10 transition-[transform,opacity] hover:scale-105 focus-visible:ring-2 focus-visible:ring-chrome-accent motion-reduce:hover:scale-100",
+          open && "pointer-events-none opacity-0"
+        )}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {open ? (
-            <motion.span
-              key="close"
-              initial={{ opacity: 0, rotate: -45 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: 45 }}
-              transition={MOTION.fade}
-              className="flex text-[#f2efed]"
-            >
-              <Icon icon={X} size="lg" />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="chat"
-              initial={{ opacity: 0, rotate: 45 }}
-              animate={{ opacity: 1, rotate: 0 }}
-              exit={{ opacity: 0, rotate: -45 }}
-              transition={MOTION.fade}
-              className="flex text-[#f5841f]"
-            >
-              {/* Drawn rather than imported, so the tail sits on the lower left
-                  and the two speech lines read as a written question. */}
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.75}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                className="h-6 w-6"
-              >
-                <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8.6L4.5 21.2V11.5a7.5 7.5 0 0 1 15 0Z" />
-                <path d="M8.75 11.5h7" />
-                <path d="M8.75 14.75h4.5" />
-              </svg>
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <span className="flex text-chrome-accent">
+          {/* Drawn rather than imported, so the tail sits on the lower left
+              and the two speech lines read as a written question. */}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="h-6 w-6"
+          >
+            <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H8.6L4.5 21.2V11.5a7.5 7.5 0 0 1 15 0Z" />
+            <path d="M8.75 11.5h7" />
+            <path d="M8.75 14.75h4.5" />
+          </svg>
+        </span>
 
         {/* The live marker rides the button, so the state is readable before
             anything has been opened. */}
         <span
           aria-hidden
-          className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full"
-          style={{ background: PLATE.base }}
+          className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-chrome"
         >
           <span
             className="absolute inline-flex h-2 w-2 animate-ping rounded-full opacity-60 motion-reduce:hidden"
-            style={{ background: PLATE.online }}
+            style={{ background: STATUS_ONLINE }}
           />
           <span
             className="relative inline-flex h-2 w-2 rounded-full"
-            style={{ background: PLATE.online }}
+            style={{ background: STATUS_ONLINE }}
           />
         </span>
       </button>

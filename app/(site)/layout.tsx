@@ -125,6 +125,11 @@ export default async function RootLayout({
                 closeLabel={dict.common.close}
                 viewAllLabel={dict.common.viewAll}
                 requestPriceLabel={dict.common.requestPrice}
+                hotOfferLabels={{
+                  popular: dict.home.popularTitle,
+                  bestSellers: dict.home.bestSellersTitle,
+                  newest: dict.home.newTitle,
+                }}
                 account={dict.account}
                 phone={session?.phone ?? null}
               />
