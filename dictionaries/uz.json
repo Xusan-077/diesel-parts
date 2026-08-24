@@ -229,7 +229,9 @@
     "ratingLabel": "5 tadan {rating}",
     "reviewCount": "{count} ta sharh",
     "reviewCountEmpty": "Sharh yo'q",
-    "orderedCount": "{count} marta buyurtma qilingan"
+    "orderedCount": "{count} marta buyurtma qilingan",
+    "zoomLabel": "Rasmni kattalashtirish",
+    "zoomCloseLabel": "Yopish"
   },
   "categories": {
     "title": "Kategoriya",

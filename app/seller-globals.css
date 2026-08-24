@@ -95,3 +95,35 @@
     opacity: 1;
   }
 }
+
+/*
+ * The refusal shake, on the login form only. Fired by setting `data-shake` —
+ * see components/seller/login-form.tsx for why the attribute is removed and
+ * set again rather than held in React state, and the director panel's
+ * app/globals.css for the sibling this was copied from so the two panels'
+ * front doors feel the same.
+ */
+@keyframes seller-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-8px);
+  }
+  80% {
+    transform: translateX(8px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .seller-form[data-shake] {
+    animation: seller-shake 0.35s ease-in-out;
+  }
+}

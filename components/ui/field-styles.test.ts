@@ -4,7 +4,7 @@ import { controlVariants, fieldBox, fieldRail } from "./field-styles";
 
 /** The Server Components that share the field treatment without the behaviour. */
 const SERVER_PAGES = [
-  "app/admin/director/products/page.tsx",
+  "app/director/(panel)/products/page.tsx",
   "app/admin/seller/customers/page.tsx",
 ];
 

@@ -8,16 +8,18 @@ export default function robots(): MetadataRoute.Robots {
     // The pattern lost its `/*/` prefix with the locale segment: the profile
     // now lives at `/account`, not `/uz/account`.
     //
-    // `/admin` and `/seller` are the two internal panels — each already ships
-    // its own `robots: { index: false }` in its root layout, but that only
-    // stops indexing; a crawler still spends budget fetching every route
-    // under them without this. `/login` is the seller panel's public sign-in
-    // screen (`app/(seller-auth)/login`), and `/field-preview` is a
-    // throwaway component harness, neither meant for a search result.
+    // `/admin`, `/director` and `/seller` are the three internal panels —
+    // each already ships its own `robots: { index: false }` in its root
+    // layout, but that only stops indexing; a crawler still spends budget
+    // fetching every route under them without this. Each panel's own sign-in
+    // screen lives inside its prefix now (`/director/login`,
+    // `/seller/login`), so no separate `/login` entry is needed for it.
+    // `/field-preview` is a throwaway component harness, not meant for a
+    // search result either.
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/account", "/api/", "/admin", "/seller", "/login", "/field-preview"],
+      disallow: ["/account", "/api/", "/admin", "/director", "/seller", "/field-preview"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

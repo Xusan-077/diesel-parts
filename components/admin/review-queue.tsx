@@ -209,7 +209,7 @@ export function ReviewQueue({
         <nav aria-label="Sahifalar" className="mt-8 flex items-center gap-3">
           {list.data.page > 1 ? (
             <Link
-              href={`/admin/director/reviews?page=${list.data.page - 1}`}
+              href={`/director/reviews?page=${list.data.page - 1}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               Oldingi
@@ -222,7 +222,7 @@ export function ReviewQueue({
 
           {list.data.page < list.data.totalPages ? (
             <Link
-              href={`/admin/director/reviews?page=${list.data.page + 1}`}
+              href={`/director/reviews?page=${list.data.page + 1}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               Keyingi

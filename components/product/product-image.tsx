@@ -10,15 +10,6 @@ export interface ProductImageProps {
   /** Sizes the fallback glyph to the tile it sits in — a 44px search row wants
    *  a smaller mark than a full-width card photo. */
   fallbackIconSize?: IconSize;
-  /**
-   * True only for the single copy of this image that is on screen before any
-   * scroll — the product detail page's own photo. `loading="lazy"` is right
-   * for every card in a grid, but applied to that one image it is also the
-   * page's LCP element, and lazy-loading it delays the paint Lighthouse
-   * scores instead of speeding up the fold, which has nothing else in it to
-   * save bandwidth for.
-   */
-  priority?: boolean;
   className?: string;
 }
 
@@ -40,7 +31,6 @@ export function ProductImage({
   src,
   alt,
   fallbackIconSize = "lg",
-  priority = false,
   className,
 }: ProductImageProps) {
   if (!src) {
@@ -61,8 +51,7 @@ export function ProductImage({
     <img
       src={src}
       alt={alt}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : undefined}
+      loading="lazy"
       className={cn("object-cover", className)}
     />
   );

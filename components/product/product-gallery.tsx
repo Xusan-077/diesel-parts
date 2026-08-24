@@ -1,4 +1,4 @@
-import { ProductImage } from "@/components/product/product-image";
+import { ZoomableProductImage } from "@/components/product/zoomable-product-image";
 
 /**
  * The product page's own photo.
@@ -13,6 +13,8 @@ import { ProductImage } from "@/components/product/product-image";
 export function ProductGallery({
   imageUrl,
   galleryAlt,
+  zoomLabel,
+  closeLabel,
 }: {
   imageUrl: string | null;
   /** The part's own name — this is the page's single most important image,
@@ -20,13 +22,19 @@ export function ProductGallery({
    *  card in a grid already does, rather than a caption identical on all of
    *  them ("Product image"). */
   galleryAlt: string;
+  /** Names the magnifier/click target, which carries no visible text of its
+   *  own — the picture is the whole button. */
+  zoomLabel: string;
+  /** Names the full-screen view's dismiss control. */
+  closeLabel: string;
 }) {
   return (
-    <ProductImage
+    <ZoomableProductImage
       src={imageUrl}
       alt={galleryAlt}
       fallbackIconSize="xl"
-      priority
+      zoomLabel={zoomLabel}
+      closeLabel={closeLabel}
       className="aspect-4/3 w-full rounded-lg border border-border"
     />
   );

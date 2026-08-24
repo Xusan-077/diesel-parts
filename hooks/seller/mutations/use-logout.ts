@@ -18,7 +18,7 @@ export function useLogout() {
       // because /auth/logout returned an error.
       clear();
       queryClient.clear();
-      router.replace("/login");
+      router.replace("/seller/login");
     },
   });
 }

@@ -229,7 +229,9 @@
     "ratingLabel": "{rating} out of 5",
     "reviewCount": "{count} reviews",
     "reviewCountEmpty": "No reviews yet",
-    "orderedCount": "Ordered {count} times"
+    "orderedCount": "Ordered {count} times",
+    "zoomLabel": "Zoom image",
+    "zoomCloseLabel": "Close"
   },
   "categories": {
     "title": "Category",

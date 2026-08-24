@@ -2,7 +2,8 @@ import { useSellerAuthStore } from "@/lib/store/seller-auth-store";
 
 /**
  * Browser-side client for the standalone NestJS backend (backend/), which
- * seller-panel routes (/login, /seller/*) talk to. Distinct from
+ * seller-panel routes (/seller/*, including /seller/login) talk to. Distinct
+ * from
  * lib/api/client.ts, which hits this app's own Prisma-backed /api routes for
  * the storefront/admin — the two must never be mixed.
  */
@@ -91,7 +92,7 @@ function redirectToLogin() {
     // TanStack Query cache rather than leaving stale authenticated data
     // behind a soft client-side transition.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = `/login${next && next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`;
+    window.location.href = `/seller/login${next && next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`;
   }
 }
 

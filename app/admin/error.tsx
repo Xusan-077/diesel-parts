@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { PanelMessage } from "@/components/admin/panel-message";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ADMIN_LOGIN_PATH } from "@/lib/auth/roles";
+import { STAFF_LOGIN_PATH } from "@/lib/auth/roles";
 
 /**
  * What a staff member sees when a panel page throws.
@@ -63,7 +63,7 @@ export default function AdminError({
           <Button type="button" onClick={reset}>
             Qayta urinish
           </Button>
-          <Link href={ADMIN_LOGIN_PATH} className={buttonVariants({ variant: "outline" })}>
+          <Link href={STAFF_LOGIN_PATH} className={buttonVariants({ variant: "outline" })}>
             Kirish sahifasi
           </Link>
         </>
