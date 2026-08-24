@@ -8,7 +8,7 @@ vi.mock("axios", () => {
   return { default: { post, isAxiosError }, isAxiosError };
 });
 
-const { isEskizConfigured, resetEskizTokenCache, sendSms } = await import("./eskiz");
+const { buildOtpMessage, isEskizConfigured, resetEskizTokenCache, sendSms } = await import("./eskiz");
 
 const PHONE = "998901234567";
 const MESSAGE = "DieselParts: tasdiqlash kodi 1234.";
@@ -32,6 +32,28 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.ESKIZ_EMAIL;
   delete process.env.ESKIZ_PASSWORD;
+});
+
+describe("buildOtpMessage", () => {
+  afterEach(() => {
+    delete process.env.ESKIZ_SMS_TEMPLATE;
+  });
+
+  it("substitutes the code into the configured template", () => {
+    process.env.ESKIZ_SMS_TEMPLATE = "Kod: {code}!";
+    expect(buildOtpMessage("123456")).toBe("Kod: 123456!");
+  });
+
+  it("substitutes the code into the built-in default when unset", () => {
+    expect(buildOtpMessage("123456")).toContain("123456");
+  });
+
+  it("refuses a template that has no {code} placeholder, rather than sending it verbatim", () => {
+    // Mirrors pasting Eskiz's dashboard wording straight in without swapping
+    // its sample digits for the placeholder — see the 2026-08-24 incident.
+    process.env.ESKIZ_SMS_TEMPLATE = "DieselParts.uz tasdiqlash kodi: 0000. Kodni hech kimga bermang!";
+    expect(() => buildOtpMessage("123456")).toThrow(/\{code\}/);
+  });
 });
 
 describe("isEskizConfigured", () => {
