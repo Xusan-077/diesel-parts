@@ -20,6 +20,8 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: "/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
   { href: "/director/analytics", label: "Analitika", roles: ["DIRECTOR"] },
   { href: "/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
+  { href: "/director/warehouse", label: "Ombor", roles: ["DIRECTOR"] },
+  { href: "/director/customers", label: "Mijozlar", roles: ["DIRECTOR"] },
   { href: "/director/categories", label: "Kategoriyalar", roles: ["DIRECTOR"] },
   { href: "/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
   { href: "/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },

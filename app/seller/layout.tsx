@@ -3,6 +3,7 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import "../seller-globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { SellerToaster } from "@/components/seller/ui/toaster";
+import { ClarityInit } from "@/components/analytics/clarity-init";
 
 /*
  * Root layout for the whole standalone seller panel — both its public
@@ -33,6 +34,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`seller-root ${sellerSans.variable} ${sellerMono.variable} antialiased`}>
+        <ClarityInit />
         <QueryProvider>
           {children}
           <SellerToaster />

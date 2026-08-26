@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "../globals.css";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { OG_IMAGE, OG_LOCALES, SITE_ICONS, SITE_URL } from "@/lib/site-config";
@@ -13,6 +14,7 @@ import { RouteBreadcrumb } from "@/components/layout/route-breadcrumb";
 import { staticRouteLabels } from "@/lib/breadcrumb";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeScript } from "@/components/theme-script";
+import { ClarityInit } from "@/components/analytics/clarity-init";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { StoreHydration } from "@/components/providers/store-hydration";
 import { LanguageSync } from "@/components/providers/language-sync";
@@ -100,7 +102,17 @@ export default async function RootLayout({
         (`.dark .site-root`) to outweigh `.dark`.
       */}
       <body className="site-root min-h-full flex flex-col bg-background text-foreground">
+        <ClarityInit />
         <ThemeScript />
+        <NextTopLoader
+          color="var(--accent)"
+          height={2}
+          showSpinner={false}
+          shadow={false}
+          crawlSpeed={100}
+          speed={300}
+          easing="cubic-bezier(0.16, 1, 0.3, 1)"
+        />
         <ThemeProvider>
           <MotionProvider>
             <QueryProvider>

@@ -28,6 +28,9 @@ export interface CustomerRow {
   assignedSellerId: string | null;
   assignedSellerName: string | null;
   orderCount: number;
+  /** Sum of COMPLETED orders only — the same "only landed sales count" rule
+   *  `product-stats-repository.ts` uses, so this never counts a draft. */
+  totalSpent: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,7 +59,7 @@ const ROW_SELECT = {
 
 type CustomerRecord = Prisma.CustomerGetPayload<{ select: typeof ROW_SELECT }>;
 
-function toRow(row: CustomerRecord): CustomerRow {
+function toRow(row: CustomerRecord, spent: number): CustomerRow {
   return {
     id: row.id,
     name: row.name,
@@ -67,9 +70,31 @@ function toRow(row: CustomerRecord): CustomerRow {
     assignedSellerId: row.assignedSellerId,
     assignedSellerName: row.assignedSeller?.name ?? null,
     orderCount: row._count.orders,
+    totalSpent: spent,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+/**
+ * Completed-order spend per customer, for exactly the rows a page just read.
+ *
+ * A `groupBy` keyed to the page's ids rather than a per-row query — the
+ * director overview lists twenty rows at a time and this keeps that at one
+ * extra round trip instead of twenty.
+ */
+async function spendByCustomer(customerIds: readonly string[]): Promise<Map<string, number>> {
+  if (customerIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await prisma.order.groupBy({
+    by: ["customerId"],
+    where: { customerId: { in: [...customerIds] }, status: "COMPLETED" },
+    _sum: { totalAmount: true },
+  });
+
+  return new Map(rows.map((row) => [row.customerId, Number(row._sum.totalAmount ?? 0)]));
 }
 
 export async function listCustomers(
@@ -107,7 +132,15 @@ export async function listCustomers(
     select: ROW_SELECT,
   });
 
-  return { items: rows.map(toRow), total, page, pageSize: SELLER_PAGE_SIZE, totalPages };
+  const spent = await spendByCustomer(rows.map((row) => row.id));
+
+  return {
+    items: rows.map((row) => toRow(row, spent.get(row.id) ?? 0)),
+    total,
+    page,
+    pageSize: SELLER_PAGE_SIZE,
+    totalPages,
+  };
 }
 
 /** Reads include the unclaimed pool: a seller cannot claim what they cannot see. */
@@ -117,7 +150,12 @@ export async function getCustomer(id: string, actor: ScopeActor): Promise<Custom
     select: ROW_SELECT,
   });
 
-  return row === null ? null : toRow(row);
+  if (row === null) {
+    return null;
+  }
+
+  const spent = await spendByCustomer([row.id]);
+  return toRow(row, spent.get(row.id) ?? 0);
 }
 
 export type CustomerWriteResult = { ok: true; id: string } | { ok: false; reason: "not_found" };

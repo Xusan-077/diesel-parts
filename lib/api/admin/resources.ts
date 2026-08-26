@@ -8,6 +8,7 @@ import type { ModeratedReview } from "@/lib/api/review-repository";
 import type { StaffRow } from "@/lib/api/user-repository";
 import type {
   AdminProductListQuery,
+  AiFillResult,
   AuditListQuery,
   CategoryWriteInput,
   CustomerCreateInput,
@@ -111,6 +112,32 @@ export async function archiveProduct(id: string): Promise<void> {
 export async function restoreProduct(id: string): Promise<void> {
   const current = await fetchProductForEdit(id);
   await panelClient.patch("/products/" + id, { ...current, isActive: true });
+}
+
+/**
+ * Looks a part up by its OEM number ("OEM raqam bilan (AI)"). Returns a
+ * pre-filled write payload for the create dialog to show — nothing is saved
+ * until the director presses "Tasdiqlash va qo'shish", which goes through
+ * `createProduct` exactly like a manually-filled form.
+ */
+export async function aiFillProduct(oemNumber: string, category?: string): Promise<AiFillResult> {
+  const { data } = await panelClient.post<{ result: AiFillResult } & Envelope>("/products/ai-fill", {
+    oemNumber,
+    category,
+  });
+  return data.result;
+}
+
+/** Generates a studio photo and hands back its bytes — see the route's own doc comment. */
+export async function aiGenerateProductImage(
+  productName: string,
+  oemNumber?: string,
+): Promise<{ base64: string; mimeType: string }> {
+  const { data } = await panelClient.post<{ base64: string; mimeType: string } & Envelope>(
+    "/products/ai-generate-image",
+    { productName, oemNumber },
+  );
+  return { base64: data.base64, mimeType: data.mimeType };
 }
 
 /* ── Categories ───────────────────────────────────────────────────────────── */

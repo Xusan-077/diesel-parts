@@ -156,6 +156,78 @@ export const productWriteSchema = z.object({
 
 export type ProductWriteInput = z.infer<typeof productWriteSchema>;
 
+/* ── Director panel: AI product fill ──────────────────────────────────────── */
+
+export const aiFillRequestSchema = z.object({
+  oemNumber: z.string().min(1).max(64),
+  category: z.string().max(120).optional(),
+});
+
+export type AiFillRequest = z.infer<typeof aiFillRequestSchema>;
+
+/** The field keys a warning can point at — mirrors backend's `WARNABLE_FIELDS`. */
+export const aiFillWarnableFields = [
+  "sku",
+  "slug",
+  "name",
+  "description",
+  "categoryId",
+  "brandId",
+  "compatibleModels",
+  "specs",
+] as const;
+
+/**
+ * `name`/`description` as the AI-fill result carries them: unlike
+ * `productWriteSchema`'s `localizedSchema`, a language is allowed to be an
+ * empty string here. That is the documented behavior for a language (or
+ * every language) the lookup could not fill in — "topilmagan maydonlarni
+ * bo'sh qoldiradi, warnings'da belgilaydi" — and it is not an error the
+ * director's review modal needs the route to refuse; the modal already
+ * shows a warning badge on the field instead (see `aiWarnings`).
+ */
+const optionalLocalizedSchema = z.object({
+  uz: z.string(),
+  ru: z.string(),
+  en: z.string(),
+});
+
+/**
+ * What `backend/`'s `POST internal/products/ai-fill` answers with — validated
+ * here rather than trusted blindly, since it crossed a service boundary.
+ * `price`/`stock` are deliberately absent: the director fills those in by
+ * hand, per the feature spec.
+ */
+export const aiFillResultSchema = z.object({
+  sku: z.string(),
+  slug: z.string(),
+  oemNumbers: z.array(z.string()),
+  name: optionalLocalizedSchema,
+  description: optionalLocalizedSchema,
+  categoryId: z.string().nullable(),
+  brandId: z.string().nullable(),
+  compatibleModels: z.array(z.string()),
+  specs: z.array(productSpecSchema),
+  warnings: z.array(z.enum(aiFillWarnableFields)),
+  confidence: z.enum(["high", "medium", "low"]),
+});
+
+export type AiFillResult = z.infer<typeof aiFillResultSchema>;
+
+export const aiGenerateImageRequestSchema = z.object({
+  productName: z.string().min(1).max(200),
+  oemNumber: z.string().max(64).optional(),
+});
+
+export type AiGenerateImageRequest = z.infer<typeof aiGenerateImageRequestSchema>;
+
+export const aiGenerateImageResultSchema = z.object({
+  base64: z.string().min(1),
+  mimeType: z.string().min(1),
+});
+
+export type AiGenerateImageResult = z.infer<typeof aiGenerateImageResultSchema>;
+
 /* ── Director panel: user management ──────────────────────────────────────── */
 
 export const userCreateSchema = z.object({

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Archive, ImageOff, Pencil, Plus, RotateCcw } from "lucide-react";
+import { Archive, ImageOff, MoreHorizontal, PackageSearch, Pencil, Plus, RotateCcw } from "lucide-react";
 import {
   useAdminProducts,
   useProductEditLoader,
@@ -16,15 +16,32 @@ import type {
   ProductEditRecord,
 } from "@/lib/api/product-write-repository";
 import type { AdminProductListQuery } from "@/lib/schemas";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { CsvColumn } from "@/lib/analytics/csv";
 import { ConfirmModal } from "@/components/ui/form-modal";
-import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 import {
   ProductFormModal,
   type ReferenceOption,
 } from "@/components/admin/product-form-modal";
+import { ExportButton } from "@/components/admin/export-button";
+import { EmptyState } from "@/components/director/empty-state";
+import { Badge } from "@/components/ui/shadcn/badge";
+import { Button } from "@/components/ui/shadcn/button";
+import { Checkbox } from "@/components/ui/shadcn/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/shadcn/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/shadcn/dropdown-menu";
 
 /**
  * The catalogue table, and the three dialogs that act on it.
@@ -63,12 +80,41 @@ export interface ProductCatalogProps {
   brands: readonly ReferenceOption[];
 }
 
+/** The current page's rows, for the toolbar's export button — the same rule
+ *  `ExportButton`'s own doc comment states: an export is the rows already on
+ *  screen, never a fresh request. */
+const EXPORT_COLUMNS: readonly CsvColumn<AdminProductRow>[] = [
+  { header: "Mahsulot", value: (row) => row.name },
+  { header: "SKU", value: (row) => row.sku },
+  { header: "Qoldiq", value: (row) => row.stock },
+  { header: "Narx", value: (row) => row.price },
+  { header: "Holat", value: (row) => (row.isActive ? "faol" : "arxiv") },
+];
+
 export function ProductCatalog({ query, initialData, categories, brands }: ProductCatalogProps) {
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const showingArchived = query.all;
 
   const list = useAdminProducts(query, initialData);
   const rows = list.data?.items ?? [];
+  const selectedRows = rows.filter((row) => selected.has(row.id));
+
+  function toggleRow(id: string, checked: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean) {
+    setSelected(checked ? new Set(rows.map((row) => row.id)) : new Set());
+  }
 
   /*
    * The edit payload is a separate read: the row carries a name and a price,
@@ -107,12 +153,21 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
             ? " "
             : formatInteger(list.data.total) +
               " ta mahsulot" +
-              (showingArchived ? " (arxiv bilan)" : "")}
+              (showingArchived ? " (arxiv bilan)" : "") +
+              (selectedRows.length > 0 ? " · " + selectedRows.length + " ta tanlandi" : "")}
         </p>
-        <Button type="button" onClick={() => setDialog({ kind: "create" })}>
-          <Icon icon={Plus} />
-          Yangi mahsulot
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            columns={EXPORT_COLUMNS}
+            rows={selectedRows.length > 0 ? selectedRows : rows}
+            filename="mahsulotlar.csv"
+            label={selectedRows.length > 0 ? "Tanlanganlarni eksport" : "Eksport"}
+          />
+          <Button type="button" onClick={() => setDialog({ kind: "create" })}>
+            <Plus className="size-4" aria-hidden="true" />
+            Yangi mahsulot
+          </Button>
+        </div>
       </div>
 
       <div className="panel mt-4 overflow-x-auto">
@@ -134,38 +189,47 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
             </Button>
           </div>
         ) : rows.length === 0 ? (
-          <p className="type-body text-muted">
-            Hech narsa topilmadi. Qidiruvni o&apos;zgartiring yoki yangi mahsulot qo&apos;shing.
-          </p>
+          <EmptyState
+            icon={PackageSearch}
+            message="Hech narsa topilmadi. Qidiruvni o'zgartiring yoki yangi mahsulot qo'shing."
+          />
         ) : (
-          <table className="w-full min-w-4xl text-left text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="type-eyebrow pb-2 text-muted">
+          <Table className="min-w-4xl">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Barchasini tanlash"
+                    checked={rows.length > 0 && selectedRows.length === rows.length}
+                    onCheckedChange={(checked) => toggleAll(checked === true)}
+                  />
+                </TableHead>
+                <TableHead className="w-10">
                   <span className="sr-only">Rasm</span>
-                </th>
-                <th scope="col" className="type-eyebrow pb-2 text-muted">Mahsulot</th>
-                <th scope="col" className="type-eyebrow pb-2 text-muted">SKU</th>
-                <th scope="col" className="type-eyebrow pb-2 text-muted">Brend</th>
-                <th scope="col" className="type-eyebrow pb-2 text-right text-muted">Narx</th>
-                <th scope="col" className="type-eyebrow pb-2 text-right text-muted">Qoldiq</th>
-                <th scope="col" className="type-eyebrow pb-2 text-right text-muted">Holat</th>
-                <th scope="col" className="type-eyebrow pb-2 text-right text-muted">
+                </TableHead>
+                <TableHead>Mahsulot</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead className="text-right">Narx</TableHead>
+                <TableHead className="text-right">Qoldiq</TableHead>
+                <TableHead className="text-right">Holat</TableHead>
+                <TableHead className="w-10 text-right">
                   <span className="sr-only">Amallar</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((product) => {
                 const short = product.stock <= product.minStock;
                 return (
-                  <tr
-                    key={product.id}
-                    /* `group` is what lets the row reveal its actions; `row-hover`
-                       is the panel's existing background treatment. */
-                    className="group row-hover border-b border-border last:border-0"
-                  >
-                    <td className="py-3 pr-3">
+                  <TableRow key={product.id} data-state={selected.has(product.id) ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        aria-label={"Tanlash: " + product.name}
+                        checked={selected.has(product.id)}
+                        onCheckedChange={(checked) => toggleRow(product.id, checked === true)}
+                      />
+                    </TableCell>
+                    <TableCell>
                       {/* A thumbnail, or the same empty-photo mark the upload
                           field shows — never a broken <img>, since most rows
                           in an existing catalog have no photo yet. */}
@@ -181,8 +245,8 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                           <ImageOff aria-hidden className="size-4" />
                         </div>
                       )}
-                    </td>
-                    <td className="py-3 pr-3">
+                    </TableCell>
+                    <TableCell>
                       {/*
                         * The name opens the editor rather than navigating. It
                         * is a button and not a link because there is no longer
@@ -198,19 +262,18 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                         {product.name}
                       </button>
                       <span className="ml-2 text-xs text-muted">{product.categoryName}</span>
-                    </td>
-                    <td className="py-3 pr-3 font-mono text-xs text-muted">{product.sku}</td>
-                    <td className="py-3 pr-3 text-muted">{product.brandName}</td>
-                    <td className="py-3 text-right font-mono tabular-nums text-foreground">
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted">{product.sku}</TableCell>
+                    <TableCell className="text-right font-mono tabular-nums text-foreground">
                       {product.price === null ? (
                         <span className="text-muted">so&apos;rov bo&apos;yicha</span>
                       ) : (
                         formatSum(product.price)
                       )}
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={
-                        "py-3 pl-3 text-right font-mono tabular-nums " +
+                        "text-right font-mono tabular-nums " +
                         (product.stock === 0
                           ? "text-danger"
                           : short
@@ -220,61 +283,69 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                     >
                       {formatInteger(product.stock)}
                       <span className="ml-1 text-muted">/ {formatInteger(product.minStock)}</span>
-                    </td>
-                    <td className="py-3 pl-3 text-right">
-                      {/* Both states are badges now. "faol" as bare text beside
-                          "arxiv" in a pill made the column read as one status
-                          and one absence of status, when they are two values of
-                          the same field — and the pill was hand-rolled at a
-                          padding the Badge component does not use. */}
-                      {product.isActive ? (
-                        <Badge variant="success">faol</Badge>
-                      ) : (
-                        <Badge>arxiv</Badge>
-                      )}
-                    </td>
-                    <td className="py-3 pl-3">
-                      {/*
-                        * Row actions are icon buttons that appear on hover and
-                        * on focus, and stay visible on touch, where there is no
-                        * hover to reveal them. `group-hover` is on the row's
-                        * `row-hover` class; `focus-within` is what keeps them
-                        * reachable by keyboard.
-                        */}
-                      <div className="flex items-center justify-end gap-1">
-                        <RowAction
-                          label={"Tahrirlash: " + product.name}
-                          icon={Pencil}
-                          busy={editLoader.loadingId === product.id}
-                          onClick={() => void openEdit(product)}
-                        />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end">
                         {product.isActive ? (
-                          <RowAction
-                            label={"Arxivga olish: " + product.name}
-                            icon={Archive}
-                            tone="danger"
-                            onClick={() => {
-                              setActive.reset();
-                              setDialog({ kind: "archive", row: product });
-                            }}
-                          />
+                          <Badge variant="success">faol</Badge>
                         ) : (
-                          <RowAction
-                            label={"Katalogga qaytarish: " + product.name}
-                            icon={RotateCcw}
-                            onClick={() => {
-                              setActive.reset();
-                              setDialog({ kind: "restore", row: product });
-                            }}
-                          />
+                          <Badge variant="secondary">arxiv</Badge>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            aria-label={"Amallar: " + product.name}
+                            disabled={editLoader.loadingId === product.id}
+                          >
+                            {editLoader.loadingId === product.id ? (
+                              <Spinner />
+                            ) : (
+                              <MoreHorizontal className="size-4" aria-hidden="true" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => void openEdit(product)}>
+                            <Pencil className="size-4" aria-hidden="true" />
+                            Tahrirlash
+                          </DropdownMenuItem>
+                          {product.isActive ? (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => {
+                                setActive.reset();
+                                setDialog({ kind: "archive", row: product });
+                              }}
+                            >
+                              <Archive className="size-4" aria-hidden="true" />
+                              Arxivga olish
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setActive.reset();
+                                setDialog({ kind: "restore", row: product });
+                              }}
+                            >
+                              <RotateCcw className="size-4" aria-hidden="true" />
+                              Katalogga qaytarish
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
 
@@ -418,41 +489,3 @@ function Pager({
   );
 }
 
-/**
- * One icon-only action in a table row.
- *
- * Hidden until the row is hovered or something inside it takes focus, so a
- * fifty-row table is not fifty pairs of competing buttons — but never hidden
- * from assistive technology, which is why this is `opacity` and not `hidden`.
- */
-function RowAction({
-  label,
-  icon,
-  onClick,
-  busy = false,
-  tone = "default",
-}: {
-  label: string;
-  icon: React.ComponentProps<typeof Icon>["icon"];
-  onClick: () => void;
-  busy?: boolean;
-  tone?: "default" | "danger";
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={busy}
-      aria-label={label}
-      title={label}
-      className={
-        "flex size-8 items-center justify-center rounded-md text-muted opacity-0 transition-[opacity,color,background-color] group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100 [@media(hover:none)]:opacity-100 " +
-        (tone === "danger"
-          ? "hover:bg-danger-surface hover:text-danger"
-          : "hover:bg-surface-hover hover:text-foreground")
-      }
-    >
-      {busy ? <Spinner /> : <Icon icon={icon} />}
-    </button>
-  );
-}

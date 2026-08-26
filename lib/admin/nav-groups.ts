@@ -24,11 +24,16 @@ const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
   { id: "overview", hrefs: ["/director", "/director/analytics", "/admin/seller"] },
   {
     id: "catalog",
-    hrefs: ["/director/products", "/director/categories", "/director/discounts"],
+    hrefs: ["/director/products", "/director/warehouse", "/director/categories", "/director/discounts"],
   },
   {
     id: "sales",
-    hrefs: ["/admin/seller/inquiries", "/admin/seller/orders", "/admin/seller/customers"],
+    hrefs: [
+      "/admin/seller/inquiries",
+      "/admin/seller/orders",
+      "/admin/seller/customers",
+      "/director/customers",
+    ],
   },
   {
     id: "management",
