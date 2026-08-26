@@ -14,6 +14,7 @@ import { RouteBreadcrumb } from "@/components/layout/route-breadcrumb";
 import { staticRouteLabels } from "@/lib/breadcrumb";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeScript } from "@/components/theme-script";
+import { ClarityInit } from "@/components/analytics/clarity-init";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { StoreHydration } from "@/components/providers/store-hydration";
 import { LanguageSync } from "@/components/providers/language-sync";
@@ -101,6 +102,7 @@ export default async function RootLayout({
         (`.dark .site-root`) to outweigh `.dark`.
       */}
       <body className="site-root min-h-full flex flex-col bg-background text-foreground">
+        <ClarityInit />
         <ThemeScript />
         <NextTopLoader
           color="var(--accent)"

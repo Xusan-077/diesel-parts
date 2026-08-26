@@ -132,6 +132,7 @@ then create the two databases above with `createdb` or any Postgres client.
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | `https://www.diesel-parts.uz` |
 | `DATABASE_URL` | Railway Postgres (dev) | Railway Postgres (production) — **should not be the same physical database as local dev**; see "Open items" |
 | `AUTH_SECRET`, `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `ESKIZ_FROM`, `ESKIZ_SMS_TEMPLATE`, `SEED_DIRECTOR_PASSWORD` | see `.env.example` | set per environment in Vercel |
+| `NEXT_PUBLIC_CLARITY_ID` | leave empty (Clarity only initializes when `NODE_ENV === "production"`, see `components/analytics/clarity-init.tsx`) | Microsoft Clarity project ID from clarity.microsoft.com — must be added to Vercel Project Settings → Environment Variables (Production) for session replay to start |
 
 Set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SITE_URL` for both the
 **Production** and **Preview** environments in Vercel (Preview should also

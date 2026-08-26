@@ -5,6 +5,7 @@ import "../globals.css";
 import { SITE_ICONS } from "@/lib/site-config";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeScript } from "@/components/theme-script";
+import { ClarityInit } from "@/components/analytics/clarity-init";
 import { PanelChromeScript } from "@/components/admin/panel-chrome-script";
 import { Toaster } from "@/components/providers/toaster";
 import { MotionProvider } from "@/components/providers/motion-provider";
@@ -51,6 +52,7 @@ export default function DirectorLayout({ children }: { children: React.ReactNode
       <body
         className={`admin-root ${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <ClarityInit />
         <ThemeScript />
         <PanelChromeScript />
         {/* One line at the top of the viewport for every navigation between
