@@ -1,13 +1,15 @@
-import Link from "next/link";
+import { Search } from "lucide-react";
 import { listProductsForAdmin } from "@/lib/api/product-write-repository";
 import { listBrands, listCategories } from "@/lib/api/product-repository";
 import { safeRead } from "@/lib/api/safe-read";
 import type { AdminProductListQuery } from "@/lib/schemas";
-import { controlVariants, fieldRail } from "@/components/ui/field-styles";
-import { cn } from "@/lib/utils";
 import { CatalogTransfer } from "@/components/admin/catalog-transfer";
 import { PageHeader } from "@/components/admin/page-header";
 import { ProductCatalog } from "@/components/admin/product-catalog";
+import { Input } from "@/components/ui/shadcn/input";
+import { SortSelect } from "@/components/director/sort-select";
+import { ArchiveToggle } from "@/components/director/archive-toggle";
+import { FilterBar, FilterField } from "@/components/director/filter-bar";
 
 const SORTS = [
   { key: "stock", label: "Qoldiq bo'yicha" },
@@ -90,68 +92,54 @@ export default async function DirectorProductsPage({
         description="Katalogdagi barcha mahsulotlar, qoldiqlari bilan."
       />
 
-      <div className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4">
-        <form method="get" className="flex items-end gap-2">
-          <div className={fieldRail({ className: "pl-3" })}>
-            <label htmlFor="q" className="block text-xs text-muted">
-              SKU, nom yoki OEM raqami
-            </label>
-            <input
-              id="q"
-              name="q"
-              defaultValue={search}
-              className={cn(
-                controlVariants({ variant: "rail" }),
-                "mt-1 h-9 w-64 font-mono",
-              )}
-              placeholder="DP-INJ-3126"
-            />
-          </div>
-          {sort !== "stock" ? <input type="hidden" name="sort" value={sort} /> : null}
-          {includeInactive ? <input type="hidden" name="all" value="1" /> : null}
-          <button
-            type="submit"
-            className="h-9 rounded-md border border-border px-3 text-sm text-foreground transition-colors hover:bg-surface-hover"
-          >
-            Qidirish
-          </button>
-        </form>
-
-        {/*
-          * The same segmented control as the dashboard's period selector, with
-          * one deliberate difference: the selected chip is raised (level 1 on
-          * the recessed track) rather than filled with the accent. Sorting is
-          * not the screen's primary choice, and a page with two orange fills on
-          * it has no primary choice at all.
-          */}
-        <nav
-          aria-label="Tartib"
-          className="flex items-center gap-1 rounded-md border border-border bg-surface-muted p-1"
-        >
-          {SORTS.map((option) => (
-            <Link
-              key={option.key}
-              href={link({ sort: option.key === "stock" ? "" : option.key, page: "" })}
-              aria-current={option.key === sort ? "true" : undefined}
-              className={
-                "inline-flex h-7 items-center rounded-sm px-3 text-xs transition-colors " +
-                (option.key === sort
-                  ? "border border-border bg-surface font-medium text-foreground shadow-xs"
-                  : "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground")
-              }
+      <FilterBar>
+        <FilterField label="SKU, nom yoki OEM raqami">
+          <form method="get" className="flex items-center gap-2">
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted"
+              />
+              <Input
+                id="q"
+                name="q"
+                defaultValue={search}
+                className="h-9 w-64 pl-8 font-mono"
+                placeholder="DP-INJ-3126"
+              />
+            </div>
+            {sort !== "stock" ? <input type="hidden" name="sort" value={sort} /> : null}
+            {includeInactive ? <input type="hidden" name="all" value="1" /> : null}
+            <button
+              type="submit"
+              className="h-9 rounded-md border border-border px-3 text-sm text-foreground transition-colors hover:bg-surface-hover"
             >
-              {option.label}
-            </Link>
-          ))}
-        </nav>
+              Qidirish
+            </button>
+          </form>
+        </FilterField>
 
-        <Link
-          href={link({ all: includeInactive ? "" : "1", page: "" })}
-          className="text-xs text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
-          {includeInactive ? "Faqat faollarini ko'rsatish" : "Arxivni ham ko'rsatish"}
-        </Link>
-      </div>
+        <FilterField label="Saralash">
+          <SortSelect
+            value={sort}
+            label="Saralash"
+            options={SORTS.map((option) => ({
+              value: option.key,
+              label: option.label,
+              href: link({ sort: option.key === "stock" ? "" : option.key, page: "" }),
+            }))}
+          />
+        </FilterField>
+
+        <FilterField label="Arxiv">
+          <ArchiveToggle
+            id="show-archived"
+            checked={includeInactive}
+            href={link({ all: includeInactive ? "" : "1", page: "" })}
+            label="Arxivni ham ko'rsatish"
+          />
+        </FilterField>
+      </FilterBar>
 
       <div className="mt-4">
         <CatalogTransfer />

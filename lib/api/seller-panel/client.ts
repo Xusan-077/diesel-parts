@@ -1,3 +1,4 @@
+import axios, { AxiosError } from "axios";
 import { useSellerAuthStore } from "@/lib/store/seller-auth-store";
 
 /**
@@ -8,6 +9,12 @@ import { useSellerAuthStore } from "@/lib/store/seller-auth-store";
  * the storefront/admin — the two must never be mixed.
  */
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? ""}/api`;
+
+const sellerAxios = axios.create({
+  baseURL: API_BASE,
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
+});
 
 export class SellerApiError extends Error {
   readonly status: number;
@@ -35,26 +42,24 @@ interface RequestOptions {
   skipAuthRetry?: boolean;
 }
 
-function buildUrl(path: string, query?: object): string {
-  const url = new URL(`${API_BASE}${path}`);
-  if (query) {
-    for (const [key, value] of Object.entries(query as Record<string, unknown>)) {
-      if (value !== undefined && value !== "") {
-        url.searchParams.set(key, String(value));
-      }
+function buildParams(query?: object): Record<string, string> | undefined {
+  if (!query) return undefined;
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(query as Record<string, unknown>)) {
+    if (value !== undefined && value !== "") {
+      params[key] = String(value);
     }
   }
-  return url.toString();
+  return params;
 }
 
-async function parseErrorBody(res: Response): Promise<{ message: string; code: string }> {
-  try {
-    const data = (await res.json()) as { message?: string | string[]; error?: string };
-    const message = Array.isArray(data.message) ? data.message.join(", ") : data.message;
-    return { message: message ?? res.statusText, code: data.error ?? String(res.status) };
-  } catch {
-    return { message: res.statusText, code: String(res.status) };
-  }
+function parseErrorBody(error: AxiosError): { message: string; code: string } {
+  const data = error.response?.data as { message?: string | string[]; error?: string } | undefined;
+  const message = Array.isArray(data?.message) ? data.message.join(", ") : data?.message;
+  return {
+    message: message ?? error.response?.statusText ?? error.message,
+    code: data?.error ?? String(error.response?.status ?? 0),
+  };
 }
 
 /** Coalesces concurrent 401s onto a single POST /auth/refresh call instead of a stampede. */
@@ -64,14 +69,12 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       try {
-        const res = await fetch(buildUrl("/auth/refresh"), {
-          method: "POST",
-          credentials: "include",
-        });
-        if (!res.ok) return null;
-        const data = (await res.json()) as { accessToken: string; user: import("./types").AuthenticatedUser };
-        useSellerAuthStore.getState().setSession(data.accessToken, data.user);
-        return data.accessToken;
+        const res = await sellerAxios.post<{
+          accessToken: string;
+          user: import("./types").AuthenticatedUser;
+        }>("/auth/refresh");
+        useSellerAuthStore.getState().setSession(res.data.accessToken, res.data.user);
+        return res.data.accessToken;
       } catch {
         return null;
       } finally {
@@ -100,37 +103,36 @@ export async function sellerApiRequest<T>(path: string, options: RequestOptions 
   const { method = "GET", body, query, skipAuthRetry } = options;
   const accessToken = useSellerAuthStore.getState().accessToken;
 
-  const res = await fetch(buildUrl(path, query), {
-    method,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-
-  if (res.status === 401 && !skipAuthRetry && path !== "/auth/refresh") {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      return sellerApiRequest<T>(path, { ...options, skipAuthRetry: true });
+  try {
+    const res = await sellerAxios.request<T>({
+      url: path,
+      method,
+      params: buildParams(query),
+      data: body,
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    });
+    return res.status === 204 ? (undefined as T) : res.data;
+  } catch (error) {
+    if (!(error instanceof AxiosError)) {
+      throw error;
     }
-    redirectToLogin();
-    throw new SellerApiError("Session expired", 401, "session_expired");
-  }
+    const status = error.response?.status ?? 0;
 
-  if (res.status === 403) {
-    const { message } = await parseErrorBody(res);
-    throw new SellerApiError(message, 403, "forbidden");
-  }
+    if (status === 401 && !skipAuthRetry && path !== "/auth/refresh") {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        return sellerApiRequest<T>(path, { ...options, skipAuthRetry: true });
+      }
+      redirectToLogin();
+      throw new SellerApiError("Session expired", 401, "session_expired");
+    }
 
-  if (!res.ok) {
-    const { message, code } = await parseErrorBody(res);
-    throw new SellerApiError(message, res.status, code);
-  }
+    if (status === 403) {
+      const { message } = parseErrorBody(error);
+      throw new SellerApiError(message, 403, "forbidden");
+    }
 
-  if (res.status === 204) {
-    return undefined as T;
+    const { message, code } = parseErrorBody(error);
+    throw new SellerApiError(message, status, code);
   }
-  return (await res.json()) as T;
 }

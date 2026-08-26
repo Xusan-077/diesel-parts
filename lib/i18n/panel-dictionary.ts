@@ -83,6 +83,7 @@ const uz = {
     title: "Ko'rsatkichlar",
     comparison: "oldingi {days} kunga nisbatan",
     periodLabel: "Davr",
+    statusLabel: "Holat",
 
     revenue: "Daromad",
     orders: "Buyurtmalar",
@@ -225,6 +226,7 @@ const ru: PanelDictionary = {
     title: "Показатели",
     comparison: "к предыдущим {days} дням",
     periodLabel: "Период",
+    statusLabel: "Статус",
 
     revenue: "Выручка",
     orders: "Заказы",
@@ -350,6 +352,7 @@ const en: PanelDictionary = {
     title: "Dashboard",
     comparison: "vs the previous {days} days",
     periodLabel: "Period",
+    statusLabel: "Status",
 
     revenue: "Revenue",
     orders: "Orders",

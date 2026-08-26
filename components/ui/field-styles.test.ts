@@ -2,11 +2,16 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { controlVariants, fieldBox, fieldRail } from "./field-styles";
 
-/** The Server Components that share the field treatment without the behaviour. */
-const SERVER_PAGES = [
-  "app/director/(panel)/products/page.tsx",
-  "app/admin/seller/customers/page.tsx",
-];
+/**
+ * The Server Components that share the field treatment without the behaviour.
+ *
+ * `app/director/(panel)/products/page.tsx` moved off this convention in the
+ * shadcn-based Director panel redesign — its search field is now
+ * `components/ui/shadcn/input.tsx`, which (like `field-styles`) carries no
+ * `"use client"` of its own, so the page stays a Server Component either way.
+ * Only the styling source changed.
+ */
+const SERVER_PAGES = ["app/admin/seller/customers/page.tsx"];
 
 /** The client half — importing any of it from a Server Component opens a boundary. */
 const CLIENT_ONLY = [

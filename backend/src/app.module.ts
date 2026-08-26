@@ -23,6 +23,7 @@ import { AuditModule } from './audit/audit.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
 import { DiscountRequestsModule } from './discount-requests/discount-requests.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { DiscountRequestsModule } from './discount-requests/discount-requests.mo
     ReviewsModule,
     InquiriesModule,
     DiscountRequestsModule,
+    AiModule,
   ],
   controllers: [AppController],
 })

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { adminKeys } from "@/lib/api/admin/keys";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import {
+  aiFillProduct,
+  aiGenerateProductImage,
   archiveProduct,
   createProduct,
   fetchAdminProducts,
@@ -15,7 +17,7 @@ import {
   updateProduct,
 } from "@/lib/api/admin/resources";
 import type { AdminProductPage, ProductEditRecord } from "@/lib/api/product-write-repository";
-import type { AdminProductListQuery, ProductWriteInput } from "@/lib/schemas";
+import type { AdminProductListQuery, AiFillResult, ProductWriteInput } from "@/lib/schemas";
 import { PANEL_STALE_MS, usePanelMutation } from "./use-panel-mutation";
 
 /**
@@ -110,6 +112,27 @@ export function useReplaceProductImage() {
   return usePanelMutation<{ id: string; image: File }, { imageUrl: string }>({
     run: ({ id, image }) => replaceProductImage(id, image),
     invalidates: [adminKeys.products.all],
+  });
+}
+
+/**
+ * "OEM raqam bilan (AI)" — looks a part up and returns a write payload for
+ * the create dialog to pre-fill. No cache to invalidate (nothing is written)
+ * and no toast: the dialog shows the result itself, and a refusal has to
+ * stay next to the OEM input it belongs to, exactly like `useCreateProduct`.
+ */
+export function useAiFillProduct() {
+  return usePanelMutation<{ oemNumber: string; category?: string }, AiFillResult>({
+    run: ({ oemNumber, category }) => aiFillProduct(oemNumber, category),
+    invalidates: [],
+  });
+}
+
+/** Generates a studio photo for the AI-filled form. Same no-toast reasoning as `useAiFillProduct`. */
+export function useAiGenerateProductImage() {
+  return usePanelMutation<{ productName: string; oemNumber?: string }, { base64: string; mimeType: string }>({
+    run: ({ productName, oemNumber }) => aiGenerateProductImage(productName, oemNumber),
+    invalidates: [],
   });
 }
 

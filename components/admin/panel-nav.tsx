@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
+  BookUser,
   ChevronDown,
   ClipboardList,
   Contact,
@@ -16,6 +17,7 @@ import {
   Percent,
   Star,
   Users,
+  Warehouse,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { currentNavHref } from "@/lib/auth/admin-nav";
@@ -36,6 +38,8 @@ const GLYPH: Record<string, LucideIcon> = {
   "/director": LayoutDashboard,
   "/admin/seller": LayoutDashboard,
   "/director/products": Package,
+  "/director/warehouse": Warehouse,
+  "/director/customers": BookUser,
   "/director/categories": FolderTree,
   "/director/discounts": Percent,
   "/admin/seller/inquiries": Inbox,

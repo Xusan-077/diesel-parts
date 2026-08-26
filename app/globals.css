@@ -841,6 +841,37 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* --- shadcn CLI bridge ---------------------------------------------------
+     Components fetched with `npx shadcn add` (components/ui/shadcn/*, Director
+     panel redesign) are written against a fixed slot vocabulary: primary,
+     card, popover, destructive, input, ring -- plus muted/accent/secondary as
+     generic surface names. The first six have no existing meaning in this
+     file and are aliased straight onto the tokens above. The last three do
+     already mean something here -- `--color-muted`/`--color-secondary` are
+     TEXT roles (`text-muted`, `text-secondary`), and `--color-accent` is the
+     one brand CTA colour, not a hover tint -- so reusing shadcn's names for
+     them would repaint every existing caption and button the moment a shadcn
+     component sat next to one. They are aliased under a `panel-` prefix
+     instead, and every file under components/ui/shadcn/ is rewritten after
+     fetch to reference `panel-muted`/`panel-accent`/`panel-secondary` in
+     place of shadcn's own names. Nothing outside that folder reads these. */
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface-elevated);
+  --color-popover-foreground: var(--foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--accent-foreground);
+  --color-input: var(--border-strong);
+  --color-ring: var(--accent);
+  --color-panel-muted: var(--surface-muted);
+  --color-panel-muted-foreground: var(--muted);
+  --color-panel-accent: var(--surface-hover);
+  --color-panel-accent-foreground: var(--foreground);
+  --color-panel-secondary: var(--surface-muted);
+  --color-panel-secondary-foreground: var(--foreground);
 }
 
 /* ==========================================================================

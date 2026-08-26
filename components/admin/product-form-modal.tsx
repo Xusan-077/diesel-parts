@@ -2,21 +2,53 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { AlertTriangle, Plus, Sparkles, X } from "lucide-react";
 import {
+  useAiFillProduct,
+  useAiGenerateProductImage,
   useCreateProduct,
   useReplaceProductImage,
   useUpdateProduct,
 } from "@/hooks/admin/use-admin-products";
-import { OFFLINE_MESSAGE, refusalPayload } from "@/lib/api/request-error";
+import { OFFLINE_MESSAGE, refusalPayload, requestErrorMessage } from "@/lib/api/request-error";
 import { useFieldErrors, type FieldErrors } from "@/lib/forms/use-field-errors";
 import { productWriteSchema, type ProductWriteInput } from "@/lib/schemas";
 import { CheckboxField } from "@/components/ui/checkbox";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { FormField } from "@/components/ui/form-field";
 import { FormModal } from "@/components/ui/form-modal";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductImageField } from "@/components/admin/product-image-field";
+
+/** The field keys `aiWarnings` can name — mirrors `aiFillWarnableFields`. */
+type AiWarnableField =
+  | "sku"
+  | "slug"
+  | "name"
+  | "description"
+  | "categoryId"
+  | "brandId"
+  | "compatibleModels"
+  | "specs";
+
+/** Decodes the AI image endpoint's base64 payload into a `File` the picker already knows how to stage. */
+function base64ToFile(base64: string, mimeType: string, filename: string): File {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new File([bytes], filename, { type: mimeType });
+}
+
+function extensionForMime(mimeType: string): string {
+  if (mimeType.includes("png")) return "png";
+  if (mimeType.includes("webp")) return "webp";
+  return "jpg";
+}
 
 export interface ReferenceOption {
   id: string;
@@ -101,7 +133,7 @@ const EMPTY: ProductWriteInput & { imageUrl: string | null } = {
 };
 
 /** Section heading inside the modal — the same eyebrow the pages use. */
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="space-y-4">
       <h3 className="type-eyebrow border-b border-border pb-2 text-muted">{title}</h3>
@@ -156,6 +188,20 @@ export function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   /*
+   * "Qo'lda" vs "OEM raqam bilan (AI)" — only offered while creating; editing
+   * an existing row always uses the plain form. `aiReady` is what actually
+   * gates the OEM-input sub-view: once a fill has landed, both tabs show the
+   * same editable fields, so switching back to "AI" after that is just
+   * "keep reviewing", not "start over".
+   */
+  const [activeTab, setActiveTab] = useState<"manual" | "ai">("manual");
+  const [aiOem, setAiOem] = useState("");
+  const [aiCategory, setAiCategory] = useState("");
+  const [aiReady, setAiReady] = useState(false);
+  const [aiWarnings, setAiWarnings] = useState<ReadonlySet<AiWarnableField>>(new Set());
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
+
+  /*
    * Two mutations rather than one with a branch: the create and the update are
    * different verbs against different URLs, and both invalidate the catalogue
    * cache on success. That invalidation is what refills the table — there is
@@ -166,7 +212,62 @@ export function ProductFormModal({
   const create = useCreateProduct();
   const update = useUpdateProduct();
   const replaceImage = useReplaceProductImage();
+  const aiFill = useAiFillProduct();
+  const aiImage = useAiGenerateProductImage();
   const saving = create.isPending || update.isPending || replaceImage.isPending;
+  const aiBusy = aiFill.isPending || aiImage.isPending;
+  const showAiInput = !productId && activeTab === "ai" && !aiReady;
+
+  /**
+   * Runs the OEM lookup, then the photo generation, then opens the same
+   * fields the manual tab uses — pre-filled, still entirely editable, and
+   * not sent anywhere until "Tasdiqlash va qo'shish" is pressed.
+   */
+  async function runAiFill() {
+    setAiMessage(null);
+    if (!aiOem.trim()) {
+      return;
+    }
+
+    let result: Awaited<ReturnType<typeof aiFill.mutateAsync>>;
+    try {
+      result = await aiFill.mutateAsync({
+        oemNumber: aiOem.trim(),
+        category: aiCategory.trim() || undefined,
+      });
+    } catch (error) {
+      setAiMessage(requestErrorMessage(error, "AI orqali ma'lumot topilmadi."));
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      sku: result.sku,
+      slug: result.slug,
+      name: result.name,
+      description: result.description,
+      categoryId: result.categoryId ?? current.categoryId,
+      brandId: result.brandId ?? current.brandId,
+      specs: result.specs,
+      isActive: true,
+    }));
+    setOem(listToLines(result.oemNumbers));
+    setModels(listToLines(result.compatibleModels));
+    setPriceText("");
+    setAiWarnings(new Set(result.warnings));
+    setAiReady(true);
+
+    try {
+      const image = await aiImage.mutateAsync({
+        productName: result.name.uz || result.name.en || result.sku,
+        oemNumber: aiOem.trim(),
+      });
+      const filename = (result.slug || "mahsulot") + "." + extensionForMime(image.mimeType);
+      setImageFile(base64ToFile(image.base64, image.mimeType, filename));
+    } catch (error) {
+      toast.error(requestErrorMessage(error, "Rasm generatsiya qilinmadi — rasmni qo'lda yuklashingiz mumkin."));
+    }
+  }
 
   /*
    * The value the schema actually judges, rebuilt on every keystroke. The three
@@ -181,6 +282,12 @@ export function ProductFormModal({
     // Empty means "price not set", which the catalog renders as a contact
     // action. Coercing it to 0 would advertise a free part.
     price: priceText.trim() === "" ? null : Number(priceText),
+    // A row left at "+ Xususiyat qo'shish" and never touched is not a spec,
+    // it is a still-open blank — dropped here so it never blocks submission
+    // the way a half-filled one legitimately should.
+    specs: form.specs.filter(
+      (spec) => spec.value.trim() || spec.label.uz.trim() || spec.label.ru.trim() || spec.label.en.trim(),
+    ),
   };
 
   const field = useFieldErrors(productWriteSchema, payload);
@@ -193,6 +300,30 @@ export function ProductFormModal({
     value: option.id,
     label: option.label,
   }));
+
+  /** AI-sourced data can't quietly become "price on request" — the director has to type a number. */
+  const aiPriceMissing = aiReady && priceText.trim() === "";
+  /** A row with some but not all of its four fields filled — the schema will refuse it, so say why up front. */
+  const specsIncomplete = form.specs.some((spec) => {
+    const filled = [spec.label.uz, spec.label.ru, spec.label.en, spec.value].filter((v) => v.trim());
+    return filled.length > 0 && filled.length < 4;
+  });
+  const isWarned = (fieldName: AiWarnableField) => aiReady && aiWarnings.has(fieldName);
+
+  function warnedLabel(text: string, fieldName: AiWarnableField) {
+    if (!isWarned(fieldName)) return text;
+    return (
+      <span className="inline-flex items-center gap-1">
+        {text}
+        <Icon
+          icon={AlertTriangle}
+          size="xs"
+          className="text-warning"
+          aria-label="AI taxminiy to'ldirdi — tekshiring"
+        />
+      </span>
+    );
+  }
 
   async function save() {
     setMessage(null);
@@ -248,25 +379,130 @@ export function ProductFormModal({
           ? "O'zgarishlar saqlangach katalogda darhol ko'rinadi."
           : "Yulduzcha bilan belgilangan maydonlar to'ldirilishi shart."
       }
-      submitLabel={productId ? "O'zgarishlarni saqlash" : "Mahsulot qo'shish"}
+      submitLabel={
+        productId ? "O'zgarishlarni saqlash" : activeTab === "ai" ? "Tasdiqlash va qo'shish" : "Mahsulot qo'shish"
+      }
       onSubmit={save}
       busy={saving}
+      submitDisabled={showAiInput || aiPriceMissing || specsIncomplete}
       error={message}
     >
-      <Group title="Rasm">
-        <div className="max-w-64">
-          <ProductImageField
-            currentUrl={start.imageUrl ?? null}
-            file={imageFile}
-            onFileChange={setImageFile}
-            disabled={saving}
-          />
-        </div>
-      </Group>
+      {productId ? null : (
+        /* Segmented control — same treatment as the catalogue page's sort chips. */
+        <nav
+          aria-label="To'ldirish usuli"
+          className="flex items-center gap-1 rounded-md border border-border bg-surface-muted p-1"
+        >
+          {(
+            [
+              ["manual", "Qo'lda to'ldirish"],
+              ["ai", "OEM raqam bilan (AI)"],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              aria-current={activeTab === tab ? "true" : undefined}
+              onClick={() => setActiveTab(tab)}
+              className={
+                "inline-flex h-8 flex-1 items-center justify-center gap-2 rounded-sm px-3 text-xs transition-colors " +
+                (activeTab === tab
+                  ? "border border-border bg-surface font-medium text-foreground shadow-xs"
+                  : "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground")
+              }
+            >
+              {tab === "ai" ? <Icon icon={Sparkles} size="xs" /> : null}
+              {label}
+            </button>
+          ))}
+        </nav>
+      )}
 
-      <Group title="Identifikatsiya">
+      {showAiInput ? (
+        <section className="space-y-4">
+          <p className="text-sm text-muted">
+            {
+              "OEM raqamini kiriting — AI internetdan qidirib, mahsulot nomi, tavsifi, mos texnika va xususiyatlarini taxmin qiladi. Natijani ko'rib chiqib, kerak bo'lsa tuzatib, so'ng qo'shishingiz mumkin."
+            }
+          </p>
+
+          <FormField label="OEM raqami" required hint="Ishlab chiqaruvchining original raqami">
+            <Input
+              value={aiOem}
+              onChange={(e) => setAiOem(e.target.value)}
+              className="font-mono"
+              placeholder="10R-7225"
+              disabled={aiBusy}
+            />
+          </FormField>
+
+          <FormField label="Kategoriya (ixtiyoriy)" hint="AI taxminini aniqlashtirish uchun">
+            <Input
+              value={aiCategory}
+              onChange={(e) => setAiCategory(e.target.value)}
+              placeholder="Yoqilg'i tizimi"
+              disabled={aiBusy}
+            />
+          </FormField>
+
+          <div aria-live="polite" className="empty:hidden">
+            {aiMessage ? (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-danger bg-danger-surface px-3 py-2 text-sm text-danger"
+              >
+                <Icon icon={AlertTriangle} className="mt-1 shrink-0" />
+                <span>{aiMessage}</span>
+              </p>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void runAiFill()}
+            disabled={aiBusy || !aiOem.trim()}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-accent-edge bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover disabled:pointer-events-none disabled:opacity-50"
+          >
+            {aiBusy ? (
+              <>
+                <Spinner />
+                {aiFill.isPending ? "Qidirilmoqda…" : "Rasm yaratilmoqda…"}
+              </>
+            ) : (
+              <>
+                <Icon icon={Sparkles} size="sm" />
+                Generatsiya qilish
+              </>
+            )}
+          </button>
+        </section>
+      ) : (
+        <>
+          {aiReady ? (
+            <p className="flex items-start gap-2 rounded-md border border-border bg-surface-muted px-3 py-2 text-sm text-muted">
+              <Icon icon={Sparkles} className="mt-1 shrink-0 text-accent" />
+              <span>
+                {
+                  "AI orqali to'ldirildi — sariq belgili maydonlar taxminiy, tekshirib tuzating. Narx va qoldiqni to'ldirish majburiy."
+                }
+              </span>
+            </p>
+          ) : null}
+
+          <Group title="Rasm">
+            <div className="max-w-64">
+              <ProductImageField
+                currentUrl={start.imageUrl ?? null}
+                file={imageFile}
+                onFileChange={setImageFile}
+                disabled={saving}
+              />
+            </div>
+          </Group>
+
+          <Group title="Identifikatsiya">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="SKU" required error={field.errorFor("sku")}>
+          <FormField label={warnedLabel("SKU", "sku")} required error={field.errorFor("sku")}>
             <Input
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
@@ -276,7 +512,7 @@ export function ProductFormModal({
             />
           </FormField>
           <FormField
-            label="Slug (URL)"
+            label={warnedLabel("Slug (URL)", "slug")}
             required
             hint="Saytdagi manzil: /products/…"
             error={field.errorFor("slug")}
@@ -292,7 +528,7 @@ export function ProductFormModal({
         </div>
       </Group>
 
-      <Group title="Nomi">
+      <Group title={warnedLabel("Nomi", "name")}>
         <div className="grid gap-4 sm:grid-cols-3">
           {(
             [
@@ -318,7 +554,7 @@ export function ProductFormModal({
         </div>
       </Group>
 
-      <Group title="Tavsif">
+      <Group title={warnedLabel("Tavsif", "description")}>
         <div className="grid gap-4 sm:grid-cols-3">
           {(
             [
@@ -352,12 +588,13 @@ export function ProductFormModal({
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField
             label="Narx"
+            required={aiReady}
             /* The suffix carries the unit, so the label does not have to. A
                label reading "Narx (so'm)" and a box reading "1 200 000" say the
                currency twice and align it nowhere. */
             suffix="so'm"
-            hint={`Bo'sh qoldirilsa — "so'rov bo'yicha"`}
-            error={field.errorFor("price")}
+            hint={aiReady ? "AI orqali to'ldirilganda narx kiritish majburiy" : `Bo'sh qoldirilsa — "so'rov bo'yicha"`}
+            error={field.errorFor("price") ?? (aiPriceMissing ? "Narxni kiriting" : null)}
           >
             <Input
               inputMode="numeric"
@@ -401,7 +638,7 @@ export function ProductFormModal({
 
       <Group title="Tasnif">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Kategoriya" required error={field.errorFor("categoryId")}>
+          <FormField label={warnedLabel("Kategoriya", "categoryId")} required error={field.errorFor("categoryId")}>
             {/* A combobox and not a select: the catalogue is a tree of parts
                 families, and finding "Yoqilg'i tizimi" in it by scrolling is
                 the slowest thing in this form. */}
@@ -414,7 +651,7 @@ export function ProductFormModal({
               searchPlaceholder="Kategoriya nomi"
             />
           </FormField>
-          <FormField label="Brend" required error={field.errorFor("brandId")}>
+          <FormField label={warnedLabel("Brend", "brandId")} required error={field.errorFor("brandId")}>
             <Combobox
               options={brandOptions}
               value={form.brandId}
@@ -444,7 +681,7 @@ export function ProductFormModal({
         </FormField>
 
         <FormField
-          label="Mos texnika"
+          label={warnedLabel("Mos texnika", "compatibleModels")}
           hint="Har biri yangi qatorda"
           multiline
           error={field.errorFor("compatibleModels")}
@@ -459,12 +696,77 @@ export function ProductFormModal({
         </FormField>
       </Group>
 
+      <Group title={warnedLabel("Texnik xususiyatlari", "specs")}>
+        <div className="space-y-3">
+          {form.specs.map((spec, index) => (
+            // Index is stable here: rows are only appended or removed, never
+            // reordered, so React never confuses one row's inputs for another's.
+            <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+              {(["uz", "ru", "en"] as const).map((lang) => (
+                <Input
+                  key={lang}
+                  value={spec.label[lang]}
+                  onChange={(e) => {
+                    const specs = [...form.specs];
+                    specs[index] = { ...spec, label: { ...spec.label, [lang]: e.target.value } };
+                    setForm({ ...form, specs });
+                  }}
+                  placeholder={lang === "uz" ? "Diametri" : lang === "ru" ? "Диаметр" : "Diameter"}
+                  className="text-sm"
+                />
+              ))}
+              <Input
+                value={spec.value}
+                onChange={(e) => {
+                  const specs = [...form.specs];
+                  specs[index] = { ...spec, value: e.target.value };
+                  setForm({ ...form, specs });
+                }}
+                placeholder="10 mm"
+                className="text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, specs: form.specs.filter((_, i) => i !== index) })}
+                aria-label="Xususiyatni o'chirish"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-foreground"
+              >
+                <Icon icon={X} size="sm" />
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() =>
+              setForm({
+                ...form,
+                specs: [...form.specs, { label: { uz: "", ru: "", en: "" }, value: "" }],
+              })
+            }
+            className="inline-flex items-center gap-2 text-sm text-accent-strong hover:underline"
+          >
+            <Icon icon={Plus} size="xs" />
+            Xususiyat qo&apos;shish
+          </button>
+
+          {specsIncomplete ? (
+            <p className="flex items-start gap-2 text-xs font-medium text-danger">
+              <Icon icon={AlertTriangle} size="xs" className="mt-1 shrink-0" />
+              {"Har bir xususiyat qatorida uchala til va qiymat to'ldirilishi kerak — yoki qatorni o'chiring."}
+            </p>
+          ) : null}
+        </div>
+      </Group>
+
       <CheckboxField
         label="Katalogda ko'rinsin"
         hint="Belgi olib tashlansa mahsulot saytdan yo'qoladi, lekin eski buyurtmalarda qoladi."
         checked={form.isActive}
         onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
       />
+        </>
+      )}
     </FormModal>
   );
 }

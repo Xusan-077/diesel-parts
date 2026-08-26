@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "../globals.css";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { OG_IMAGE, OG_LOCALES, SITE_ICONS, SITE_URL } from "@/lib/site-config";
@@ -101,6 +102,15 @@ export default async function RootLayout({
       */}
       <body className="site-root min-h-full flex flex-col bg-background text-foreground">
         <ThemeScript />
+        <NextTopLoader
+          color="var(--accent)"
+          height={2}
+          showSpinner={false}
+          shadow={false}
+          crawlSpeed={100}
+          speed={300}
+          easing="cubic-bezier(0.16, 1, 0.3, 1)"
+        />
         <ThemeProvider>
           <MotionProvider>
             <QueryProvider>
