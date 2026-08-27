@@ -455,17 +455,39 @@ model DiscountRequest {
 }
 
 model Payment {
-  id        String        @id @default(cuid())
-  orderId   String        @map("order_id")
-  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount    Decimal       @db.Decimal(14, 2)
-  method    PaymentMethod
-  status    PaymentStatus @default(PENDING)
-  paidAt    DateTime?     @map("paid_at")
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
+  id                 String        @id @default(cuid())
+  orderId            String        @map("order_id")
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount             Decimal       @db.Decimal(14, 2)
+  method             PaymentMethod
+  status             PaymentStatus @default(PENDING)
+  /// "payme" once Click is wired in later this becomes "payme" | "click".
+  /// Null for the existing staff-recorded (cash/card/transfer) payments.
+  provider           String?
+  /// The provider's own id for this attempt. Only PaymeService (driven by
+  /// Payme's own webhook, never the frontend) may move a payment to
+  /// COMPLETED — see PaymeService.performTransaction.
+  transactionId      String?
+  /// Payme's `time` (epoch ms) from CreateTransaction, echoed back verbatim
+  /// on every retry — Payme's protocol requires CreateTransaction to be
+  /// idempotent, and this is the value that makes a repeat call return the
+  /// exact same create_time instead of a fresh one.
+  providerCreateTime BigInt?
+  cancelledAt        DateTime?
+  /// Payme's CancelTransaction `reason` code, kept for support/audit only —
+  /// no code branches on its value.
+  cancelReason       Int?
+  paidAt             DateTime?     @map("paid_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
   @@index([orderId])
+  /// Guards webhook idempotency: a provider retrying the same callback must
+  /// not be able to create a second row for one transaction and re-fire a
+  /// COMPLETED transition. Postgres treats each NULL as distinct here, so
+  /// the existing staff-recorded rows (provider/transactionId both null)
+  /// are unaffected.
+  @@unique([provider, transactionId])
   @@map("payments")
 }
 
