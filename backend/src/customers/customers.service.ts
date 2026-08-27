@@ -8,6 +8,7 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { QueryCustomerDto } from './dto/query-customer.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
+import { extractNationalDigits, phoneTail } from '../common/phone';
 import { Role } from '../../generated/prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
@@ -76,6 +77,31 @@ export class CustomersService {
     ]);
 
     return { data, meta: paginationMeta(page, limit, total) };
+  }
+
+  /**
+   * A checkout customer identified only by an OTP-verified phone — no
+   * Customer row exists yet unless they have ordered before. Matched on
+   * canonical digits, same scan pattern the (removed) root app used:
+   * Customer.phone is free text (a seller may have typed it with different
+   * formatting), so no SQL `equals` can find it — the `contains` prefilter
+   * below narrows to roughly one row in a hundred before the exact
+   * comparison runs in JS.
+   */
+  async findOrCreateByPhone(phone: string, name?: string) {
+    const national = extractNationalDigits(phone);
+    const candidates = await this.prisma.customer.findMany({
+      where: { phone: { contains: phoneTail(national) } },
+      take: 1000,
+    });
+    const existing = candidates.find(
+      (candidate) => extractNationalDigits(candidate.phone) === national,
+    );
+    if (existing) return existing;
+
+    return this.prisma.customer.create({
+      data: { phone, name: name ?? 'Checkout' },
+    });
   }
 
   async create(dto: CreateCustomerDto) {
