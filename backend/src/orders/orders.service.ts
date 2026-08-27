@@ -142,14 +142,9 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const sequence = await tx.orderSequence.upsert({
-        where: { id: 1 },
-        create: { id: 1, lastNumber: 1001 },
-        update: { lastNumber: { increment: 1 } },
-      });
-      const orderNumber = `DP-${sequence.lastNumber}`;
+    const orderNumber = await this.reserveOrderNumber();
 
+    return this.prisma.$transaction(async (tx) => {
       return tx.order.create({
         data: {
           orderNumber,
@@ -233,6 +228,20 @@ export class OrdersService {
 
   cancel(actor: AuthenticatedUser, id: string) {
     return this.updateStatus(actor, id, OrderStatus.CANCELLED);
+  }
+
+  /**
+   * The next `DP-N` reference, atomically. Shared by the POS/CRM order form
+   * (create, above) and CheckoutService — one sequence, one numbering
+   * scheme, regardless of which flow raised the order.
+   */
+  async reserveOrderNumber(): Promise<string> {
+    const sequence = await this.prisma.orderSequence.upsert({
+      where: { id: 1 },
+      create: { id: 1, lastNumber: 1001 },
+      update: { lastNumber: { increment: 1 } },
+    });
+    return `DP-${sequence.lastNumber}`;
   }
 
   private wasReserved(status: OrderStatus) {
