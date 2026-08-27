@@ -57,9 +57,15 @@ export function customerWriteScope(actor: ScopeActor): Prisma.CustomerWhereInput
   return isDirector(actor) ? {} : { assignedSellerId: actor.id };
 }
 
-/** Orders are never pooled: one always belongs to the seller who raised it. */
+/**
+ * A staff-raised order still belongs to the seller who raised it. A
+ * self-checkout order (channel ONLINE) has no such relationship to start
+ * with — it is assigned to a house account purely so sellerId stays required
+ * — so it is pooled for every seller instead, the same way an unclaimed
+ * Customer or Inquiry is.
+ */
 export function orderReadScope(actor: ScopeActor): Prisma.OrderWhereInput {
-  return isDirector(actor) ? {} : { sellerId: actor.id };
+  return isDirector(actor) ? {} : { OR: [{ sellerId: actor.id }, { channel: "ONLINE" }] };
 }
 
 export function orderWriteScope(actor: ScopeActor): Prisma.OrderWhereInput {

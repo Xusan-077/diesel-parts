@@ -70,9 +70,16 @@ describe("customer scopes", () => {
 });
 
 describe("order scopes", () => {
-  it("never pools orders: a seller sees only their own", () => {
-    expect(orderReadScope(seller)).toEqual({ sellerId: "seller-1" });
-    expect(orderWriteScope(seller)).toEqual({ sellerId: "seller-1" });
+  it("shows a seller their own orders plus every ONLINE-channel order", () => {
+    // A self-checkout order has no seller relationship to hand it to, so it
+    // reads like the Customer/Inquiry pool: visible and workable by any
+    // seller, not locked to whoever happens to own the sellerId column.
+    expect(orderReadScope(seller)).toEqual({
+      OR: [{ sellerId: "seller-1" }, { channel: "ONLINE" }],
+    });
+    expect(orderWriteScope(seller)).toEqual({
+      OR: [{ sellerId: "seller-1" }, { channel: "ONLINE" }],
+    });
   });
 
   it("shows a director every order", () => {
