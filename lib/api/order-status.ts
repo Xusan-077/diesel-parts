@@ -9,10 +9,20 @@ import type { OrderStatus } from "@/prisma/generated/prisma/enums";
  */
 const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   DRAFT: ["PENDING", "CANCELLED"],
-  PENDING: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["COMPLETED", "CANCELLED"],
+  // PENDING is shared by both paths: a staff order moves straight to
+  // CONFIRMED; a checkout order steps into PAYMENT_PENDING instead.
+  PENDING: ["CONFIRMED", "PAYMENT_PENDING", "CANCELLED"],
+  PAYMENT_PENDING: ["PAID", "PAYMENT_FAILED"],
+  PAYMENT_FAILED: ["PAYMENT_PENDING", "CANCELLED"],
+  PAID: ["CONFIRMED", "REFUNDED"],
+  CONFIRMED: ["PROCESSING", "COMPLETED", "CANCELLED"],
+  PROCESSING: ["READY_FOR_SHIPMENT", "CANCELLED"],
+  READY_FOR_SHIPMENT: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: ["REFUNDED"],
   COMPLETED: [],
   CANCELLED: [],
+  REFUNDED: [],
 };
 
 /** Statuses from which an order may still be edited rather than only moved. */
