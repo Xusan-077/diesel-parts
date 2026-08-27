@@ -17,9 +17,17 @@ import type { OrderStatus } from "@/prisma/generated/prisma/enums";
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   DRAFT: "Qoralama",
   PENDING: "Kutilmoqda",
+  PAYMENT_PENDING: "To'lov kutilmoqda",
+  PAYMENT_FAILED: "To'lov muvaffaqiyatsiz",
+  PAID: "To'langan",
   CONFIRMED: "Tasdiqlangan",
+  PROCESSING: "Tayyorlanmoqda",
+  READY_FOR_SHIPMENT: "Jo'natishga tayyor",
+  SHIPPED: "Jo'natildi",
+  DELIVERED: "Yetkazildi",
   COMPLETED: "Yopilgan",
   CANCELLED: "Bekor qilingan",
+  REFUNDED: "Qaytarildi",
 };
 
 export interface TimelineInquiry {
@@ -98,7 +106,9 @@ export function summariseValue(orders: readonly TimelineOrder[]): CustomerValue 
     if (order.status === "COMPLETED") {
       value.earned += order.totalAmount;
       value.completedCount += 1;
-    } else if (order.status !== "CANCELLED") {
+      // CANCELLED never happened; REFUNDED happened but the money went back —
+      // neither is receivable, so both are excluded the same way.
+    } else if (order.status !== "CANCELLED" && order.status !== "REFUNDED") {
       value.open += order.totalAmount;
       value.openCount += 1;
     }

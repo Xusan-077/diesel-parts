@@ -101,6 +101,15 @@ describe("summariseValue", () => {
     expect(value).toEqual({ earned: 100, open: 0, completedCount: 1, openCount: 0 });
   });
 
+  it("ignores refunded orders too — the money went back, so it is not receivable", () => {
+    const value = summariseValue([
+      order({ id: "a", status: "REFUNDED", totalAmount: 900 }),
+      order({ id: "b", status: "COMPLETED", totalAmount: 100 }),
+    ]);
+
+    expect(value).toEqual({ earned: 100, open: 0, completedCount: 1, openCount: 0 });
+  });
+
   it("reports zeroes for an account that has never ordered", () => {
     expect(summariseValue([])).toEqual({
       earned: 0,

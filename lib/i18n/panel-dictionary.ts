@@ -137,9 +137,17 @@ const uz = {
   status: {
     DRAFT: "Qoralama",
     PENDING: "Kutilmoqda",
+    PAYMENT_PENDING: "To'lov kutilmoqda",
+    PAYMENT_FAILED: "To'lov muvaffaqiyatsiz",
+    PAID: "To'langan",
     CONFIRMED: "Tasdiqlangan",
+    PROCESSING: "Tayyorlanmoqda",
+    READY_FOR_SHIPMENT: "Jo'natishga tayyor",
+    SHIPPED: "Jo'natildi",
+    DELIVERED: "Yetkazildi",
     COMPLETED: "Yakunlangan",
     CANCELLED: "Bekor qilingan",
+    REFUNDED: "Qaytarildi",
   },
 } as const;
 
@@ -280,9 +288,17 @@ const ru: PanelDictionary = {
   status: {
     DRAFT: "Черновик",
     PENDING: "Ожидает",
+    PAYMENT_PENDING: "Ожидает оплаты",
+    PAYMENT_FAILED: "Оплата не прошла",
+    PAID: "Оплачен",
     CONFIRMED: "Подтверждён",
+    PROCESSING: "В обработке",
+    READY_FOR_SHIPMENT: "Готов к отправке",
+    SHIPPED: "Отправлен",
+    DELIVERED: "Доставлен",
     COMPLETED: "Завершён",
     CANCELLED: "Отменён",
+    REFUNDED: "Возвращён",
   },
 };
 
@@ -406,9 +422,17 @@ const en: PanelDictionary = {
   status: {
     DRAFT: "Draft",
     PENDING: "Pending",
+    PAYMENT_PENDING: "Awaiting payment",
+    PAYMENT_FAILED: "Payment failed",
+    PAID: "Paid",
     CONFIRMED: "Confirmed",
+    PROCESSING: "Processing",
+    READY_FOR_SHIPMENT: "Ready for shipment",
+    SHIPPED: "Shipped",
+    DELIVERED: "Delivered",
     COMPLETED: "Completed",
     CANCELLED: "Cancelled",
+    REFUNDED: "Refunded",
   },
 };
 
