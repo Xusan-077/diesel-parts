@@ -109,7 +109,6 @@ model Product {
   inquiries        Inquiry[]
   orderItems       OrderItem[]
   reviews          Review[]
-  cartItems        CartItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -210,46 +209,15 @@ model Inquiry {
 enum OrderStatus {
   DRAFT
   PENDING
-  PAYMENT_PENDING
-  PAYMENT_FAILED
-  PAID
   CONFIRMED
-  PROCESSING
-  READY_FOR_SHIPMENT
-  SHIPPED
-  DELIVERED
   COMPLETED
   CANCELLED
-  REFUNDED
 }
 
 enum DiscountStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-enum OrderChannel {
-  STAFF
-  ONLINE
-}
-
-enum PaymentMethod {
-  ONLINE
-  BANK_TRANSFER
-}
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  PENDING_VERIFICATION
-}
-
-enum DeliveryMethod {
-  STANDARD
-  EXPRESS
-  PICKUP
 }
 
 enum NotificationType {
@@ -284,7 +252,6 @@ model Customer {
   assignedSellerId String?
   assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
   orders           Order[]
-  addresses        Address[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -319,16 +286,6 @@ model Order {
   inquiry                  Inquiry?          @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   items                    OrderItem[]
   discountRequests         DiscountRequest[]
-  channel                  OrderChannel      @default(STAFF)
-  paymentMethod            PaymentMethod?
-  paymentStatus            PaymentStatus?
-  deliveryMethod           DeliveryMethod?
-  /// Added on top of totalAmount at checkout time; never folded into it, so
-  /// totalAmount keeps meaning exactly what the discount math already expects.
-  deliveryFee              Decimal           @default(0) @db.Decimal(14, 2)
-  addressId                String?
-  address                  Address?          @relation(fields: [addressId], references: [id], onDelete: SetNull)
-  payments                 Payment[]
   createdAt                DateTime          @default(now())
   updatedAt                DateTime          @updatedAt
 
@@ -336,7 +293,6 @@ model Order {
   @@index([customerId])
   @@index([status, createdAt])
   @@index([inquiryId])
-  @@index([channel, status])
 }
 
 model OrderItem {
@@ -374,78 +330,6 @@ model DiscountRequest {
   @@index([status, createdAt])
   @@index([sellerId])
   @@index([orderId])
-}
-
-/// A payment attempt against an order. An order may have more than one row
-/// here — a failed card attempt followed by a retry, for instance — so the
-/// order's own paymentStatus (the current answer) is distinct from a payment
-/// row's status (that attempt's answer).
-model Payment {
-  id            String        @id @default(cuid())
-  orderId       String
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  method        PaymentMethod
-  amount        Decimal       @db.Decimal(14, 2)
-  status        PaymentStatus @default(PENDING)
-  /// "payme" | "click", null for a bank transfer.
-  provider      String?
-  /// The provider's own id for this attempt. Only the provider's webhook may
-  /// ever move a payment to SUCCESS.
-  transactionId String?
-  /// Bank-transfer receipt upload (Vercel Blob URL), null for online payments.
-  receiptUrl    String?
-  paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@index([orderId])
-  @@index([status])
-  /// Guards webhook idempotency: a provider retrying the same callback must
-  /// not be able to create a second row for one transaction and re-fire a
-  /// PAID transition. Postgres treats each NULL as distinct here, so the many
-  /// bank-transfer rows with no transactionId are unaffected.
-  @@unique([provider, transactionId])
-}
-
-model Address {
-  id         String   @id @default(cuid())
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  /// Optional nickname ("Home", "Warehouse #2"); not required by checkout.
-  label      String?
-  country    String
-  region     String
-  city       String
-  line       String
-  postalCode String?
-  isDefault  Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  orders     Order[]
-
-  @@index([customerId])
-}
-
-/// A logged-in shopper's cart, one row per phone. There is no customer login
-/// beyond the OTP session (lib/auth/session.ts) today, so phone — the same
-/// identity a session already carries — is the only key available; it is not
-/// linked to Customer because a Customer row is only created at checkout.
-model Cart {
-  id        String     @id @default(cuid())
-  phone     String     @unique
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-}
-
-model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int
-
-  @@unique([cartId, productId])
 }
 
 model Notification {

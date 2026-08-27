@@ -14,17 +14,9 @@ import type { OrderStatus } from "@/prisma/generated/prisma/enums";
 const TONE: Record<OrderStatus, "secondary" | "warning" | "default" | "success" | "destructive"> = {
   DRAFT: "secondary",
   PENDING: "warning",
-  PAYMENT_PENDING: "warning",
-  PAYMENT_FAILED: "destructive",
-  PAID: "success",
   CONFIRMED: "default",
-  PROCESSING: "default",
-  READY_FOR_SHIPMENT: "default",
-  SHIPPED: "default",
-  DELIVERED: "success",
   COMPLETED: "success",
   CANCELLED: "destructive",
-  REFUNDED: "destructive",
 };
 
 export function OrderStatusBadge({ status, label }: { status: OrderStatus; label: string }) {
