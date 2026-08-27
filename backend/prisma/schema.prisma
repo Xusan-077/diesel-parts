@@ -246,6 +246,7 @@ model Product {
   orderItems  OrderItem[]
   inquiries   Inquiry[]
   reviews     Review[]
+  cartItems   CartItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -478,6 +479,33 @@ model Invoice {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("invoices")
+}
+
+/// A phone-verified storefront visitor's cart. Keyed by phone rather than a
+/// customer/user id — backend/ has no concept of a storefront visitor's
+/// identity beyond what Next.js's OTP session asserts over the
+/// InternalServiceGuard bridge (see CartsController), and a Customer row is
+/// only created at checkout, not at cart time.
+model Cart {
+  id        String     @id @default(cuid())
+  phone     String     @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String   @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
 }
 
 model Notification {
