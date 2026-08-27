@@ -10,6 +10,21 @@ import {
   REVIEWS_PAGE_SIZE,
 } from "@/lib/reviews";
 
+/** One line as the client posts it — no price, no name; the server owns those. */
+export const cartSetItemSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().int().min(1).max(99),
+});
+
+export type CartSetItemInput = z.infer<typeof cartSetItemSchema>;
+
+/** A guest's localStorage cart, sent up to merge into the server cart. */
+export const cartMergeSchema = z.object({
+  items: z.array(cartSetItemSchema).max(200),
+});
+
+export type CartMergeInput = z.infer<typeof cartMergeSchema>;
+
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
   productId: z.string().min(1),
