@@ -400,7 +400,11 @@ model Payment {
 
   @@index([orderId])
   @@index([status])
-  @@index([provider, transactionId])
+  /// Guards webhook idempotency: a provider retrying the same callback must
+  /// not be able to create a second row for one transaction and re-fire a
+  /// PAID transition. Postgres treats each NULL as distinct here, so the many
+  /// bank-transfer rows with no transactionId are unaffected.
+  @@unique([provider, transactionId])
 }
 
 model Address {
