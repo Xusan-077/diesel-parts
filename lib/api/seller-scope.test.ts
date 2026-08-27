@@ -72,23 +72,27 @@ describe("customer scopes", () => {
 describe("order scopes", () => {
   it("shows a seller their own orders plus every ONLINE-channel order", () => {
     // A self-checkout order has no seller relationship to hand it to, so it
-    // reads like the Customer/Inquiry pool: visible and workable by any
-    // seller, not locked to whoever happens to own the sellerId column.
+    // reads like the Customer/Inquiry pool: visible to any seller, not
+    // locked to whoever happens to own the sellerId column.
     expect(orderReadScope(seller)).toEqual({
       OR: [{ sellerId: "seller-1" }, { channel: "ONLINE" }],
     });
-    expect(orderWriteScope(seller)).toEqual({
-      OR: [{ sellerId: "seller-1" }, { channel: "ONLINE" }],
-    });
+  });
+
+  it("narrows a seller's writes to orders they already own, same as Customer/Inquiry", () => {
+    // There is no claim step for orders yet, so a pooled ONLINE order is not
+    // writable by just any seller — only whichever sellerId it actually
+    // names, exactly like a staff order always was.
+    expect(orderWriteScope(seller)).toEqual({ sellerId: "seller-1" });
+  });
+
+  it("does not let a seller write to the pool it lets them read", () => {
+    expect(JSON.stringify(orderWriteScope(seller))).not.toContain("ONLINE");
   });
 
   it("shows a director every order", () => {
     expect(orderReadScope(director)).toEqual({});
     expect(orderWriteScope(director)).toEqual({});
-  });
-
-  it("reads and writes orders through the same filter", () => {
-    expect(orderWriteScope(seller)).toEqual(orderReadScope(seller));
   });
 });
 

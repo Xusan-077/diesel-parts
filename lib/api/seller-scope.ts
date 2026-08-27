@@ -61,15 +61,23 @@ export function customerWriteScope(actor: ScopeActor): Prisma.CustomerWhereInput
  * A staff-raised order still belongs to the seller who raised it. A
  * self-checkout order (channel ONLINE) has no such relationship to start
  * with — it is assigned to a house account purely so sellerId stays required
- * — so it is pooled for every seller instead, the same way an unclaimed
+ * — so it is read-pooled for every seller instead, the same way an unclaimed
  * Customer or Inquiry is.
+ *
+ * Writes stay narrower than reads, same as Customer and Inquiry above: a
+ * seller may see the whole ONLINE queue to work out what needs picking up,
+ * but may not mutate (status, discount, items) an order until it is theirs.
+ * There is no claim step for orders yet — that lands with the plan that
+ * builds the queue UI — so today an ONLINE order is only writable by
+ * whichever seller its sellerId actually names, exactly as a staff order
+ * always was.
  */
 export function orderReadScope(actor: ScopeActor): Prisma.OrderWhereInput {
   return isDirector(actor) ? {} : { OR: [{ sellerId: actor.id }, { channel: "ONLINE" }] };
 }
 
 export function orderWriteScope(actor: ScopeActor): Prisma.OrderWhereInput {
-  return orderReadScope(actor);
+  return isDirector(actor) ? {} : { sellerId: actor.id };
 }
 
 /**
