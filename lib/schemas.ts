@@ -10,6 +10,21 @@ import {
   REVIEWS_PAGE_SIZE,
 } from "@/lib/reviews";
 
+/** One line as the client posts it — no price, no name; backend/ owns those. */
+export const cartSetItemSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().int().min(1).max(99),
+});
+
+export type CartSetItemInput = z.infer<typeof cartSetItemSchema>;
+
+/** A guest's localStorage cart, sent up to merge into the server cart. */
+export const cartMergeSchema = z.object({
+  items: z.array(cartSetItemSchema).max(200),
+});
+
+export type CartMergeInput = z.infer<typeof cartMergeSchema>;
+
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
   productId: z.string().min(1),
@@ -100,6 +115,13 @@ export const verifyCodeSchema = z.object({
 });
 
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
+
+/** The verify-code body, with the guest's localStorage cart along for the ride. */
+export const verifyCodeWithCartSchema = verifyCodeSchema.extend({
+  cart: cartMergeSchema.optional(),
+});
+
+export type VerifyCodeWithCartInput = z.infer<typeof verifyCodeWithCartSchema>;
 
 /**
  * Staff sign-in. The password is only checked for presence: a length rule here

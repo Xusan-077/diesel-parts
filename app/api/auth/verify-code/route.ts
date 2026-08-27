@@ -9,7 +9,12 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth/session";
 import { createSessionToken } from "@/lib/auth/session-token";
-import { verifyCodeSchema } from "@/lib/schemas";
+import { callBackendPhoneVerified } from "@/lib/api/internal-backend";
+import { verifyCodeWithCartSchema } from "@/lib/schemas";
+
+interface CartResult {
+  items: { productId: string; quantity: number }[];
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -19,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "invalid_json" }, { status: 400 });
   }
 
-  const parsed = verifyCodeSchema.safeParse(body);
+  const parsed = verifyCodeWithCartSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ success: false, error: "invalid_code" }, { status: 400 });
   }
@@ -43,7 +48,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = NextResponse.json({ success: true });
+  const cart = await callBackendPhoneVerified<CartResult>(phone, "carts/merge", {
+    method: "POST",
+    body: { items: parsed.data.cart?.items ?? [] },
+  });
+
+  const response = NextResponse.json({ success: true, cart });
   response.cookies.set(SESSION_COOKIE, await createSessionToken(phone), sessionCookieOptions);
   response.cookies.set(AUTH_HINT_COOKIE, "1", authHintCookieOptions);
   response.cookies.delete(PENDING_PHONE_COOKIE);
