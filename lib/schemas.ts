@@ -116,6 +116,13 @@ export const verifyCodeSchema = z.object({
 
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
 
+/** The verify-code body, with the guest's localStorage cart along for the ride. */
+export const verifyCodeWithCartSchema = verifyCodeSchema.extend({
+  cart: cartMergeSchema.optional(),
+});
+
+export type VerifyCodeWithCartInput = z.infer<typeof verifyCodeWithCartSchema>;
+
 /**
  * Staff sign-in. The password is only checked for presence: a length rule here
  * would reject nothing an attacker sends and would advertise the policy.
