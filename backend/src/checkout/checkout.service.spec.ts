@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CheckoutService } from './checkout.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CartsService } from '../carts/carts.service';
@@ -246,5 +246,114 @@ describe('CheckoutService.createOrder', () => {
     await expect(
       service.createOrder('998901234567', baseDto()),
     ).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('CheckoutService.getOrderStatus', () => {
+  it("returns the caller's own order status, including the latest payment", async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      orderFindUnique,
+    } = makeDeps();
+    orderFindUnique.mockResolvedValue({
+      orderNumber: 'DP-1001',
+      status: 'NEW',
+      paymentStatus: 'UNPAID',
+      customer: { phone: '+998 90 123-45-67' },
+      payments: [{ status: 'PENDING' }],
+    });
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+
+    const result = await service.getOrderStatus('998901234567', 'ord-1');
+
+    expect(result).toEqual({
+      orderNumber: 'DP-1001',
+      status: 'NEW',
+      paymentStatus: 'UNPAID',
+      latestPaymentStatus: 'PENDING',
+    });
+  });
+
+  it('answers null latestPaymentStatus when the order has no payment yet', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      orderFindUnique,
+    } = makeDeps();
+    orderFindUnique.mockResolvedValue({
+      orderNumber: 'DP-1001',
+      status: 'DRAFT',
+      paymentStatus: 'UNPAID',
+      customer: { phone: '998901234567' },
+      payments: [],
+    });
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+
+    const result = await service.getOrderStatus('998901234567', 'ord-1');
+
+    expect(result.latestPaymentStatus).toBeNull();
+  });
+
+  it('throws NotFoundException for an order that does not exist', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      orderFindUnique,
+    } = makeDeps();
+    orderFindUnique.mockResolvedValue(null);
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+
+    await expect(
+      service.getOrderStatus('998901234567', 'missing'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws NotFoundException when the order belongs to a different phone', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      orderFindUnique,
+    } = makeDeps();
+    orderFindUnique.mockResolvedValue({
+      orderNumber: 'DP-1001',
+      status: 'NEW',
+      paymentStatus: 'UNPAID',
+      customer: { phone: '998911111111' },
+      payments: [],
+    });
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+
+    await expect(
+      service.getOrderStatus('998901234567', 'ord-1'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

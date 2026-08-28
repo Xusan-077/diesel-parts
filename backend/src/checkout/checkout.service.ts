@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CartsService } from '../carts/carts.service';
@@ -7,6 +11,7 @@ import { OrdersService } from '../orders/orders.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { getOrCreateHouseSeller } from './house-seller';
 import { buildPaymeCheckoutUrl, toTiyin } from '../payme/payme-money';
+import { extractNationalDigits } from '../common/phone';
 import {
   Prisma,
   PaymentMethod,
@@ -155,5 +160,35 @@ export class CheckoutService {
     }
 
     return { order, checkoutUrl };
+  }
+
+  /**
+   * The payment-result page's polling target. Ownership is checked on
+   * canonical phone digits — same rule as CustomersService.findOrCreateByPhone
+   * — and a mismatch answers identically to a missing order, so a caller can
+   * never learn that *some* order exists at an id that is not theirs.
+   */
+  async getOrderStatus(phone: string, orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        payments: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+
+    const national = extractNationalDigits(phone);
+    if (!order || extractNationalDigits(order.customer.phone) !== national) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const latestPayment = order.payments[0] ?? null;
+
+    return {
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      latestPaymentStatus: latestPayment?.status ?? null,
+    };
   }
 }
