@@ -155,6 +155,9 @@ export class CheckoutService {
           merchantId,
           orderId: order.id,
           amountTiyin: toTiyin(total),
+          returnUrl: dto.returnBaseUrl
+            ? `${dto.returnBaseUrl}/checkout/status/${order.id}`
+            : undefined,
         });
       }
     }

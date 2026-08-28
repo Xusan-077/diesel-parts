@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const result = await callBackendPhoneVerified<CheckoutResult>(session.phone, "checkout", {
     method: "POST",
-    body: body.data,
+    body: { ...body.data, returnBaseUrl: process.env.NEXT_PUBLIC_SITE_URL },
   });
 
   return NextResponse.json({ success: true, ...result });

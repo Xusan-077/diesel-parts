@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSession = vi.fn();
 vi.mock("@/lib/auth/session", () => ({ getSession: () => getSession() }));
@@ -23,6 +23,8 @@ function post(body: unknown): Request {
   });
 }
 
+const ORIGINAL_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+
 beforeEach(() => {
   getSession.mockReset();
   callBackendPhoneVerified.mockReset();
@@ -30,6 +32,11 @@ beforeEach(() => {
     order: { id: "ord-1", orderNumber: "DP-1001" },
     checkoutUrl: "https://checkout.paycom.uz/xyz",
   });
+  process.env.NEXT_PUBLIC_SITE_URL = "https://www.diesel-parts.uz";
+});
+
+afterEach(() => {
+  process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
 });
 
 describe("POST /api/v1/checkout", () => {
@@ -47,7 +54,7 @@ describe("POST /api/v1/checkout", () => {
     expect(response.status).toBe(200);
     expect(callBackendPhoneVerified).toHaveBeenCalledWith("998901234567", "checkout", {
       method: "POST",
-      body: { paymentMethod: "ONLINE" },
+      body: { paymentMethod: "ONLINE", returnBaseUrl: "https://www.diesel-parts.uz" },
     });
     expect(await response.json()).toEqual({
       success: true,

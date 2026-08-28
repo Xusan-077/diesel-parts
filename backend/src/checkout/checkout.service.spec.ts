@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CheckoutService } from './checkout.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CartsService } from '../carts/carts.service';
@@ -246,6 +247,102 @@ describe('CheckoutService.createOrder', () => {
     await expect(
       service.createOrder('998901234567', baseDto()),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  it('builds a Payme checkoutUrl with a returnUrl when both PAYME_MERCHANT_ID and returnBaseUrl are present', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      getCart,
+      productFindMany,
+      orderCreate,
+    } = makeDeps();
+    getCart.mockResolvedValue({ items: [{ productId: 'p1', quantity: 1 }] });
+    productFindMany.mockResolvedValue([
+      {
+        id: 'p1',
+        sku: 'SKU-1',
+        nameEn: 'Filter',
+        isActive: true,
+        price: new Prisma.Decimal(100),
+      },
+    ]);
+    orderCreate.mockResolvedValue({
+      id: 'ord-1',
+      orderNumber: 'DP-1001',
+      total: new Prisma.Decimal(100),
+    });
+    const config = {
+      get: jest.fn().mockReturnValue('merchant-1'),
+    } as unknown as ConfigService;
+
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+      config,
+    );
+    const result = await service.createOrder(
+      '998901234567',
+      baseDto({ returnBaseUrl: 'https://www.diesel-parts.uz' }),
+    );
+
+    expect(result.checkoutUrl).not.toBeNull();
+    const decoded = Buffer.from(
+      result.checkoutUrl!.split('/').pop()!,
+      'base64',
+    ).toString('utf-8');
+    expect(decoded).toContain(
+      'c=https://www.diesel-parts.uz/checkout/status/ord-1',
+    );
+  });
+
+  it('still builds a checkoutUrl with no returnUrl segment when returnBaseUrl is absent', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      getCart,
+      productFindMany,
+      orderCreate,
+    } = makeDeps();
+    getCart.mockResolvedValue({ items: [{ productId: 'p1', quantity: 1 }] });
+    productFindMany.mockResolvedValue([
+      {
+        id: 'p1',
+        sku: 'SKU-1',
+        nameEn: 'Filter',
+        isActive: true,
+        price: new Prisma.Decimal(100),
+      },
+    ]);
+    orderCreate.mockResolvedValue({
+      id: 'ord-1',
+      orderNumber: 'DP-1001',
+      total: new Prisma.Decimal(100),
+    });
+    const config = {
+      get: jest.fn().mockReturnValue('merchant-1'),
+    } as unknown as ConfigService;
+
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+      config,
+    );
+    const result = await service.createOrder('998901234567', baseDto());
+
+    const decoded = Buffer.from(
+      result.checkoutUrl!.split('/').pop()!,
+      'base64',
+    ).toString('utf-8');
+    expect(decoded).not.toContain('c=');
   });
 });
 
