@@ -83,7 +83,11 @@ export class CheckoutService {
       (sum, line) => sum.add(line.total),
       new Prisma.Decimal(0),
     );
-    const deliveryFee = new Prisma.Decimal(dto.deliveryFee ?? 0);
+    // Always 0, never client-supplied: a caller-set fee let a shopper zero out
+    // what should be a real delivery charge, since Order.total (this sum) is
+    // exactly what Payme is told to collect. Revisit once a real delivery-fee
+    // calculation (method/zone -> price) exists to validate a client value against.
+    const deliveryFee = new Prisma.Decimal(0);
     const total = subtotal.add(deliveryFee);
 
     const order = await this.prisma.order.create({

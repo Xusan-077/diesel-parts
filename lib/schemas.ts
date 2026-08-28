@@ -25,8 +25,12 @@ export const cartMergeSchema = z.object({
 
 export type CartMergeInput = z.infer<typeof cartMergeSchema>;
 
+/**
+ * deliveryFee is deliberately not a field here: backend/'s CheckoutService
+ * always charges 0 for it (no client-supplied fee — see checkout.service.ts's
+ * comment) until a real delivery-fee calculation exists to validate one against.
+ */
 export const checkoutRequestSchema = z.object({
-  deliveryFee: z.number().nonnegative().optional(),
   notes: z.string().max(2000).optional(),
   paymentMethod: z.literal("ONLINE"),
 });

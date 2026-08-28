@@ -1,11 +1,6 @@
-import { IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class CreateCheckoutDto {
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  deliveryFee?: number;
-
   @IsOptional()
   @IsString()
   notes?: string;

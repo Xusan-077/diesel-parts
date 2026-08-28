@@ -42,12 +42,12 @@ describe("POST /api/v1/checkout", () => {
   it("proxies the checkout request and returns the order plus checkout URL", async () => {
     getSession.mockResolvedValue({ phone: "998901234567" });
 
-    const response = await POST(post({ paymentMethod: "ONLINE", deliveryFee: 15000 }));
+    const response = await POST(post({ paymentMethod: "ONLINE" }));
 
     expect(response.status).toBe(200);
     expect(callBackendPhoneVerified).toHaveBeenCalledWith("998901234567", "checkout", {
       method: "POST",
-      body: { paymentMethod: "ONLINE", deliveryFee: 15000 },
+      body: { paymentMethod: "ONLINE" },
     });
     expect(await response.json()).toEqual({
       success: true,
