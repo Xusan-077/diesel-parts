@@ -14,6 +14,7 @@ import { usePruneMissing } from "@/hooks/use-prune-missing";
 import { ResolvedProductsSkeleton } from "@/components/store/resolved-products-skeleton";
 import { CheckoutDetailsForm } from "@/components/store/checkout-details-form";
 import { CheckoutOrderSummary } from "@/components/store/checkout-order-summary";
+import { CheckoutSummarySheet } from "@/components/store/checkout-summary-sheet";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import type { CheckoutRequestInput } from "@/lib/schemas";
@@ -212,7 +213,7 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
         <CheckoutDetailsForm formId={formId} dict={dict} profile={profile} onSubmit={placeOrder} />
       </div>
 
-      <aside className="lg:sticky lg:top-40">
+      <aside className="hidden lg:sticky lg:top-40 lg:block">
         <Card>
           <CardHeader>
             <CardTitle>{cartDict.summaryTitle}</CardTitle>
@@ -236,6 +237,21 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
           </CardContent>
         </Card>
       </aside>
+
+      <CheckoutSummarySheet
+        formId={formId}
+        submitting={status === "submitting"}
+        submitLabel={dict.submit}
+        submittingLabel={dict.submitting}
+        cartDict={cartDict}
+        checkoutDict={dict}
+        lineCount={lineCount}
+        unitCount={unitCount}
+        total={total}
+        totalLabel={totalLabel}
+        unpricedCount={unpriced}
+        errorMessage={status === "error" ? errorMessage : null}
+      />
     </div>
   );
 }
