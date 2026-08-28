@@ -39,22 +39,30 @@ afterEach(() => {
   process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
 });
 
+const basePayload = {
+  firstName: "Aziz",
+  lastName: "Karimov",
+  deliveryMethod: "PICKUP",
+  termsAccepted: true,
+  paymentMethod: "ONLINE",
+};
+
 describe("POST /api/v1/checkout", () => {
   it("answers 401 with no session", async () => {
     getSession.mockResolvedValue(null);
-    expect((await POST(post({ paymentMethod: "ONLINE" }))).status).toBe(401);
+    expect((await POST(post(basePayload))).status).toBe(401);
     expect(callBackendPhoneVerified).not.toHaveBeenCalled();
   });
 
   it("proxies the checkout request and returns the order plus checkout URL", async () => {
     getSession.mockResolvedValue({ phone: "998901234567" });
 
-    const response = await POST(post({ paymentMethod: "ONLINE" }));
+    const response = await POST(post(basePayload));
 
     expect(response.status).toBe(200);
     expect(callBackendPhoneVerified).toHaveBeenCalledWith("998901234567", "checkout", {
       method: "POST",
-      body: { paymentMethod: "ONLINE", returnBaseUrl: "https://www.diesel-parts.uz" },
+      body: { ...basePayload, returnBaseUrl: "https://www.diesel-parts.uz" },
     });
     expect(await response.json()).toEqual({
       success: true,
@@ -65,7 +73,9 @@ describe("POST /api/v1/checkout", () => {
 
   it("answers 400 for a payment method other than ONLINE", async () => {
     getSession.mockResolvedValue({ phone: "998901234567" });
-    expect((await POST(post({ paymentMethod: "BANK_TRANSFER" }))).status).toBe(400);
+    expect(
+      (await POST(post({ ...basePayload, paymentMethod: "BANK_TRANSFER" }))).status,
+    ).toBe(400);
     expect(callBackendPhoneVerified).not.toHaveBeenCalled();
   });
 });

@@ -25,15 +25,61 @@ export const cartMergeSchema = z.object({
 
 export type CartMergeInput = z.infer<typeof cartMergeSchema>;
 
+export const checkoutDeliveryMethodSchema = z.enum(["PICKUP", "DELIVERY"]);
+
+function optionalTrimmedString(max: number) {
+  return z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().trim().max(max, "tooLong").optional(),
+  );
+}
+
+const optionalEmail = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().max(160, "tooLong").email("invalidEmail").optional(),
+);
+
 /**
- * deliveryFee is deliberately not a field here: backend/'s CheckoutService
+ * Every failure message here is a *code* (`"required"`, `"tooLong"`, ...),
+ * looked up by lib/store/checkout-error-text.ts — same split
+ * profileDetailsSchema already uses, for the same reason: this form renders
+ * in three languages and a Zod schema has no dictionary.
+ *
+ * `deliveryFee` is deliberately not a field here: backend/'s CheckoutService
  * always charges 0 for it (no client-supplied fee — see checkout.service.ts's
  * comment) until a real delivery-fee calculation exists to validate one against.
+ * `returnBaseUrl` is deliberately not a field either — see route.ts, which
+ * adds it server-side from NEXT_PUBLIC_SITE_URL rather than trusting it from
+ * the browser's own request body.
  */
-export const checkoutRequestSchema = z.object({
-  notes: z.string().max(2000).optional(),
-  paymentMethod: z.literal("ONLINE"),
-});
+export const checkoutRequestSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "required").max(60, "tooLong"),
+    lastName: z.string().trim().min(1, "required").max(60, "tooLong"),
+    email: optionalEmail,
+    companyName: optionalTrimmedString(160),
+    taxId: optionalTrimmedString(32),
+    deliveryMethod: checkoutDeliveryMethodSchema,
+    city: optionalTrimmedString(120),
+    district: optionalTrimmedString(120),
+    street: optionalTrimmedString(200),
+    deliveryNotes: optionalTrimmedString(500),
+    notes: z.string().max(2000).optional(),
+    termsAccepted: z.boolean().refine((value) => value === true, "termsRequired"),
+    paymentMethod: z.literal("ONLINE"),
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.city), {
+    message: "required",
+    path: ["city"],
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.district), {
+    message: "required",
+    path: ["district"],
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.street), {
+    message: "required",
+    path: ["street"],
+  });
 
 export type CheckoutRequestInput = z.infer<typeof checkoutRequestSchema>;
 
