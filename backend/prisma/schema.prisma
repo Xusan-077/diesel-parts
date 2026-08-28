@@ -81,6 +81,11 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
 model User {
   id            String   @id @default(cuid())
   /// Nullable: some accounts (director/staff created via the old email-based
@@ -154,6 +159,10 @@ model Customer {
   phone            String
   email            String?
   company          String?
+  /// INN — the Uzbek taxpayer id, for a B2B checkout's invoice. Free text,
+  /// not format-checked: it varies by entity type and this project has no
+  /// authoritative check-digit table today.
+  taxId            String?  @map("tax_id")
   telegram         String?
   notes            String?
   debt             Decimal  @default(0) @db.Decimal(14, 2)
@@ -388,6 +397,18 @@ model Order {
   /// and merging them would change either flow's existing behavior.
   discount                 Decimal            @default(0) @db.Decimal(14, 2)
   deliveryFee              Decimal            @default(0) @map("delivery_fee") @db.Decimal(14, 2)
+  /// Self-checkout only: PICKUP needs no address; DELIVERY requires
+  /// city/district/street, enforced in CreateCheckoutDto (not at the DB
+  /// level, so a CRM-raised order — created through OrdersService.create,
+  /// not CheckoutService — is unaffected and simply keeps the PICKUP
+  /// default with every address column null).
+  deliveryMethod           DeliveryMethod     @default(PICKUP) @map("delivery_method")
+  deliveryCity             String?            @map("delivery_city")
+  deliveryDistrict         String?            @map("delivery_district")
+  deliveryStreet           String?            @map("delivery_street")
+  /// Free-text delivery guidance (entrance, floor, landmark) — distinct
+  /// from `notes`, which is the order's general comment.
+  deliveryNotes            String?            @map("delivery_notes")
   /// Percent the seller asked for (CRM flow). Within their User.discountLimit
   /// it applies immediately; above it, a DiscountRequest gates approval.
   discountRequestedPercent Decimal            @default(0) @map("discount_requested_percent") @db.Decimal(5, 2)
@@ -481,13 +502,13 @@ model Payment {
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
 
-  @@index([orderId])
   /// Guards webhook idempotency: a provider retrying the same callback must
   /// not be able to create a second row for one transaction and re-fire a
   /// COMPLETED transition. Postgres treats each NULL as distinct here, so
   /// the existing staff-recorded rows (provider/transactionId both null)
   /// are unaffected.
   @@unique([provider, transactionId])
+  @@index([orderId])
   @@map("payments")
 }
 
@@ -519,11 +540,11 @@ model Cart {
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String   @map("cart_id")
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String   @map("product_id")
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  cartId    String  @map("cart_id")
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int
 
   @@unique([cartId, productId])
