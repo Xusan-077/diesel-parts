@@ -25,6 +25,7 @@ import { InquiriesModule } from './inquiries/inquiries.module';
 import { DiscountRequestsModule } from './discount-requests/discount-requests.module';
 import { AiModule } from './ai/ai.module';
 import { CartsModule } from './carts/carts.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { CartsModule } from './carts/carts.module';
     DiscountRequestsModule,
     AiModule,
     CartsModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
 })
