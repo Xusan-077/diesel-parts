@@ -87,8 +87,23 @@ export class CustomersService {
    * formatting), so no SQL `equals` can find it — the `contains` prefilter
    * below narrows to roughly one row in a hundred before the exact
    * comparison runs in JS.
+   *
+   * For an existing match: `name` overwrites whenever the checkout's name
+   * differs from what is on file (checkout now always collects a real name
+   * — see CreateCheckoutDto — so it is the most up-to-date value available).
+   * `email`/`company`/`taxId` only backfill a currently-null column, so a
+   * repeat checkout can never clobber data a seller already curated on the
+   * CRM side.
    */
-  async findOrCreateByPhone(phone: string, name?: string) {
+  async findOrCreateByPhone(
+    phone: string,
+    details?: {
+      name?: string;
+      email?: string;
+      company?: string;
+      taxId?: string;
+    },
+  ) {
     const national = extractNationalDigits(phone);
     const candidates = await this.prisma.customer.findMany({
       where: { phone: { contains: phoneTail(national) } },
@@ -97,10 +112,39 @@ export class CustomersService {
     const existing = candidates.find(
       (candidate) => extractNationalDigits(candidate.phone) === national,
     );
-    if (existing) return existing;
+
+    if (existing) {
+      const patch: Record<string, string> = {};
+      if (details?.name && details.name !== existing.name) {
+        patch.name = details.name;
+      }
+      if (details?.email && !existing.email) {
+        patch.email = details.email;
+      }
+      if (details?.company && !existing.company) {
+        patch.company = details.company;
+      }
+      if (details?.taxId && !existing.taxId) {
+        patch.taxId = details.taxId;
+      }
+
+      if (Object.keys(patch).length === 0) {
+        return existing;
+      }
+      return this.prisma.customer.update({
+        where: { id: existing.id },
+        data: patch,
+      });
+    }
 
     return this.prisma.customer.create({
-      data: { phone, name: name ?? 'Checkout' },
+      data: {
+        phone,
+        name: details?.name ?? 'Checkout',
+        email: details?.email,
+        company: details?.company,
+        taxId: details?.taxId,
+      },
     });
   }
 
