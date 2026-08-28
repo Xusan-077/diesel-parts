@@ -72,8 +72,15 @@ export class CheckoutService {
       throw new BadRequestException('Cart is empty');
     }
 
+    const fullName = `${dto.firstName.trim()} ${dto.lastName.trim()}`.trim();
+
     const [customer, houseSeller, lines, orderNumber] = await Promise.all([
-      this.customers.findOrCreateByPhone(phone),
+      this.customers.findOrCreateByPhone(phone, {
+        name: fullName,
+        email: dto.email,
+        company: dto.companyName,
+        taxId: dto.taxId,
+      }),
       getOrCreateHouseSeller(this.prisma),
       this.buildLines(cart.items),
       this.orders.reserveOrderNumber(),
@@ -105,6 +112,14 @@ export class CheckoutService {
         deliveryFee,
         total,
         notes: dto.notes?.trim() || null,
+        deliveryMethod: dto.deliveryMethod,
+        deliveryCity:
+          dto.deliveryMethod === 'DELIVERY' ? (dto.city ?? null) : null,
+        deliveryDistrict:
+          dto.deliveryMethod === 'DELIVERY' ? (dto.district ?? null) : null,
+        deliveryStreet:
+          dto.deliveryMethod === 'DELIVERY' ? (dto.street ?? null) : null,
+        deliveryNotes: dto.deliveryNotes?.trim() || null,
         items: {
           create: lines.map(({ price, total: lineTotal, ...rest }) => ({
             ...rest,

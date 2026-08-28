@@ -5,6 +5,20 @@ import { CartsService } from '../carts/carts.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from '../orders/orders.service';
 import { Prisma } from '../../generated/prisma/client';
+import type { CreateCheckoutDto } from './dto/create-checkout.dto';
+
+function baseDto(
+  overrides: Partial<CreateCheckoutDto> = {},
+): CreateCheckoutDto {
+  return {
+    firstName: 'Aziz',
+    lastName: 'Karimov',
+    deliveryMethod: 'PICKUP',
+    termsAccepted: true,
+    paymentMethod: 'ONLINE',
+    ...overrides,
+  };
+}
 
 function makeDeps() {
   const getCart = jest.fn();
@@ -29,15 +43,21 @@ function makeDeps() {
           customerId: string;
           sellerId: string;
           warehouseId: string | null;
+          deliveryMethod: string;
+          deliveryCity: string | null;
+          deliveryDistrict: string | null;
+          deliveryStreet: string | null;
+          deliveryNotes: string | null;
           items: { create: Array<Record<string, unknown>> };
         };
       },
     ]
   >();
+  const orderFindUnique = jest.fn();
   const paymentCreate = jest.fn();
   const prisma = {
     product: { findMany: productFindMany },
-    order: { create: orderCreate },
+    order: { create: orderCreate, findUnique: orderFindUnique },
     user: {
       findUnique: jest
         .fn()
@@ -57,6 +77,7 @@ function makeDeps() {
     findOrCreateByPhone,
     productFindMany,
     orderCreate,
+    orderFindUnique,
   };
 }
 
@@ -73,11 +94,11 @@ describe('CheckoutService.createOrder', () => {
     );
 
     await expect(
-      service.createOrder('998901234567', { paymentMethod: 'ONLINE' }),
+      service.createOrder('998901234567', baseDto()),
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('builds an order from the cart, snapshotting price/sku/name, and clears the cart', async () => {
+  it('builds a PICKUP order, snapshotting price/sku/name, and resolves the customer by name/email/company/taxId', async () => {
     const {
       cartsService,
       customersService,
@@ -113,17 +134,31 @@ describe('CheckoutService.createOrder', () => {
       customersService,
       ordersService,
     );
-    const result = await service.createOrder('998901234567', {
-      paymentMethod: 'ONLINE',
-    });
+    const result = await service.createOrder(
+      '998901234567',
+      baseDto({
+        email: 'aziz@example.com',
+        companyName: 'Aziz LLC',
+        taxId: '123',
+      }),
+    );
 
-    expect(findOrCreateByPhone).toHaveBeenCalledWith('998901234567');
+    expect(findOrCreateByPhone).toHaveBeenCalledWith('998901234567', {
+      name: 'Aziz Karimov',
+      email: 'aziz@example.com',
+      company: 'Aziz LLC',
+      taxId: '123',
+    });
 
     const callArgs = orderCreate.mock.calls[0][0];
     expect(callArgs.data.orderNumber).toBe('DP-1001');
     expect(callArgs.data.customerId).toBe('cus-1');
     expect(callArgs.data.sellerId).toBe('house-1');
     expect(callArgs.data.warehouseId).toBeNull();
+    expect(callArgs.data.deliveryMethod).toBe('PICKUP');
+    expect(callArgs.data.deliveryCity).toBeNull();
+    expect(callArgs.data.deliveryDistrict).toBeNull();
+    expect(callArgs.data.deliveryStreet).toBeNull();
     expect(callArgs.data.items.create).toHaveLength(1);
     expect(callArgs.data.items.create[0]).toMatchObject({
       productId: 'p1',
@@ -134,6 +169,57 @@ describe('CheckoutService.createOrder', () => {
 
     expect(clear).toHaveBeenCalledWith('998901234567');
     expect(result.order.id).toBe('ord-1');
+  });
+
+  it('stores the structured address for a DELIVERY order', async () => {
+    const {
+      cartsService,
+      customersService,
+      ordersService,
+      prisma,
+      getCart,
+      productFindMany,
+      orderCreate,
+    } = makeDeps();
+    getCart.mockResolvedValue({ items: [{ productId: 'p1', quantity: 1 }] });
+    productFindMany.mockResolvedValue([
+      {
+        id: 'p1',
+        sku: 'SKU-1',
+        nameEn: 'Filter',
+        isActive: true,
+        price: new Prisma.Decimal(100),
+      },
+    ]);
+    orderCreate.mockResolvedValue({
+      id: 'ord-1',
+      orderNumber: 'DP-1001',
+      total: new Prisma.Decimal(100),
+    });
+
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+    await service.createOrder(
+      '998901234567',
+      baseDto({
+        deliveryMethod: 'DELIVERY',
+        city: 'Toshkent',
+        district: 'Chilonzor',
+        street: 'Bunyodkor 12',
+        deliveryNotes: '3-qavat',
+      }),
+    );
+
+    const callArgs = orderCreate.mock.calls[0][0];
+    expect(callArgs.data.deliveryMethod).toBe('DELIVERY');
+    expect(callArgs.data.deliveryCity).toBe('Toshkent');
+    expect(callArgs.data.deliveryDistrict).toBe('Chilonzor');
+    expect(callArgs.data.deliveryStreet).toBe('Bunyodkor 12');
+    expect(callArgs.data.deliveryNotes).toBe('3-qavat');
   });
 
   it('rejects when a cart line references a retired or missing product', async () => {
@@ -158,7 +244,7 @@ describe('CheckoutService.createOrder', () => {
     );
 
     await expect(
-      service.createOrder('998901234567', { paymentMethod: 'ONLINE' }),
+      service.createOrder('998901234567', baseDto()),
     ).rejects.toThrow(BadRequestException);
   });
 });
