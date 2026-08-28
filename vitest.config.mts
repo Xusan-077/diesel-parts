@@ -25,5 +25,6 @@ export default defineConfig({
     include: ["**/*.test.ts", "**/*.test.tsx"],
     // Nested node_modules (agent worktrees) ship their own test suites.
     exclude: ["**/node_modules/**", "**/.next/**", ".claude/**"],
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
