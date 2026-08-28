@@ -25,6 +25,14 @@ export const cartMergeSchema = z.object({
 
 export type CartMergeInput = z.infer<typeof cartMergeSchema>;
 
+export const checkoutRequestSchema = z.object({
+  deliveryFee: z.number().nonnegative().optional(),
+  notes: z.string().max(2000).optional(),
+  paymentMethod: z.literal("ONLINE"),
+});
+
+export type CheckoutRequestInput = z.infer<typeof checkoutRequestSchema>;
+
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
   productId: z.string().min(1),
