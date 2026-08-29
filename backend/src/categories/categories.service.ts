@@ -37,6 +37,36 @@ export class CategoriesService {
     return this.prisma.category.findMany({ orderBy: { nameEn: 'asc' } });
   }
 
+  /**
+   * The whole category tree, roots first, each with a nested `children` array.
+   * Read flat and shaped in memory — the tree is ~60 rows, so one query beats a
+   * nested include that fans out per root. A row whose parent is missing is
+   * treated as a root (matches the storefront menu's `buildCatalogTree`): a
+   * category absent from the menu is harder to notice than one a level too high.
+   */
+  async findTree() {
+    const all = await this.prisma.category.findMany({
+      orderBy: [{ order: 'asc' }, { nameUz: 'asc' }],
+    });
+
+    type Node = (typeof all)[number] & { children: Node[] };
+    const byId = new Map<string, Node>(
+      all.map((row) => [row.id, { ...row, children: [] }]),
+    );
+
+    const roots: Node[] = [];
+    for (const node of byId.values()) {
+      const parent =
+        node.parentId === null ? undefined : byId.get(node.parentId);
+      if (parent === undefined || parent.id === node.id) {
+        roots.push(node);
+      } else {
+        parent.children.push(node);
+      }
+    }
+    return roots;
+  }
+
   async findOne(id: string) {
     const category = await this.prisma.category.findUnique({ where: { id } });
     if (!category) throw new NotFoundException('Category not found');

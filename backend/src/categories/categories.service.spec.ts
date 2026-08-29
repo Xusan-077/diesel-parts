@@ -98,3 +98,48 @@ describe('CategoriesService audit', () => {
     });
   });
 });
+
+function makeTreePrisma(rows: unknown[]) {
+  const findMany = jest.fn().mockResolvedValue(rows);
+  return {
+    prisma: { category: { findMany } } as unknown as PrismaService,
+    findMany,
+  };
+}
+
+describe('CategoriesService.findTree', () => {
+  const { audit } = makeAudit();
+
+  it('nests children under their root, preserving the DB order', async () => {
+    // Rows arrive already ordered by [order asc, nameUz asc] from the query.
+    const rows = [
+      { id: 'root-a', parentId: null, order: 0, nameUz: 'Anhydrid' },
+      { id: 'root-b', parentId: null, order: 0, nameUz: 'Brakes' },
+      { id: 'child-b2', parentId: 'root-b', order: 1, nameUz: 'Discs' },
+      { id: 'child-b1', parentId: 'root-b', order: 2, nameUz: 'Pads' },
+    ];
+    const { prisma, findMany } = makeTreePrisma(rows);
+    const service = new CategoriesService(prisma, audit);
+
+    const tree = await service.findTree();
+
+    expect(findMany).toHaveBeenCalledWith({
+      orderBy: [{ order: 'asc' }, { nameUz: 'asc' }],
+    });
+    expect(tree.map((n) => n.id)).toEqual(['root-a', 'root-b']);
+    expect(tree[1].children.map((c) => c.id)).toEqual(['child-b2', 'child-b1']);
+    expect(tree[0].children).toEqual([]);
+  });
+
+  it('treats a row with a missing parent as a root', async () => {
+    const rows = [
+      { id: 'orphan', parentId: 'gone', order: 0, nameUz: 'Orphan' },
+    ];
+    const { prisma } = makeTreePrisma(rows);
+    const service = new CategoriesService(prisma, audit);
+
+    const tree = await service.findTree();
+
+    expect(tree.map((n) => n.id)).toEqual(['orphan']);
+  });
+});
