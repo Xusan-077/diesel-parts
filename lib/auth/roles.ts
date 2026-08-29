@@ -6,7 +6,7 @@
  * can be unit-tested directly and reused from every runtime.
  */
 
-export type StaffRole = "DIRECTOR" | "SELLER";
+export type StaffRole = "SUPER_ADMIN" | "DIRECTOR" | "MANAGER" | "SELLER" | "VIEWER";
 
 export const ADMIN_ROOT = "/admin";
 
@@ -32,9 +32,15 @@ export const DIRECTOR_ROOT = "/director";
  */
 export const STAFF_LOGIN_PATH = "/director/login";
 
-/** Where a role lands after login, and where `/admin` and `/director` themselves send them. */
+/**
+ * Where a role lands after login, and where `/admin` and `/director` themselves
+ * send them. `backend/`'s own API guards already treat SUPER_ADMIN and MANAGER
+ * as director-or-above (`DIRECTOR_UP`/`MANAGER_UP`); this mirrors that at the
+ * UI-gating level. VIEWER also lands here — read-only enforcement stays at the
+ * API layer, since no page branches on it today.
+ */
 export function adminHomePath(role: StaffRole): string {
-  return role === "DIRECTOR" ? DIRECTOR_ROOT : "/admin/seller";
+  return role === "SELLER" ? "/admin/seller" : DIRECTOR_ROOT;
 }
 
 /**
@@ -46,9 +52,9 @@ export function adminHomePath(role: StaffRole): string {
  * every seller.
  */
 const ADMIN_AREAS: ReadonlyArray<{ prefix: string; roles: readonly StaffRole[] }> = [
-  // Directors may open the seller pages: supporting a seller means seeing
-  // exactly what the seller sees.
-  { prefix: "/admin/seller", roles: ["SELLER", "DIRECTOR"] },
+  // A director-or-above may open the seller pages: supporting a seller means
+  // seeing exactly what the seller sees.
+  { prefix: "/admin/seller", roles: ["SELLER", "DIRECTOR", "MANAGER", "SUPER_ADMIN"] },
 ];
 
 /** Strips a trailing slash so `/admin/seller/` and `/admin/seller` agree. */

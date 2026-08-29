@@ -19,7 +19,13 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "./locales";
  */
 const uz = {
   brand: "Diesel Parts",
-  role: { DIRECTOR: "Direktor", SELLER: "Sotuvchi" },
+  role: {
+    SUPER_ADMIN: "Super admin",
+    DIRECTOR: "Direktor",
+    MANAGER: "Menejer",
+    SELLER: "Sotuvchi",
+    VIEWER: "Kuzatuvchi",
+  },
 
   nav: {
     label: "Panel bo'limlari",
@@ -162,7 +168,13 @@ export type PanelDictionary = {
 
 const ru: PanelDictionary = {
   brand: "Diesel Parts",
-  role: { DIRECTOR: "Директор", SELLER: "Продавец" },
+  role: {
+    SUPER_ADMIN: "Супер админ",
+    DIRECTOR: "Директор",
+    MANAGER: "Менеджер",
+    SELLER: "Продавец",
+    VIEWER: "Наблюдатель",
+  },
 
   nav: {
     label: "Разделы панели",
@@ -288,7 +300,13 @@ const ru: PanelDictionary = {
 
 const en: PanelDictionary = {
   brand: "Diesel Parts",
-  role: { DIRECTOR: "Director", SELLER: "Seller" },
+  role: {
+    SUPER_ADMIN: "Super Admin",
+    DIRECTOR: "Director",
+    MANAGER: "Manager",
+    SELLER: "Seller",
+    VIEWER: "Viewer",
+  },
 
   nav: {
     label: "Panel sections",

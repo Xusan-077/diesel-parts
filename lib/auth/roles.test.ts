@@ -43,12 +43,23 @@ describe("adminHomePath", () => {
     expect(adminHomePath("DIRECTOR")).toBe("/director");
     expect(adminHomePath("SELLER")).toBe("/admin/seller");
   });
+
+  it("sends MANAGER, SUPER_ADMIN and VIEWER to the director root, same as DIRECTOR", () => {
+    expect(adminHomePath("MANAGER")).toBe("/director");
+    expect(adminHomePath("SUPER_ADMIN")).toBe("/director");
+    expect(adminHomePath("VIEWER")).toBe("/director");
+  });
 });
 
 describe("canAccessAdminPath", () => {
   it("opens the seller area to both roles, so a director can support a seller", () => {
     expect(canAccessAdminPath("/admin/seller/inquiries", "SELLER")).toBe(true);
     expect(canAccessAdminPath("/admin/seller/inquiries", "DIRECTOR")).toBe(true);
+  });
+
+  it("also opens the seller area to MANAGER and SUPER_ADMIN, same reasoning as DIRECTOR", () => {
+    expect(canAccessAdminPath("/admin/seller/inquiries", "MANAGER")).toBe(true);
+    expect(canAccessAdminPath("/admin/seller/inquiries", "SUPER_ADMIN")).toBe(true);
   });
 
   it("lets either role hit the signpost at /admin", () => {
