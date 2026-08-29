@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
-import { compare } from "bcryptjs";
-import { prisma } from "@/lib/db";
 import { staffLoginSchema } from "@/lib/schemas";
 import { adminHomePath } from "@/lib/auth/roles";
-import { createStaffToken } from "@/lib/auth/staff-token";
+import { BackendApiError, backendAuthRequest } from "@/lib/api/backend-client";
+import { accessTokenExpiryMs, createStaffToken, type StaffSession } from "@/lib/auth/staff-token";
 import { STAFF_SESSION_COOKIE, staffCookieOptions } from "@/lib/auth/staff-session";
-import {
-  checkLoginAllowed,
-  clearLoginFailures,
-  recordLoginFailure,
-} from "@/lib/auth/login-throttle";
 import { recordAudit } from "@/lib/api/audit";
-
-/**
- * A valid bcrypt hash of a random string, compared against when the email is
- * unknown. Without it the "no such user" path returns in microseconds while the
- * "wrong password" path spends ~250ms hashing, and that gap alone tells an
- * attacker which addresses are real.
- */
-const DECOY_HASH = "$2b$12$6gvGctBdWlx8s.vP9b2.DeCAF9xD0PMUuub6/SVzhHnYM/Mw812v6";
 
 /** One message for every failure, so nothing distinguishes the causes. */
 const INVALID_CREDENTIALS = "Email or password is incorrect.";
+
+interface BackendLoginResponse {
+  accessToken: string;
+  user: { id: string; role: StaffSession["role"] };
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -45,45 +36,70 @@ export async function POST(request: Request) {
 
   const email = result.data.email.trim().toLowerCase();
 
-  const allowed = checkLoginAllowed(email);
-  if (!allowed.ok) {
-    return NextResponse.json(
-      {
-        success: false,
-        errors: { _root: ["Too many attempts. Try again later."] },
-        retryAfterSeconds: allowed.retryAfterSeconds,
-      },
-      { status: 429, headers: { "Retry-After": String(allowed.retryAfterSeconds) } },
-    );
-  }
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  const passwordMatches = await compare(result.data.password, user?.passwordHash ?? DECOY_HASH);
-
-  // A deactivated account fails exactly like a wrong password: a dismissed
-  // seller should not learn that their account still exists.
-  if (!user || !user.isActive || !passwordMatches) {
-    recordLoginFailure(email);
+  let login: { data: BackendLoginResponse; refreshToken: string | null };
+  try {
+    // The DTO field is named `phone` but accepts phone OR email (backend/'s
+    // Task 1 kept the name to avoid an out-of-scope break to the seller
+    // panel's own `{phone, password}` login body — see
+    // backend/src/auth/dto/login.dto.ts). This form only ever collects an
+    // email, matching root's own former email-only login.
+    login = await backendAuthRequest<BackendLoginResponse>("/auth/login", {
+      method: "POST",
+      body: { phone: email, password: result.data.password },
+    });
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 429) {
+      return NextResponse.json(
+        { success: false, errors: { _root: ["Too many attempts. Try again later."] } },
+        { status: 429 },
+      );
+    }
+    // A deactivated account fails exactly like a wrong password (backend/'s
+    // own behavior, ported from root's — see backend/src/auth/auth.service.ts):
+    // a dismissed seller should not learn that their account still exists.
     return NextResponse.json(
       { success: false, errors: { _root: [INVALID_CREDENTIALS] } },
       { status: 401 },
     );
   }
 
-  clearLoginFailures(email);
+  if (!login.refreshToken) {
+    // backend/ didn't rotate a refresh cookie for us — treat this exactly
+    // like a failed login rather than minting a session with no way to ever
+    // refresh it (see backend-client.ts's backendAuthRequest doc comment).
+    return NextResponse.json(
+      { success: false, errors: { _root: [INVALID_CREDENTIALS] } },
+      { status: 401 },
+    );
+  }
 
-  const token = await createStaffToken({ userId: user.id, role: user.role, name: user.name });
+  const session: StaffSession = {
+    role: login.data.user.role,
+    accessToken: login.data.accessToken,
+    refreshToken: login.refreshToken,
+    accessTokenExpiresAt: accessTokenExpiryMs(login.data.accessToken),
+  };
+  const token = await createStaffToken(session);
+
+  // TODO(backend-consolidation Part 4/5): still writes to root's own
+  // AuditLog via @/lib/db (lib/api/audit.ts) — out of this task's scope
+  // (see plan's file list for Task 14). Harmless today since a migrated
+  // account's id is identical on both sides (the migration script copies
+  // `id` verbatim); a staff account created directly in backend/ after this
+  // point has no matching root User row, so this write will fail closed
+  // (recordAudit never throws) until audit.ts is proxied to backend/'s own
+  // AuditService (already built, Part 1 Task 4) ahead of deleting root's
+  // Prisma layer.
   await recordAudit({
-    userId: user.id,
+    userId: login.data.user.id,
     action: "LOGIN",
     entityType: "User",
-    entityId: user.id,
+    entityId: login.data.user.id,
   });
 
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, name: user.name, role: user.role },
-    redirectTo: adminHomePath(user.role),
+    redirectTo: adminHomePath(session.role),
   });
   response.cookies.set(STAFF_SESSION_COOKIE, token, staffCookieOptions);
   return response;

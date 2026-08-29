@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { backendRequest } from "./backend-client";
+import { backendAuthRequest, backendRequest } from "./backend-client";
 
 describe("backendRequest", () => {
   it("sends a bearer token and returns parsed JSON on success", async () => {
@@ -76,5 +76,53 @@ describe("backendRequest", () => {
     expect(calledUrl).toContain("page=2");
     expect(calledUrl).not.toContain("empty=");
     expect(calledUrl).not.toContain("skip=");
+  });
+});
+
+describe("backendAuthRequest", () => {
+  it("extracts the refresh_token cookie value out of Set-Cookie", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        getSetCookie: () => ["refresh_token=abc.def.ghi; Path=/api/auth; HttpOnly; SameSite=Lax"],
+      },
+      json: async () => ({ accessToken: "new-access-token" }),
+    });
+
+    const result = await backendAuthRequest<{ accessToken: string }>("/auth/refresh", {
+      method: "POST",
+      refreshCookie: "refresh_token=old-token",
+    });
+
+    expect(result.data).toEqual({ accessToken: "new-access-token" });
+    expect(result.refreshToken).toBe("abc.def.ghi");
+  });
+
+  it("returns null when there is no refresh_token cookie in the response", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: { getSetCookie: () => [] },
+      json: async () => ({}),
+    });
+
+    const result = await backendAuthRequest("/products");
+
+    expect(result.refreshToken).toBeNull();
+  });
+
+  it("still throws BackendApiError on a non-2xx before touching cookies", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: { getSetCookie: () => [] },
+      json: async () => ({ message: "Invalid phone or password" }),
+    });
+
+    await expect(backendAuthRequest("/auth/login", { method: "POST" })).rejects.toMatchObject({
+      status: 401,
+      message: "Invalid phone or password",
+    });
   });
 });

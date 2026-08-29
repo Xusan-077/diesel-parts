@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSkipped } from "./proxy";
+import { isSkipped, needsRefresh } from "./proxy";
 
 /**
  * These guard a bug that was invisible from the outside: the `config.matcher`
@@ -28,5 +28,21 @@ describe("isSkipped", () => {
   it("does not skip a route that merely starts with the same letters", () => {
     expect(isSkipped("/apidocs")).toBe(false);
     expect(isSkipped("/_nextsteps")).toBe(false);
+  });
+});
+
+describe("needsRefresh", () => {
+  const now = 1_700_000_000_000;
+
+  it("is false while comfortably inside the access token's life", () => {
+    expect(needsRefresh({ accessTokenExpiresAt: now + 5 * 60_000 }, now)).toBe(false);
+  });
+
+  it("is true once under a minute of life remains", () => {
+    expect(needsRefresh({ accessTokenExpiresAt: now + 30_000 }, now)).toBe(true);
+  });
+
+  it("is true for a token that has already expired", () => {
+    expect(needsRefresh({ accessTokenExpiresAt: now - 1 }, now)).toBe(true);
   });
 });

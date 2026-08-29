@@ -1,17 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { STAFF_SESSION_COOKIE } from "./cookie-names";
-import { STAFF_SESSION_TTL_SECONDS, verifyStaffToken, type StaffSession } from "./staff-token";
+import { verifyStaffToken, type StaffSession } from "./staff-token";
 
 export { STAFF_SESSION_COOKIE } from "./cookie-names";
-
-export const staffCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-  maxAge: STAFF_SESSION_TTL_SECONDS,
-} as const;
+export { staffCookieOptions } from "./staff-token";
 
 /**
  * Reads what the cookie claims. Nothing here touches the database, so treat the

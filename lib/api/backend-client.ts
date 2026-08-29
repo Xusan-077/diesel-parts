@@ -33,7 +33,7 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
   return url.toString();
 }
 
-export async function backendRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function performRequest(path: string, options: RequestOptions): Promise<{ res: Response; data: unknown }> {
   const { method = "GET", body, query, accessToken, refreshCookie } = options;
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -46,14 +46,42 @@ export async function backendRequest<T>(path: string, options: RequestOptions = 
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  if (res.status === 204) return undefined as T;
-
-  const data = await res.json().catch(() => ({}));
+  const data = res.status === 204 ? undefined : await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const message = Array.isArray(data?.message) ? data.message.join(", ") : (data?.message ?? res.statusText);
-    throw new BackendApiError(message, res.status, data?.error ?? String(res.status));
+    const message = Array.isArray((data as { message?: unknown })?.message)
+      ? (data as { message: string[] }).message.join(", ")
+      : ((data as { message?: string })?.message ?? res.statusText);
+    throw new BackendApiError(message, res.status, (data as { error?: string })?.error ?? String(res.status));
   }
 
+  return { res, data };
+}
+
+export async function backendRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { data } = await performRequest(path, options);
   return data as T;
+}
+
+/**
+ * `POST /auth/login` and `POST /auth/refresh` are the only backend/ endpoints
+ * whose result includes a rotated refresh token — delivered only via a
+ * `Set-Cookie: refresh_token=...` header (`backend/src/auth/auth.controller.ts`'s
+ * `setRefreshCookie`), never in the JSON body. `backendRequest` discards
+ * headers entirely; this sibling captures that one cookie's value for the
+ * caller to store (this app's own session cookie, not a browser-facing one —
+ * backend/'s cookie never reaches the browser in this flow).
+ */
+export async function backendAuthRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ data: T; refreshToken: string | null }> {
+  const { res, data } = await performRequest(path, options);
+
+  const refreshToken = res.headers
+    .getSetCookie()
+    .map((cookie) => /(?:^|;\s*)refresh_token=([^;]+)/.exec(cookie)?.[1])
+    .find((value): value is string => value !== undefined);
+
+  return { data: data as T, refreshToken: refreshToken ?? null };
 }
