@@ -3,14 +3,37 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../../generated/prisma/client';
+import { AuditAction, Prisma } from '../../generated/prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
+import { ImportProductRowDto } from './dto/import-products.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
 import { deriveStockStatus } from './stock-status';
+import {
+  readProductCsv,
+  toCsv,
+  type CsvRowError,
+  type ProductCsvRow,
+} from './product-csv';
+
+/**
+ * Imported catalog stock lands here — the same warehouse the web_dev→erp data
+ * migration uses (see Global Constraints in the consolidation plan), so a
+ * product's `stock` column keeps meaning once stock is Inventory-derived.
+ */
+const CATALOG_WAREHOUSE_NAME = "Katalog (ko'chirilgan)";
+
+export interface ImportProductsResult {
+  success: boolean;
+  created: number;
+  updated: number;
+  errors: CsvRowError[];
+}
 
 const ADMIN_INCLUDE = {
   category: { select: { id: true, nameEn: true } },
@@ -238,6 +261,143 @@ export class ProductsService {
       after: auditSnapshot(after),
     });
     return { success: true };
+  }
+
+  /**
+   * The whole catalog as CSV, retired products included — the director edits
+   * the export and imports it back, so an omitted row would read as a delete.
+   * The `stock` column carries the computed available quantity.
+   */
+  async exportCsv(): Promise<string> {
+    const all = await this.prisma.product.findMany({
+      include: ADMIN_INCLUDE,
+      orderBy: { sku: 'asc' },
+    });
+
+    const rows: ProductCsvRow[] = all.map((product) => {
+      const stock = this.withStock(product);
+      return {
+        id: product.id,
+        sku: product.sku,
+        slug: product.slug,
+        oemNumbers: product.oemNumbers,
+        nameUz: product.nameUz,
+        nameRu: product.nameRu,
+        nameEn: product.nameEn,
+        descriptionUz: product.descriptionUz,
+        descriptionRu: product.descriptionRu,
+        descriptionEn: product.descriptionEn,
+        price: product.price === null ? null : Number(product.price),
+        stock: stock.availableQuantity,
+        minStock: product.minStock,
+        categoryId: product.categoryId,
+        brandId: product.brandId,
+        compatibleModels: product.compatibleModels,
+        isActive: product.isActive,
+      };
+    });
+
+    return toCsv(rows);
+  }
+
+  /**
+   * Bulk create/update from a CSV upload. Validation is all-or-nothing — a typo
+   * on line 80 blocks the whole file so the catalog is never left half-changed
+   * — and every bad row is reported with its line number at once. Each row goes
+   * through the same `create`/`update` path as a single write, so SKU-collision
+   * checks and audit logging apply identically.
+   */
+  async importCsv(csv: string, actorId: string): Promise<ImportProductsResult> {
+    const { rows, errors: structural } = readProductCsv(csv);
+    if (structural.length > 0) {
+      return { success: false, created: 0, updated: 0, errors: structural };
+    }
+
+    const invalid: CsvRowError[] = [];
+    const valid: { line: number; dto: ImportProductRowDto }[] = [];
+
+    for (const row of rows) {
+      const { line, ...candidate } = row;
+      const dto = plainToInstance(ImportProductRowDto, candidate);
+      const failures = await validate(dto, {
+        whitelist: true,
+        stopAtFirstError: true,
+      });
+      if (failures.length > 0) {
+        const first = failures[0];
+        const message = Object.values(first.constraints ?? {})[0] ?? 'invalid';
+        invalid.push({ line, message: `${first.property}: ${message}` });
+        continue;
+      }
+      valid.push({ line, dto });
+    }
+
+    if (invalid.length > 0) {
+      return { success: false, created: 0, updated: 0, errors: invalid };
+    }
+
+    const warehouseId = await this.catalogWarehouseId();
+    const failures: CsvRowError[] = [];
+    let created = 0;
+    let updated = 0;
+
+    for (const { line, dto } of valid) {
+      const { id, stock, ...write } = dto;
+      try {
+        const product = id
+          ? await this.update(id, write, actorId)
+          : await this.create(write, actorId);
+        await this.setCatalogStock(product.id, warehouseId, stock);
+        if (id) updated += 1;
+        else created += 1;
+      } catch (error) {
+        failures.push({ line, message: this.importFailureMessage(error, id) });
+      }
+    }
+
+    return {
+      success: failures.length === 0,
+      created,
+      updated,
+      errors: failures,
+    };
+  }
+
+  private importFailureMessage(error: unknown, id: string | undefined): string {
+    if (error instanceof ConflictException) return 'Bu SKU allaqachon band.';
+    if (error instanceof NotFoundException) {
+      return `Mahsulot topilmadi (id: ${id ?? ''}).`;
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
+    ) {
+      return 'Kategoriya yoki brend topilmadi.';
+    }
+    throw error;
+  }
+
+  private async catalogWarehouseId(): Promise<string> {
+    const existing = await this.prisma.warehouse.findFirst({
+      where: { name: CATALOG_WAREHOUSE_NAME },
+    });
+    if (existing) return existing.id;
+    const created = await this.prisma.warehouse.create({
+      data: { name: CATALOG_WAREHOUSE_NAME },
+    });
+    return created.id;
+  }
+
+  private async setCatalogStock(
+    productId: string,
+    warehouseId: string,
+    quantity: number,
+  ) {
+    await this.prisma.inventory.upsert({
+      where: { productId_warehouseId: { productId, warehouseId } },
+      create: { productId, warehouseId, quantity, reservedQuantity: 0 },
+      update: { quantity },
+    });
   }
 
   private async getOrThrow(id: string) {

@@ -1,4 +1,6 @@
 import {
+  IsArray,
+  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -49,7 +51,7 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  price?: number;
+  price?: number | null;
 
   /** Nullable in the schema; not every migrated product has one on record. */
   @IsOptional()
@@ -65,4 +67,18 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   minStock?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  oemNumbers?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  compatibleModels?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

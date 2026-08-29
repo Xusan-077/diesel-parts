@@ -3,16 +3,20 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
+import { ImportProductsDto } from './dto/import-products.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -33,6 +37,23 @@ export class ProductsController {
   @Get()
   findAll(@Query() query: QueryProductDto) {
     return this.products.findAllAdmin(query);
+  }
+
+  @Post('import')
+  import(@CurrentUser('id') actorId: string, @Body() dto: ImportProductsDto) {
+    return this.products.importCsv(dto.csv, actorId);
+  }
+
+  @Get('export')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Cache-Control', 'no-store')
+  async export(@Res({ passthrough: true }) res: Response): Promise<string> {
+    const today = new Date().toISOString().slice(0, 10);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="diesel-parts-katalog-${today}.csv"`,
+    );
+    return this.products.exportCsv();
   }
 
   @Get(':id')
