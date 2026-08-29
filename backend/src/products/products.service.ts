@@ -14,7 +14,7 @@ import {
 } from '../../generated/prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { QueryProductDto } from './dto/query-product.dto';
+import { QueryProductDto, type NameLocale } from './dto/query-product.dto';
 import { ImportProductRowDto } from './dto/import-products.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
 import { deriveStockStatus } from './stock-status';
@@ -46,6 +46,29 @@ const ADMIN_INCLUDE = {
     select: { quantity: true, reservedQuantity: true, warehouseId: true },
   },
 } as const;
+
+function nameColumn(lang: NameLocale): 'nameUz' | 'nameRu' | 'nameEn' {
+  return lang === 'uz' ? 'nameUz' : lang === 'ru' ? 'nameRu' : 'nameEn';
+}
+
+/** `''` parses to `[]` (a real, deliberate empty scope), not `['']`. */
+function splitIds(value: string): string[] {
+  return value
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+}
+
+function computeOrderBy(
+  query: QueryProductDto,
+): Prisma.ProductOrderByWithRelationInput {
+  if (query.sort === 'id') return { id: 'asc' };
+  if (query.sort === 'name-asc' && query.lang)
+    return { [nameColumn(query.lang)]: 'asc' };
+  if (query.sort === 'name-desc' && query.lang)
+    return { [nameColumn(query.lang)]: 'desc' };
+  return { createdAt: 'desc' };
+}
 
 /** Never returned to a SELLER: cost data the frontend/API must not leak to them. */
 const SELLER_HIDDEN_FIELDS = ['purchasePrice'] as const;
@@ -117,23 +140,60 @@ export class ProductsService {
     const where: Record<string, unknown> = {};
     if (options.publicOnly) where.isActive = true;
     if (query.search) {
-      where.OR = [
-        { nameUz: { contains: query.search, mode: 'insensitive' } },
-        { nameRu: { contains: query.search, mode: 'insensitive' } },
-        { nameEn: { contains: query.search, mode: 'insensitive' } },
-        { sku: { contains: query.search, mode: 'insensitive' } },
-      ];
+      // A locale narrows the match to what that reader actually sees; without
+      // one (the admin/seller lookup, which searches every language a staff
+      // member might type in) every name column is matched, unchanged from
+      // before this field existed.
+      where.OR = query.lang
+        ? [
+            {
+              [nameColumn(query.lang)]: {
+                contains: query.search,
+                mode: 'insensitive',
+              },
+            },
+            { sku: { contains: query.search, mode: 'insensitive' } },
+            // Prisma's array `has` takes no `mode`, so it is always
+            // case-sensitive; part numbers are stored upper-cased.
+            { oemNumbers: { has: query.search.toUpperCase() } },
+          ]
+        : [
+            { nameUz: { contains: query.search, mode: 'insensitive' } },
+            { nameRu: { contains: query.search, mode: 'insensitive' } },
+            { nameEn: { contains: query.search, mode: 'insensitive' } },
+            { sku: { contains: query.search, mode: 'insensitive' } },
+          ];
     }
-    if (query.categoryId) where.categoryId = query.categoryId;
-    if (query.brandId) where.brandId = query.brandId;
+    // The multi-select scope wins over the single value when present -- an
+    // empty list is a real scope (every box unticked) that matches nothing,
+    // not an absent filter falling through to the single id.
+    if (query.brandIds !== undefined) {
+      where.brandId = { in: splitIds(query.brandIds) };
+    } else if (query.brandId) {
+      where.brandId = query.brandId;
+    }
+    if (query.categoryIds !== undefined) {
+      where.categoryId = { in: splitIds(query.categoryIds) };
+    } else if (query.categoryId) {
+      where.categoryId = query.categoryId;
+    }
     if (query.ids) {
-      where.id = { in: query.ids.split(',').map((id) => id.trim()) };
+      where.id = { in: splitIds(query.ids) };
+    }
+    // A price bound also excludes products with no price on file: those show
+    // a "contact us" action, and a reader who asked for "under 500 000" has
+    // not asked to be shown parts whose cost is unknown.
+    if (query.priceMin !== undefined || query.priceMax !== undefined) {
+      where.price = {
+        ...(query.priceMin !== undefined ? { gte: query.priceMin } : {}),
+        ...(query.priceMax !== undefined ? { lte: query.priceMax } : {}),
+      };
     }
 
     const all = await this.prisma.product.findMany({
       where,
       include: ADMIN_INCLUDE,
-      orderBy: query.sort === 'id' ? { id: 'asc' } : { createdAt: 'desc' },
+      orderBy: computeOrderBy(query),
     });
 
     let withStock = all.map((product) => this.withStock(product));

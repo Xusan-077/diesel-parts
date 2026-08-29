@@ -381,6 +381,150 @@ describe('ProductsService public reads', () => {
 
       expect(result.data.map((p) => p.id)).toEqual(['low', 'high']);
     });
+
+    it('orders by the given locale name column when sort=name-asc', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ sort: 'name-asc', lang: 'ru' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { nameRu: 'asc' } }),
+      );
+    });
+
+    it('orders by the given locale name column, descending, when sort=name-desc', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ sort: 'name-desc', lang: 'en' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { nameEn: 'desc' } }),
+      );
+    });
+  });
+
+  describe('findAllPublic with brandIds/categoryIds', () => {
+    it('filters by brandIds, winning over a single brandId', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ brandIds: 'b1,b2', brandId: 'ignored' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, brandId: { in: ['b1', 'b2'] } },
+        }),
+      );
+    });
+
+    it('treats an empty categoryIds as a real scope matching nothing', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ categoryIds: '' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, categoryId: { in: [] } },
+        }),
+      );
+    });
+
+    it('falls back to the single categoryId when categoryIds is absent', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ categoryId: 'c1' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, categoryId: 'c1' },
+        }),
+      );
+    });
+  });
+
+  describe('findAllPublic with a price range', () => {
+    it('excludes unpriced products once either bound is set', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ priceMin: 100, priceMax: 500 });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, price: { gte: 100, lte: 500 } },
+        }),
+      );
+    });
+  });
+
+  describe('findAllPublic with a locale-scoped search', () => {
+    it('matches only the given locale name column, sku, and uppercased oem numbers', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ search: 'voe14514151', lang: 'uz' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            isActive: true,
+            OR: [
+              { nameUz: { contains: 'voe14514151', mode: 'insensitive' } },
+              { sku: { contains: 'voe14514151', mode: 'insensitive' } },
+              { oemNumbers: { has: 'VOE14514151' } },
+            ],
+          },
+        }),
+      );
+    });
+
+    it('falls back to matching every locale column when lang is omitted', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllAdmin({ search: 'pump' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { nameUz: { contains: 'pump', mode: 'insensitive' } },
+              { nameRu: { contains: 'pump', mode: 'insensitive' } },
+              { nameEn: { contains: 'pump', mode: 'insensitive' } },
+              { sku: { contains: 'pump', mode: 'insensitive' } },
+            ],
+          },
+        }),
+      );
+    });
   });
 });
 
