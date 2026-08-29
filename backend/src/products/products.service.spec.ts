@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -6,6 +7,7 @@ import { AuditAction } from '../../generated/prisma/client';
 function makePrisma(overrides: { product?: Record<string, unknown> } = {}) {
   return {
     product: {
+      findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
@@ -93,6 +95,112 @@ describe('ProductsService audit', () => {
       entityId: 'p1',
       before: snapshot,
       after: { ...snapshot, isActive: false },
+    });
+  });
+});
+
+function makePublicProduct(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'p1',
+    sku: 'SKU-1',
+    slug: 'sku-1',
+    nameUz: 'X',
+    nameRu: 'X',
+    nameEn: 'X',
+    price: 100,
+    purchasePrice: 60,
+    minStock: 5,
+    isActive: true,
+    inventories: [{ quantity: 10, reservedQuantity: 0, warehouseId: 'w1' }],
+    category: { id: 'c1', nameEn: 'Cat' },
+    brand: null,
+    ...overrides,
+  };
+}
+
+describe('ProductsService public reads', () => {
+  const { audit } = makeAudit();
+
+  describe('findAllPublic', () => {
+    it('forces isActive: true on the query', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({});
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { isActive: true } }),
+      );
+    });
+
+    it('never includes purchasePrice in the returned rows', async () => {
+      const findMany = jest.fn().mockResolvedValue([makePublicProduct()]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      const result = await service.findAllPublic({});
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).not.toHaveProperty('purchasePrice');
+    });
+  });
+
+  describe('findOnePublic', () => {
+    it('looks up by slug, not id', async () => {
+      const findUnique = jest.fn().mockResolvedValue(makePublicProduct());
+      const service = new ProductsService(
+        makePrisma({ product: { findUnique } }),
+        audit,
+      );
+
+      await service.findOnePublic('sku-1');
+
+      expect(findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { slug: 'sku-1' } }),
+      );
+    });
+
+    it('404s when the product is inactive', async () => {
+      const findUnique = jest
+        .fn()
+        .mockResolvedValue(makePublicProduct({ isActive: false }));
+      const service = new ProductsService(
+        makePrisma({ product: { findUnique } }),
+        audit,
+      );
+
+      await expect(service.findOnePublic('sku-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('404s when the product does not exist', async () => {
+      const findUnique = jest.fn().mockResolvedValue(null);
+      const service = new ProductsService(
+        makePrisma({ product: { findUnique } }),
+        audit,
+      );
+
+      await expect(service.findOnePublic('nope')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('never includes purchasePrice', async () => {
+      const findUnique = jest.fn().mockResolvedValue(makePublicProduct());
+      const service = new ProductsService(
+        makePrisma({ product: { findUnique } }),
+        audit,
+      );
+
+      const result = await service.findOnePublic('sku-1');
+
+      expect(result).not.toHaveProperty('purchasePrice');
     });
   });
 });

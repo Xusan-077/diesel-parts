@@ -80,11 +80,15 @@ export class ProductsService {
     };
   }
 
-  private async queryWithComputedStock(query: QueryProductDto) {
+  private async queryWithComputedStock(
+    query: QueryProductDto,
+    options: { publicOnly?: boolean } = {},
+  ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
     const where: Record<string, unknown> = {};
+    if (options.publicOnly) where.isActive = true;
     if (query.search) {
       where.OR = [
         { nameUz: { contains: query.search, mode: 'insensitive' } },
@@ -127,6 +131,27 @@ export class ProductsService {
       ...result,
       data: result.data.map((product) => this.toSellerView(product)),
     };
+  }
+
+  async findAllPublic(query: QueryProductDto) {
+    const result = await this.queryWithComputedStock(query, {
+      publicOnly: true,
+    });
+    return {
+      ...result,
+      data: result.data.map((product) => this.toSellerView(product)),
+    };
+  }
+
+  async findOnePublic(slug: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { slug },
+      include: ADMIN_INCLUDE,
+    });
+    if (!product || !product.isActive) {
+      throw new NotFoundException('Product not found');
+    }
+    return this.toSellerView(this.withStock(product));
   }
 
   async findOneAdmin(id: string) {
