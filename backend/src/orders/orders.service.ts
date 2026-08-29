@@ -1,17 +1,33 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
+import { RequestDiscountDto } from './dto/request-discount.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
 import { assertOrderVisible } from '../common/order-access';
+import { isDirector } from '../common/scope';
 import { canTransition } from './order-status-transitions';
-import { OrderStatus, Prisma, Role } from '../../generated/prisma/client';
+import { applyDiscount } from '../discount-requests/order-money';
+import {
+  DIRECTOR_DISCOUNT_LIMIT,
+  classifyDiscount,
+} from '../discount-requests/discount-policy';
+import {
+  AuditAction,
+  DiscountStatus,
+  NotificationType,
+  OrderStatus,
+  Prisma,
+  Role,
+} from '../../generated/prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
 
 const ORDER_INCLUDE = {
@@ -30,6 +46,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventory: InventoryService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(actor: AuthenticatedUser, query: QueryOrderDto) {
@@ -228,6 +245,135 @@ export class OrdersService {
 
   cancel(actor: AuthenticatedUser, id: string) {
     return this.updateStatus(actor, id, OrderStatus.CANCELLED);
+  }
+
+  /**
+   * Applies a discount, or asks a director for one.
+   *
+   * Ported from the root Next.js app's `lib/api/order-repository.ts`'s
+   * `requestOrderDiscount`. Inside the seller's own `User.discountLimit`
+   * (a director is bound by no ceiling — `DIRECTOR_DISCOUNT_LIMIT`), both
+   * percents are written and the total is recomputed in one write. Above it,
+   * only the requested percent is recorded and a PENDING `DiscountRequest`
+   * goes to the director's queue: the order keeps quoting the total the
+   * seller may actually honour until an answer comes back. Written directly
+   * against `PrismaService` rather than through `DiscountRequestsService`
+   * (which only owns listing/deciding an existing request, by its own
+   * doc-comment) — reusing its pure `order-money`/`discount-policy` helpers
+   * instead of duplicating the arithmetic.
+   */
+  async requestDiscount(
+    actor: AuthenticatedUser,
+    id: string,
+    dto: RequestDiscountDto,
+  ) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+    assertOrderVisible(actor, order.sellerId);
+
+    const percent = dto.percent;
+    const limit = isDirector(actor)
+      ? DIRECTOR_DISCOUNT_LIMIT
+      : (
+          await this.prisma.user.findUniqueOrThrow({
+            where: { id: actor.id },
+            select: { discountLimit: true },
+          })
+        ).discountLimit;
+
+    const subtotal = Number(order.subtotal);
+
+    if (classifyDiscount(percent, limit).kind === 'immediate') {
+      const total = applyDiscount(subtotal, percent);
+      const before = {
+        discountApprovedPercent: Number(order.discountApprovedPercent),
+        total: Number(order.total),
+      };
+
+      const updated = await this.prisma.order.update({
+        where: { id },
+        data: {
+          discountRequestedPercent: new Prisma.Decimal(percent),
+          discountApprovedPercent: new Prisma.Decimal(percent),
+          total: new Prisma.Decimal(total),
+        },
+      });
+
+      await this.audit.record({
+        userId: actor.id,
+        action: AuditAction.UPDATE,
+        entityType: 'Order',
+        entityId: id,
+        before,
+        after: { discountApprovedPercent: percent, total },
+      });
+
+      return updated;
+    }
+
+    // One open request per order. A second would give the director two
+    // percents to answer for the same total and no way to tell which is
+    // current.
+    const pending = await this.prisma.discountRequest.findFirst({
+      where: { orderId: id, status: DiscountStatus.PENDING },
+      select: { id: true },
+    });
+    if (pending !== null) {
+      throw new ConflictException(
+        'A discount request is already pending for this order',
+      );
+    }
+
+    const directors = await this.prisma.user.findMany({
+      where: { role: Role.DIRECTOR, isActive: true },
+      select: { id: true },
+    });
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.discountRequest.create({
+        data: {
+          orderId: id,
+          sellerId: actor.id,
+          requestedPercent: new Prisma.Decimal(percent),
+          reason: dto.reason?.trim() || null,
+        },
+      });
+
+      // The approved percent is deliberately untouched: until a director
+      // answers, the order still totals what the seller may actually honour.
+      await tx.order.update({
+        where: { id },
+        data: { discountRequestedPercent: new Prisma.Decimal(percent) },
+      });
+
+      if (directors.length > 0) {
+        await tx.notification.createMany({
+          data: directors.map((director) => ({
+            userId: director.id,
+            type: NotificationType.DISCOUNT_REQUESTED,
+            entityId: id,
+            message: `${percent}% chegirma so'raldi.`,
+          })),
+        });
+      }
+
+      return request;
+    });
+
+    await this.audit.record({
+      userId: actor.id,
+      action: AuditAction.CREATE,
+      entityType: 'DiscountRequest',
+      entityId: created.id,
+      after: {
+        orderId: id,
+        requestedPercent: percent,
+        status: DiscountStatus.PENDING,
+        sellerLimit: limit,
+      },
+    });
+
+    return created;
   }
 
   /**
