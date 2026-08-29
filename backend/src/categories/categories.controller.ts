@@ -14,6 +14,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ALL_ROLES, MANAGER_UP } from '../common/roles';
 
 @Controller('categories')
@@ -35,19 +36,23 @@ export class CategoriesController {
 
   @Post()
   @Roles(...MANAGER_UP)
-  create(@Body() dto: CreateCategoryDto) {
-    return this.categories.create(dto);
+  create(@CurrentUser('id') actorId: string, @Body() dto: CreateCategoryDto) {
+    return this.categories.create(dto, actorId);
   }
 
   @Patch(':id')
   @Roles(...MANAGER_UP)
-  update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
-    return this.categories.update(id, dto);
+  update(
+    @CurrentUser('id') actorId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categories.update(id, dto, actorId);
   }
 
   @Delete(':id')
   @Roles(...MANAGER_UP)
-  remove(@Param('id') id: string) {
-    return this.categories.remove(id);
+  remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
+    return this.categories.remove(id, actorId);
   }
 }

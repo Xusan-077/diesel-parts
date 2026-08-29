@@ -279,3 +279,39 @@ describe('OrdersService.requestDiscount', () => {
     expect(record).not.toHaveBeenCalled();
   });
 });
+
+describe('OrdersService.updateStatus audit', () => {
+  it('records an UPDATE with the before/after status on a status change', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      status: OrderStatus.CONFIRMED,
+      sellerId: 'seller-1',
+      warehouseId: 'w1',
+      items: [],
+    });
+    const txOrderUpdate = jest
+      .fn()
+      .mockResolvedValue({ id: 'order-1', status: OrderStatus.PREPARING });
+    const $transaction = jest.fn(
+      async (cb: (tx: unknown) => Promise<unknown>) =>
+        cb({ order: { update: txOrderUpdate } }),
+    );
+    const prisma = {
+      order: { findUnique },
+      $transaction,
+    } as unknown as PrismaService;
+    const { audit, record } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), audit);
+
+    await service.updateStatus(seller, 'order-1', OrderStatus.PREPARING);
+
+    expect(record).toHaveBeenCalledWith({
+      userId: 'seller-user-1',
+      action: AuditAction.UPDATE,
+      entityType: 'Order',
+      entityId: 'order-1',
+      before: { status: OrderStatus.CONFIRMED },
+      after: { status: OrderStatus.PREPARING },
+    });
+  });
+});

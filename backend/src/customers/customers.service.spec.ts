@@ -1,15 +1,24 @@
 import { CustomersService } from './customers.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../../generated/prisma/client';
 
 function makePrisma(overrides: { customer?: Record<string, unknown> } = {}) {
   return {
     customer: {
       findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn().mockResolvedValue({}),
       ...overrides.customer,
     },
   } as unknown as PrismaService;
+}
+
+function makeAudit() {
+  const record = jest.fn().mockResolvedValue(undefined);
+  return { audit: { record } as unknown as AuditService, record };
 }
 
 describe('CustomersService.findOrCreateByPhone', () => {
@@ -22,7 +31,7 @@ describe('CustomersService.findOrCreateByPhone', () => {
     const prisma = makePrisma({
       customer: { findMany: jest.fn().mockResolvedValue([]), create },
     });
-    const service = new CustomersService(prisma);
+    const service = new CustomersService(prisma, makeAudit().audit);
 
     const result = await service.findOrCreateByPhone('998901234567', {
       name: 'Aziz Karimov',
@@ -52,7 +61,7 @@ describe('CustomersService.findOrCreateByPhone', () => {
     const prisma = makePrisma({
       customer: { findMany: jest.fn().mockResolvedValue([]), create },
     });
-    const service = new CustomersService(prisma);
+    const service = new CustomersService(prisma, makeAudit().audit);
 
     await service.findOrCreateByPhone('998901234567');
 
@@ -80,7 +89,7 @@ describe('CustomersService.findOrCreateByPhone', () => {
     ]);
     const update = jest.fn();
     const prisma = makePrisma({ customer: { findMany, update } });
-    const service = new CustomersService(prisma);
+    const service = new CustomersService(prisma, makeAudit().audit);
 
     const result = await service.findOrCreateByPhone('998901234567', {
       name: 'Existing',
@@ -108,7 +117,7 @@ describe('CustomersService.findOrCreateByPhone', () => {
       .fn()
       .mockResolvedValue({ id: 'cus-1', name: 'Aziz Karimov' });
     const prisma = makePrisma({ customer: { findMany, update } });
-    const service = new CustomersService(prisma);
+    const service = new CustomersService(prisma, makeAudit().audit);
 
     await service.findOrCreateByPhone('998901234567', { name: 'Aziz Karimov' });
 
@@ -131,7 +140,7 @@ describe('CustomersService.findOrCreateByPhone', () => {
     ]);
     const update = jest.fn().mockResolvedValue({ id: 'cus-1' });
     const prisma = makePrisma({ customer: { findMany, update } });
-    const service = new CustomersService(prisma);
+    const service = new CustomersService(prisma, makeAudit().audit);
 
     await service.findOrCreateByPhone('998901234567', {
       name: 'Aziz',
@@ -143,6 +152,70 @@ describe('CustomersService.findOrCreateByPhone', () => {
     expect(update).toHaveBeenCalledWith({
       where: { id: 'cus-1' },
       data: { email: 'aziz@example.com', taxId: '999' },
+    });
+  });
+});
+
+describe('CustomersService audit', () => {
+  const row = {
+    id: 'cus-1',
+    name: 'Aziz',
+    phone: '998901234567',
+    telegram: null,
+  };
+
+  it('records a CREATE with an after snapshot', async () => {
+    const create = jest.fn().mockResolvedValue(row);
+    const prisma = makePrisma({ customer: { create } });
+    const { audit, record } = makeAudit();
+    const service = new CustomersService(prisma, audit);
+
+    await service.create({ name: 'Aziz', phone: '998901234567' }, 'actor-1');
+
+    expect(record).toHaveBeenCalledWith({
+      userId: 'actor-1',
+      action: AuditAction.CREATE,
+      entityType: 'Customer',
+      entityId: 'cus-1',
+      after: { name: 'Aziz', phone: '998901234567', telegram: null },
+    });
+  });
+
+  it('records an UPDATE with before and after snapshots', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const update = jest
+      .fn()
+      .mockResolvedValue({ ...row, name: 'Aziz Karimov' });
+    const prisma = makePrisma({ customer: { findUnique, update } });
+    const { audit, record } = makeAudit();
+    const service = new CustomersService(prisma, audit);
+
+    await service.update('cus-1', { name: 'Aziz Karimov' }, 'actor-1');
+
+    expect(record).toHaveBeenCalledWith({
+      userId: 'actor-1',
+      action: AuditAction.UPDATE,
+      entityType: 'Customer',
+      entityId: 'cus-1',
+      before: { name: 'Aziz', phone: '998901234567', telegram: null },
+      after: { name: 'Aziz Karimov', phone: '998901234567', telegram: null },
+    });
+  });
+
+  it('records a DELETE with a before snapshot', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const prisma = makePrisma({ customer: { findUnique } });
+    const { audit, record } = makeAudit();
+    const service = new CustomersService(prisma, audit);
+
+    await service.remove('cus-1', 'actor-1');
+
+    expect(record).toHaveBeenCalledWith({
+      userId: 'actor-1',
+      action: AuditAction.DELETE,
+      entityType: 'Customer',
+      entityId: 'cus-1',
+      before: { name: 'Aziz', phone: '998901234567', telegram: null },
     });
   });
 });

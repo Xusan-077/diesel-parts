@@ -161,7 +161,7 @@ export class OrdersService {
 
     const orderNumber = await this.reserveOrderNumber();
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       return tx.order.create({
         data: {
           orderNumber,
@@ -178,6 +178,21 @@ export class OrdersService {
         include: ORDER_INCLUDE,
       });
     });
+
+    await this.audit.record({
+      userId: actor.id,
+      action: AuditAction.CREATE,
+      entityType: 'Order',
+      entityId: created.id,
+      after: {
+        orderNumber: created.orderNumber,
+        customerId: created.customerId,
+        status: created.status,
+        total: Number(created.total),
+      },
+    });
+
+    return created;
   }
 
   async updateStatus(
@@ -198,7 +213,9 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const previousStatus = order.status;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
       if (target === OrderStatus.CONFIRMED) {
         await this.inventory.reserveForOrder(
           tx,
@@ -241,6 +258,17 @@ export class OrdersService {
         include: ORDER_INCLUDE,
       });
     });
+
+    await this.audit.record({
+      userId: actor.id,
+      action: AuditAction.UPDATE,
+      entityType: 'Order',
+      entityId: id,
+      before: { status: previousStatus },
+      after: { status: updated.status },
+    });
+
+    return updated;
   }
 
   cancel(actor: AuthenticatedUser, id: string) {

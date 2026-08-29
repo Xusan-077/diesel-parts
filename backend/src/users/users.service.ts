@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { OrderStatus, Role } from '../../generated/prisma/client';
+import { AuditAction, OrderStatus, Role } from '../../generated/prisma/client';
 
 const SAFE_SELECT = {
   id: true,
@@ -18,9 +19,21 @@ const SAFE_SELECT = {
   updatedAt: true,
 } as const;
 
+/** What the audit trail keeps for a staff write — never the password hash. */
+function auditSnapshot(row: {
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+}) {
+  return { phone: row.phone, role: row.role, isActive: row.isActive };
+}
+
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * Ported from lib/api/user-repository.ts's listStaff: same groupBy shape
@@ -68,7 +81,7 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, actorId: string) {
     const existing = await this.prisma.user.findUnique({
       where: { phone: dto.phone },
     });
@@ -76,7 +89,7 @@ export class UsersService {
       throw new ConflictException('Phone number already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         phone: dto.phone,
         passwordHash,
@@ -85,9 +98,17 @@ export class UsersService {
       },
       select: SAFE_SELECT,
     });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.CREATE,
+      entityType: 'User',
+      entityId: created.id,
+      after: auditSnapshot(created),
+    });
+    return created;
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto, actorId: string) {
     const before = await this.findOne(id);
     await this.assertLastActiveDirectorSafe(
       id,
@@ -95,14 +116,23 @@ export class UsersService {
       dto.role ?? before.role,
       dto.isActive ?? before.isActive,
     );
-    return this.prisma.user.update({
+    const after = await this.prisma.user.update({
       where: { id },
       data: dto,
       select: SAFE_SELECT,
     });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      entityType: 'User',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
+    });
+    return after;
   }
 
-  async remove(id: string) {
+  async remove(id: string, actorId: string) {
     const before = await this.findOne(id);
     await this.assertLastActiveDirectorSafe(
       id,
@@ -111,6 +141,14 @@ export class UsersService {
       false,
     );
     await this.prisma.user.update({ where: { id }, data: { isActive: false } });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.DELETE,
+      entityType: 'User',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot({ ...before, isActive: false }),
+    });
     return { success: true };
   }
 

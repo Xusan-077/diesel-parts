@@ -4,17 +4,30 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { QueryCustomerDto } from './dto/query-customer.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
 import { extractNationalDigits, phoneTail } from '../common/phone';
-import { Role } from '../../generated/prisma/client';
+import { AuditAction, Role } from '../../generated/prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types';
+
+/** The fields a staff write to a customer can move; what the trail keeps. */
+function auditSnapshot(row: {
+  name: string;
+  phone: string;
+  telegram: string | null;
+}) {
+  return { name: row.name, phone: row.phone, telegram: row.telegram };
+}
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findAll(query: QueryCustomerDto) {
     const page = query.page ?? 1;
@@ -148,23 +161,50 @@ export class CustomersService {
     });
   }
 
-  async create(dto: CreateCustomerDto) {
+  async create(dto: CreateCustomerDto, actorId: string) {
     // Customer.phone is intentionally not unique (see schema doc-comment: a
     // company switchboard can be shared by several contacts, and a seller
     // must be able to create a second card for a different contact at the
     // same number). A shared phone number across multiple Customer rows is
     // expected, valid data, so no duplicate check happens here.
-    return this.prisma.customer.create({ data: dto });
+    const created = await this.prisma.customer.create({ data: dto });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.CREATE,
+      entityType: 'Customer',
+      entityId: created.id,
+      after: auditSnapshot(created),
+    });
+    return created;
   }
 
-  async update(id: string, dto: UpdateCustomerDto) {
-    await this.findOne(id);
-    return this.prisma.customer.update({ where: { id }, data: dto });
+  async update(id: string, dto: UpdateCustomerDto, actorId: string) {
+    const before = await this.findOne(id);
+    const after = await this.prisma.customer.update({
+      where: { id },
+      data: dto,
+    });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      entityType: 'Customer',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
+    });
+    return after;
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, actorId: string) {
+    const before = await this.findOne(id);
     await this.prisma.customer.delete({ where: { id } });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.DELETE,
+      entityType: 'Customer',
+      entityId: id,
+      before: auditSnapshot(before),
+    });
     return { success: true };
   }
 }

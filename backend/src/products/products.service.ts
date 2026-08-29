@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../../generated/prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
@@ -21,9 +23,35 @@ const ADMIN_INCLUDE = {
 /** Never returned to a SELLER: cost data the frontend/API must not leak to them. */
 const SELLER_HIDDEN_FIELDS = ['purchasePrice'] as const;
 
+/**
+ * The shape written to the audit trail — enough to see what changed. Mirrors
+ * root's `product-write-repository.ts` `auditSnapshot`, minus `stock`/
+ * `stockStatus` (computed from `Inventory` here, not stored on the row).
+ */
+function auditSnapshot(row: {
+  sku: string;
+  slug: string;
+  nameUz: string;
+  price: unknown;
+  minStock: number;
+  isActive: boolean;
+}) {
+  return {
+    sku: row.sku,
+    slug: row.slug,
+    name: row.nameUz,
+    price: row.price === null ? null : Number(row.price),
+    minStock: row.minStock,
+    isActive: row.isActive,
+  };
+}
+
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private withStock<
     T extends {
@@ -137,24 +165,52 @@ export class ProductsService {
     return { byWarehouse, totals };
   }
 
-  async create(dto: CreateProductDto) {
+  async create(dto: CreateProductDto, actorId: string) {
     const existing = await this.prisma.product.findUnique({
       where: { sku: dto.sku },
     });
     if (existing) throw new ConflictException('SKU already exists');
-    return this.prisma.product.create({ data: dto });
+    const created = await this.prisma.product.create({ data: dto });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.CREATE,
+      entityType: 'Product',
+      entityId: created.id,
+      after: auditSnapshot(created),
+    });
+    return created;
   }
 
-  async update(id: string, dto: UpdateProductDto) {
-    await this.getOrThrow(id);
-    return this.prisma.product.update({ where: { id }, data: dto });
+  async update(id: string, dto: UpdateProductDto, actorId: string) {
+    const before = await this.getOrThrow(id);
+    const after = await this.prisma.product.update({
+      where: { id },
+      data: dto,
+    });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      entityType: 'Product',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
+    });
+    return after;
   }
 
-  async remove(id: string) {
-    await this.getOrThrow(id);
-    await this.prisma.product.update({
+  async remove(id: string, actorId: string) {
+    const before = await this.getOrThrow(id);
+    const after = await this.prisma.product.update({
       where: { id },
       data: { isActive: false },
+    });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.DELETE,
+      entityType: 'Product',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
     });
     return { success: true };
   }

@@ -16,6 +16,7 @@ import { QueryProductDto } from './dto/query-product.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MANAGER_UP } from '../common/roles';
 
 /**
@@ -45,17 +46,21 @@ export class ProductsController {
   }
 
   @Post()
-  create(@Body() dto: CreateProductDto) {
-    return this.products.create(dto);
+  create(@CurrentUser('id') actorId: string, @Body() dto: CreateProductDto) {
+    return this.products.create(dto, actorId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
-    return this.products.update(id, dto);
+  update(
+    @CurrentUser('id') actorId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.products.update(id, dto, actorId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.products.remove(id);
+  remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
+    return this.products.remove(id, actorId);
   }
 }
