@@ -12,6 +12,13 @@ export interface AuditEntry {
   entityId: string;
   before?: unknown;
   after?: unknown;
+  /**
+   * Overrides the access token backend/'s write is authenticated with.
+   * Only needed at login: the staff cookie that `getStaffSession` would
+   * otherwise read isn't set on the request until after this call returns,
+   * so the freshly-minted token has to be passed in by hand.
+   */
+  accessToken?: string;
 }
 
 /**
@@ -20,9 +27,9 @@ export interface AuditEntry {
  *
  * `entry.userId` is not sent: backend/ always attributes the write to
  * whoever the access token belongs to, never a client-supplied id, so this
- * only writes when a staff session exists — the field stays on `AuditEntry`
+ * only writes when a token is available — the field stays on `AuditEntry`
  * because every call site already passes the acting user's own id (the same
- * one the session belongs to), and dropping it would be a needless signature
+ * one the token belongs to), and dropping it would be a needless signature
  * change to every caller for no behavior difference.
  *
  * Never throws: an audit write failing must not turn a completed action into
@@ -31,15 +38,15 @@ export interface AuditEntry {
  */
 export async function recordAudit(entry: AuditEntry): Promise<void> {
   try {
-    const session = await getStaffSession();
-    if (!session) {
+    const accessToken = entry.accessToken ?? (await getStaffSession())?.accessToken;
+    if (!accessToken) {
       console.error("[audit] failed to record", entry.action, entry.entityType, "no staff session");
       return;
     }
 
     await backendRequest("/audit", {
       method: "POST",
-      accessToken: session.accessToken,
+      accessToken,
       body: {
         action: entry.action,
         entityType: entry.entityType,

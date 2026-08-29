@@ -81,20 +81,15 @@ export async function POST(request: Request) {
   };
   const token = await createStaffToken(session);
 
-  // TODO(backend-consolidation Part 4/5): still writes to root's own
-  // AuditLog via @/lib/db (lib/api/audit.ts) — out of this task's scope
-  // (see plan's file list for Task 14). Harmless today since a migrated
-  // account's id is identical on both sides (the migration script copies
-  // `id` verbatim); a staff account created directly in backend/ after this
-  // point has no matching root User row, so this write will fail closed
-  // (recordAudit never throws) until audit.ts is proxied to backend/'s own
-  // AuditService (already built, Part 1 Task 4) ahead of deleting root's
-  // Prisma layer.
+  // The staff cookie recordAudit would otherwise read isn't set on this
+  // request yet (that happens below), so the just-issued token is passed
+  // in directly.
   await recordAudit({
     userId: login.data.user.id,
     action: "LOGIN",
     entityType: "User",
     entityId: login.data.user.id,
+    accessToken: session.accessToken,
   });
 
   const response = NextResponse.json({

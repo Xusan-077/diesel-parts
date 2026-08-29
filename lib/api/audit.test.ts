@@ -49,6 +49,25 @@ describe("recordAudit", () => {
     });
   });
 
+  it("uses an explicit accessToken instead of the staff cookie when given one", async () => {
+    vi.mocked(backendRequest).mockResolvedValue(undefined);
+
+    await recordAudit({
+      userId: "u1",
+      action: "LOGIN",
+      entityType: "User",
+      entityId: "u1",
+      accessToken: "fresh-login-token",
+    });
+
+    expect(getStaffSession).not.toHaveBeenCalled();
+    expect(backendRequest).toHaveBeenCalledWith("/audit", {
+      method: "POST",
+      accessToken: "fresh-login-token",
+      body: { action: "LOGIN", entityType: "User", entityId: "u1", before: undefined, after: undefined },
+    });
+  });
+
   it("never throws when there is no staff session to attribute the write to", async () => {
     vi.mocked(getStaffSession).mockResolvedValue(null);
 
