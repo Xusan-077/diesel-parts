@@ -17,6 +17,8 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import { ImportProductsDto } from './dto/import-products.dto';
+import { SearchProductDto } from './dto/search-product.dto';
+import { SetProductImageDto } from './dto/set-product-image.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -42,6 +44,11 @@ export class ProductsController {
   @Post('import')
   import(@CurrentUser('id') actorId: string, @Body() dto: ImportProductsDto) {
     return this.products.importCsv(dto.csv, actorId);
+  }
+
+  @Get('search')
+  search(@Query() query: SearchProductDto) {
+    return this.products.search(query.q);
   }
 
   @Get('export')
@@ -83,5 +90,14 @@ export class ProductsController {
   @Delete(':id')
   remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
     return this.products.remove(id, actorId);
+  }
+
+  @Patch(':id/image')
+  setImage(
+    @CurrentUser('id') actorId: string,
+    @Param('id') id: string,
+    @Body() dto: SetProductImageDto,
+  ) {
+    return this.products.setImage(id, dto.imageUrl, actorId);
   }
 }

@@ -422,3 +422,119 @@ describe('ProductsService.exportCsv', () => {
     );
   });
 });
+
+describe('ProductsService.setImage', () => {
+  it('updates imageUrl and records an audit entry', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const update = jest.fn().mockResolvedValue({ ...row });
+    const { audit, record } = makeAudit();
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique, update } }),
+      audit,
+    );
+
+    await service.setImage('p1', 'https://example.com/img.jpg', 'actor-1');
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: { imageUrl: 'https://example.com/img.jpg' },
+    });
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'actor-1',
+        action: AuditAction.UPDATE,
+        entityType: 'Product',
+        entityId: 'p1',
+      }),
+    );
+  });
+
+  it('404s when the product does not exist', async () => {
+    const service = new ProductsService(
+      makePrisma({
+        product: { findUnique: jest.fn().mockResolvedValue(null) },
+      }),
+      makeAudit().audit,
+    );
+
+    await expect(
+      service.setImage('missing', 'https://example.com/img.jpg', 'actor-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('ProductsService.search', () => {
+  function matchable(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'p1',
+      sku: 'DP-1',
+      nameUz: 'Nasos',
+      oemNumbers: ['OEM-1'],
+      price: 100,
+      currency: 'UZS',
+      minStock: 2,
+      inventories: [{ quantity: 5, reservedQuantity: 0 }],
+      ...overrides,
+    };
+  }
+
+  it('searches by name, sku or oem number, excluding retired products', async () => {
+    const findMany = jest.fn<
+      Promise<ReturnType<typeof matchable>[]>,
+      [{ where: { isActive: boolean } }]
+    >();
+    findMany.mockResolvedValue([matchable()]);
+    const service = new ProductsService(
+      makePrisma({ product: { findMany } }),
+      makeAudit().audit,
+    );
+
+    await service.search('nasos');
+
+    expect(findMany.mock.calls[0][0].where.isActive).toBe(true);
+  });
+
+  it('never returns purchasePrice and shapes the seller-facing fields', async () => {
+    const findMany = jest.fn().mockResolvedValue([matchable()]);
+    const service = new ProductsService(
+      makePrisma({ product: { findMany } }),
+      makeAudit().audit,
+    );
+
+    const result = await service.search('nasos');
+
+    expect(result).toEqual([
+      {
+        id: 'p1',
+        sku: 'DP-1',
+        name: 'Nasos',
+        oemNumbers: ['OEM-1'],
+        price: 100,
+        currency: 'UZS',
+        stock: 5,
+        stockStatus: 'IN_STOCK',
+      },
+    ]);
+  });
+
+  it('sorts in-stock rows first, then more than 8 results are capped to 8', async () => {
+    const matches = Array.from({ length: 10 }, (_, i) =>
+      matchable({
+        id: `p${i}`,
+        sku: `DP-${i}`,
+        nameUz: `Item ${i}`,
+        inventories: [{ quantity: i, reservedQuantity: 0 }],
+      }),
+    );
+    const findMany = jest.fn().mockResolvedValue(matches);
+    const service = new ProductsService(
+      makePrisma({ product: { findMany } }),
+      makeAudit().audit,
+    );
+
+    const result = await service.search('item');
+
+    expect(result).toHaveLength(8);
+    expect(result[0].id).toBe('p9');
+  });
+});

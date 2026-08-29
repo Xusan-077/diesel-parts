@@ -263,6 +263,70 @@ export class ProductsService {
     return { success: true };
   }
 
+  async setImage(id: string, imageUrl: string, actorId: string) {
+    const before = await this.getOrThrow(id);
+    const after = await this.prisma.product.update({
+      where: { id },
+      data: { imageUrl },
+    });
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.UPDATE,
+      entityType: 'Product',
+      entityId: id,
+      before: auditSnapshot(before),
+      after: auditSnapshot(after),
+    });
+    return after;
+  }
+
+  /**
+   * The catalog lookup behind the order form's product field. Matches by SKU,
+   * name (either fragment) or a whole OEM number — ported from root's
+   * `product-lookup-repository.ts`/`product-search.ts`; retired products are
+   * excluded because a seller could never save an order line with one anyway.
+   * Stock can't be sorted at the database level here (it's Inventory-derived,
+   * not a column), so matches are fetched, computed, then sorted in memory —
+   * in-stock rows first, matching the order the seller expects to scan.
+   */
+  async search(term: string) {
+    const trimmed = term.trim();
+    const insensitive = { contains: trimmed, mode: 'insensitive' as const };
+
+    const matches = await this.prisma.product.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { nameUz: insensitive },
+          { nameRu: insensitive },
+          { sku: insensitive },
+          { oemNumbers: { has: trimmed } },
+          { oemNumbers: { has: trimmed.toUpperCase() } },
+        ],
+      },
+      include: ADMIN_INCLUDE,
+    });
+
+    return matches
+      .map((product) => this.withStock(product))
+      .sort(
+        (a, b) =>
+          b.availableQuantity - a.availableQuantity ||
+          (a.nameUz ?? '').localeCompare(b.nameUz ?? ''),
+      )
+      .slice(0, 8)
+      .map((product) => ({
+        id: product.id,
+        sku: product.sku,
+        name: product.nameUz,
+        oemNumbers: product.oemNumbers,
+        price: product.price === null ? null : Number(product.price),
+        currency: product.currency,
+        stock: product.availableQuantity,
+        stockStatus: product.stockStatus,
+      }));
+  }
+
   /**
    * The whole catalog as CSV, retired products included — the director edits
    * the export and imports it back, so an omitted row would read as a delete.
