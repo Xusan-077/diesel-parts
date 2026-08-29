@@ -375,26 +375,24 @@ async function main() {
   await erp.connect();
 
   try {
-    const [rootProducts, rootCategories, rootBrands, rootUsers, rootCustomers, rootInquiries, rootReviews] =
-      await Promise.all([
-        root.query('SELECT * FROM "Product"').then((r) => r.rows as RootProductRow[]),
-        root.query('SELECT * FROM "Category"').then((r) => r.rows as RootCategoryRow[]),
-        root.query('SELECT * FROM "Brand"').then((r) => r.rows as RootBrandRow[]),
-        root.query('SELECT * FROM "User"').then((r) => r.rows as RootUserRow[]),
-        root.query('SELECT * FROM "Customer"').then((r) => r.rows as RootCustomerRow[]),
-        root.query('SELECT * FROM "Inquiry"').then((r) => r.rows as RootInquiryRow[]),
-        root.query('SELECT * FROM "Review"').then((r) => r.rows as RootReviewRow[]),
-      ]);
+    // node-postgres queues concurrent queries on one Client but deprecates the
+    // pattern (removed in pg@9) — run each client's reads sequentially instead.
+    const rootProducts = (await root.query('SELECT * FROM "Product"')).rows as RootProductRow[];
+    const rootCategories = (await root.query('SELECT * FROM "Category"')).rows as RootCategoryRow[];
+    const rootBrands = (await root.query('SELECT * FROM "Brand"')).rows as RootBrandRow[];
+    const rootUsers = (await root.query('SELECT * FROM "User"')).rows as RootUserRow[];
+    const rootCustomers = (await root.query('SELECT * FROM "Customer"')).rows as RootCustomerRow[];
+    const rootInquiries = (await root.query('SELECT * FROM "Inquiry"')).rows as RootInquiryRow[];
+    const rootReviews = (await root.query('SELECT * FROM "Review"')).rows as RootReviewRow[];
 
-    const [erpSkuRows, erpSlugRows, erpCategorySlugRows, erpBrandSlugRows, erpUserRows, warehouseRows] =
-      await Promise.all([
-        erp.query('SELECT sku FROM products'),
-        erp.query('SELECT slug FROM products'),
-        erp.query('SELECT slug FROM categories'),
-        erp.query('SELECT slug FROM brands'),
-        erp.query('SELECT email, phone FROM users'),
-        erp.query('SELECT id FROM warehouses WHERE name = $1', ["Katalog (ko'chirilgan)"]),
-      ]);
+    const erpSkuRows = await erp.query('SELECT sku FROM products');
+    const erpSlugRows = await erp.query('SELECT slug FROM products');
+    const erpCategorySlugRows = await erp.query('SELECT slug FROM categories');
+    const erpBrandSlugRows = await erp.query('SELECT slug FROM brands');
+    const erpUserRows = await erp.query('SELECT email, phone FROM users');
+    const warehouseRows = await erp.query('SELECT id FROM warehouses WHERE name = $1', [
+      "Katalog (ko'chirilgan)",
+    ]);
 
     const plan = planMigration({
       rootProducts,
