@@ -271,6 +271,21 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     assertOrderVisible(actor, order.sellerId);
 
+    // A settled or abandoned order is closed: neither has an outgoing
+    // transition in order-status-transitions.ts's table, and a discount
+    // touching `total` after settlement would silently rewrite a figure the
+    // books already closed on. This is narrower than root's `isEditable`
+    // (which also gates in-progress CRM states) — those states are Task 10's
+    // unresolved territory, not this method's to guess at.
+    if (
+      order.status === OrderStatus.COMPLETED ||
+      order.status === OrderStatus.CANCELLED
+    ) {
+      throw new ConflictException(
+        'Cannot request a discount on a completed or cancelled order',
+      );
+    }
+
     const percent = dto.percent;
     const limit = isDirector(actor)
       ? DIRECTOR_DISCOUNT_LIMIT

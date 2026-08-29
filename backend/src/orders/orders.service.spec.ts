@@ -7,6 +7,7 @@ import {
   AuditAction,
   DiscountStatus,
   NotificationType,
+  OrderStatus,
   Prisma,
   Role,
 } from '../../generated/prisma/client';
@@ -249,6 +250,31 @@ describe('OrdersService.requestDiscount', () => {
     await expect(
       service.requestDiscount(seller, 'order-1', { percent: 20 }),
     ).rejects.toBeInstanceOf(ConflictException);
+    expect($transaction).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('refuses a discount request on a COMPLETED order, with no side effects', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      sellerId: 'seller-1',
+      status: OrderStatus.COMPLETED,
+      subtotal: new Prisma.Decimal(1000),
+      discountRequestedPercent: new Prisma.Decimal(0),
+      discountApprovedPercent: new Prisma.Decimal(0),
+      total: new Prisma.Decimal(1000),
+    });
+    const orderUpdate = jest.fn();
+    const { prisma, $transaction } = makePrisma({
+      order: { findUnique, update: orderUpdate },
+    });
+    const { audit, record } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), audit);
+
+    await expect(
+      service.requestDiscount(seller, 'order-1', { percent: 5 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(orderUpdate).not.toHaveBeenCalled();
     expect($transaction).not.toHaveBeenCalled();
     expect(record).not.toHaveBeenCalled();
   });
