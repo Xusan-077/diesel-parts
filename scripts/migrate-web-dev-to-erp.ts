@@ -14,6 +14,13 @@
  * dry pass first and requires its plan to be inspected — see `main` below.
  */
 import { Client } from 'pg';
+import { execFile } from 'node:child_process';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 export interface RootProductRow {
   id: string;
@@ -90,6 +97,8 @@ export interface PlanInput {
   rootCustomers?: RootCustomerRow[];
   rootInquiries?: RootInquiryRow[];
   rootReviews?: RootReviewRow[];
+  /** sku -> existing erp product id, for remapping an inquiry onto the erp row a skipped product collided with. */
+  erpSkuToId?: Map<string, string>;
 }
 
 export interface ProductPlan extends TablePlan<RootProductRow> {
@@ -335,10 +344,17 @@ export function planMigration(input: PlanInput): MigrationPlan {
 
   // A skipped product's SKU already exists in the target — an inquiry
   // pointing at it should remap to the existing erp product with that SKU
-  // rather than being dropped. planMigration only has the id, so this map is
-  // supplied by callers that also pass `erpSkuToId`; when absent (as in the
-  // unit tests below), a skipped product's inquiries keep their original id.
+  // rather than being dropped, when the caller supplied `erpSkuToId` (the I/O
+  // shell does; the unit tests below mostly don't, and a skipped product's
+  // inquiries then keep their original — now dangling — id).
   const skippedProductRemap = new Map<string, string>();
+  if (input.erpSkuToId) {
+    for (const skipped of products.skipped) {
+      if (skipped.reason !== 'sku_exists') continue;
+      const erpId = input.erpSkuToId.get(skipped.sku);
+      if (erpId) skippedProductRemap.set(skipped.id, erpId);
+    }
+  }
 
   const customers = planCustomers(input.rootCustomers ?? [], migratedUserIds);
   const inquiries = planInquiries(
@@ -356,6 +372,288 @@ export function planMigration(input: PlanInput): MigrationPlan {
 /** `.env` values in this repo are double-quoted; pg's URL parser chokes on that. */
 function unquote(value: string): string {
   return value.replace(/^"|"$/g, '');
+}
+
+/**
+ * The Windows installer for Postgres does not add `pg_dump` to PATH, so a
+ * bare `pg_dump` invocation on this environment reliably fails even when it
+ * is installed. Try PATH first (works on Linux/macOS CI), then the standard
+ * Windows install location, preferring the newest version directory found.
+ */
+function resolvePgDump(): string {
+  const override = process.env.PG_DUMP_PATH;
+  if (override) return override;
+
+  const installRoots = [
+    'C:\\Program Files\\PostgreSQL',
+    'C:\\Program Files (x86)\\PostgreSQL',
+  ];
+  const candidates: string[] = [];
+  for (const root of installRoots) {
+    if (!existsSync(root)) continue;
+    for (const entry of readdirSync(root)) {
+      const exe = path.join(root, entry, 'bin', 'pg_dump.exe');
+      if (existsSync(exe)) candidates.push(exe);
+    }
+  }
+  // Version directories are plain numbers ("17", "18") — numeric sort picks
+  // the newest rather than a lexical one misordering "9" after "17".
+  candidates.sort((a, b) => {
+    const versionOf = (p: string) => Number(path.basename(path.dirname(path.dirname(p))));
+    return versionOf(b) - versionOf(a);
+  });
+
+  return candidates[0] ?? 'pg_dump';
+}
+
+/**
+ * Prisma connection strings carry a `?schema=` query param that libpq-based
+ * tools (pg_dump, psql) don't recognize as a URI param — `pg`'s own Client
+ * tolerates it, but pg_dump errors with "invalid URI query parameter". Strip
+ * it; `public` is the default schema pg_dump would dump anyway.
+ */
+function stripPrismaSchemaParam(url: string): string {
+  const parsed = new URL(url);
+  parsed.searchParams.delete('schema');
+  return parsed.toString();
+}
+
+/**
+ * Dumps `backend/`'s database before `--apply` writes anything — the rollback
+ * path if the migration goes wrong. Never committed (see .gitignore).
+ */
+async function backupErpDatabase(erpUrl: string): Promise<string> {
+  const dir = path.join(process.cwd(), 'scripts', 'backups');
+  mkdirSync(dir, { recursive: true });
+  const date = new Date().toISOString().slice(0, 10);
+  const file = path.join(dir, `diesel_parts_erp_pre_migration_${date}.sql`);
+
+  await execFileAsync(resolvePgDump(), [
+    '--dbname',
+    stripPrismaSchemaParam(erpUrl),
+    '--file',
+    file,
+  ]);
+  return file;
+}
+
+async function insertBrand(client: Client, row: RootBrandRow) {
+  await client.query(
+    `INSERT INTO brands (id, slug, name, logo_url, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+    [row.id, row.slug, row.name, row.logoUrl ?? null],
+  );
+}
+
+async function insertCategory(client: Client, row: RootCategoryRow) {
+  await client.query(
+    `INSERT INTO categories
+       (id, slug, name_uz, name_ru, name_en, type, parent_id, "order", icon, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+    [
+      row.id,
+      row.slug,
+      row.nameUz,
+      row.nameRu,
+      row.nameEn,
+      row.type ?? 'general',
+      row.parentId,
+      row.order ?? 0,
+      row.icon ?? null,
+      row.createdAt ?? new Date(),
+    ],
+  );
+}
+
+async function insertProduct(client: Client, row: RootProductRow) {
+  await client.query(
+    `INSERT INTO products
+       (id, slug, sku, oem_numbers, name_uz, name_ru, name_en,
+        description_uz, description_ru, description_en, category_id, brand_id,
+        compatible_models, specs, price, currency, purchase_price, image_url,
+        min_stock, is_active, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15,
+             $16, $17, $18, $19, $20, $21, NOW())`,
+    [
+      row.id,
+      row.slug,
+      row.sku,
+      row.oemNumbers ?? [],
+      row.nameUz,
+      row.nameRu,
+      row.nameEn,
+      row.descriptionUz ?? '',
+      row.descriptionRu ?? '',
+      row.descriptionEn ?? '',
+      row.categoryId,
+      row.brandId,
+      row.compatibleModels ?? [],
+      // `pg` serializes a JS array as a Postgres array literal, not JSON —
+      // `specs` is jsonb, so it must be stringified explicitly (root's own
+      // `Product.specs` is itself an array-of-objects shape).
+      JSON.stringify(row.specs ?? {}),
+      row.price,
+      row.currency ?? 'UZS',
+      // Root never had this column — a migrated product has no purchase-price
+      // figure on record until a director fills one in.
+      null,
+      row.imageUrl ?? null,
+      row.minStock ?? 0,
+      row.isActive ?? true,
+      row.createdAt ?? new Date(),
+    ],
+  );
+}
+
+async function insertInventory(
+  client: Client,
+  productId: string,
+  warehouseId: string,
+  quantity: number,
+) {
+  await client.query(
+    `INSERT INTO inventories (id, product_id, warehouse_id, quantity, reserved_quantity, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, 0, NOW(), NOW())`,
+    [randomUUID(), productId, warehouseId, quantity],
+  );
+}
+
+async function insertUser(client: Client, row: RootUserRow) {
+  await client.query(
+    `INSERT INTO users (id, phone, email, name, password_hash, role, is_active, discount_limit, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+    [
+      row.id,
+      row.phone,
+      row.email,
+      row.name ?? '',
+      row.passwordHash,
+      row.role,
+      row.isActive ?? true,
+      row.discountLimit ?? 5,
+      row.createdAt ?? new Date(),
+    ],
+  );
+}
+
+/**
+ * `warehouseId: null` — resolved lazily, same as the checkout CRM-order path
+ * already does (2026-08-23 plan, Task 10), not tied to the catalog warehouse.
+ */
+async function insertSeller(client: Client, userId: string) {
+  await client.query(
+    `INSERT INTO sellers (id, user_id, warehouse_id, created_at, updated_at)
+     VALUES ($1, $2, NULL, NOW(), NOW())`,
+    [randomUUID(), userId],
+  );
+}
+
+async function insertCustomer(
+  client: Client,
+  row: RootCustomerRow & { assignedSellerId: string | null },
+) {
+  await client.query(
+    `INSERT INTO customers
+       (id, name, phone, email, company, notes, tax_id, telegram, debt, assigned_seller_id, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL, 0, $7, $8, $9)`,
+    [
+      row.id,
+      row.name,
+      row.phone,
+      row.email ?? null,
+      row.company ?? null,
+      row.notes ?? null,
+      row.assignedSellerId,
+      row.createdAt ?? new Date(),
+      row.updatedAt ?? new Date(),
+    ],
+  );
+}
+
+async function insertInquiry(
+  client: Client,
+  row: RootInquiryRow & { productId: string | null; assignedSellerId: string | null },
+) {
+  await client.query(
+    `INSERT INTO inquiries
+       (id, customer_name, phone, email, message, product_id, product_sku,
+        quantity, status, source, assigned_seller_id, notes, follow_up_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [
+      row.id,
+      row.customerName,
+      row.phone,
+      row.email ?? null,
+      row.message,
+      row.productId,
+      row.productSku ?? null,
+      row.quantity ?? null,
+      row.status,
+      row.source,
+      row.assignedSellerId,
+      row.notes ?? null,
+      row.followUpAt ?? null,
+      row.createdAt ?? new Date(),
+    ],
+  );
+}
+
+async function insertReview(client: Client, row: RootReviewRow) {
+  await client.query(
+    `INSERT INTO reviews (id, product_id, rating, body, author_name, author_phone, is_approved, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      row.id,
+      row.productId,
+      row.rating,
+      row.body ?? null,
+      row.authorName,
+      row.authorPhone,
+      row.isApproved ?? true,
+      row.createdAt ?? new Date(),
+    ],
+  );
+}
+
+/**
+ * Writes the whole plan inside one transaction — insert order follows the
+ * FK dependency chain (categories/brands before products, products before
+ * their Inventory row, users before the Seller rows a migrated SELLER needs).
+ * Any failure rolls back the entire batch; nothing is left half-applied.
+ */
+async function applyPlan(erp: Client, plan: MigrationPlan, warehouseId: string) {
+  await erp.query('BEGIN');
+  try {
+    for (const brand of plan.brands.toInsert) await insertBrand(erp, brand);
+    for (const category of plan.categories.insertOrder) await insertCategory(erp, category);
+    for (const product of plan.products.toInsert) await insertProduct(erp, product);
+    for (const { rootProductId, quantity } of plan.products.inventoryFor) {
+      await insertInventory(erp, rootProductId, warehouseId, quantity);
+    }
+    for (const user of plan.users.toInsert) await insertUser(erp, user);
+    for (const userId of plan.users.sellerRowsFor) await insertSeller(erp, userId);
+    for (const customer of plan.customers.remapped) await insertCustomer(erp, customer);
+    for (const inquiry of plan.inquiries.remapped) await insertInquiry(erp, inquiry);
+    for (const review of plan.reviews.toInsert) await insertReview(erp, review);
+    await erp.query('COMMIT');
+  } catch (error) {
+    await erp.query('ROLLBACK');
+    throw error;
+  }
+}
+
+async function ensureCatalogWarehouse(erp: Client): Promise<string> {
+  const existing = await erp.query(
+    'SELECT id FROM warehouses WHERE name = $1',
+    ["Katalog (ko'chirilgan)"],
+  );
+  if (existing.rows.length > 0) return (existing.rows[0] as { id: string }).id;
+
+  const created = await erp.query(
+    `INSERT INTO warehouses (id, name, created_at, updated_at) VALUES ($1, $2, NOW(), NOW()) RETURNING id`,
+    [randomUUID(), "Katalog (ko'chirilgan)"],
+  );
+  return (created.rows[0] as { id: string }).id;
 }
 
 async function main() {
@@ -385,7 +683,7 @@ async function main() {
     const rootInquiries = (await root.query('SELECT * FROM "Inquiry"')).rows as RootInquiryRow[];
     const rootReviews = (await root.query('SELECT * FROM "Review"')).rows as RootReviewRow[];
 
-    const erpSkuRows = await erp.query('SELECT sku FROM products');
+    const erpSkuRows = await erp.query('SELECT id, sku FROM products');
     const erpSlugRows = await erp.query('SELECT slug FROM products');
     const erpCategorySlugRows = await erp.query('SELECT slug FROM categories');
     const erpBrandSlugRows = await erp.query('SELECT slug FROM brands');
@@ -412,6 +710,9 @@ async function main() {
       rootCustomers,
       rootInquiries,
       rootReviews,
+      erpSkuToId: new Map(
+        erpSkuRows.rows.map((r: { id: string; sku: string }) => [r.sku, r.id]),
+      ),
     });
 
     const warehouseNeeded = plan.products.toInsert.length > 0;
@@ -446,8 +747,28 @@ async function main() {
       return;
     }
 
+    console.log('\nBacking up backend/\'s database before writing anything...');
+    const backupPath = await backupErpDatabase(unquote(erpUrl));
+    console.log(`Backup written to ${backupPath}`);
+
+    const warehouseId = warehouseNeeded
+      ? await ensureCatalogWarehouse(erp)
+      : ((warehouseRows.rows[0] as { id: string } | undefined)?.id ?? '');
+
+    console.log('\nApplying migration inside one transaction...');
+    await applyPlan(erp, plan, warehouseId);
+
+    const finalCounts: Record<string, number> = {};
+    for (const table of ['brands', 'categories', 'products', 'users', 'customers', 'inquiries']) {
+      const result = await erp.query(`SELECT count(*)::int AS count FROM ${table}`);
+      finalCounts[table] = (result.rows[0] as { count: number }).count;
+    }
+
+    console.log('\nMigration applied. Post-migration row counts:');
+    console.table(finalCounts);
     console.log(
-      '\n--apply is not yet implemented in this script run (Task 11) — re-run after that task lands.',
+      `\nRollback path if anything looks wrong: restore from ${backupPath} ` +
+        `(psql -d diesel_parts_erp -f "${backupPath}").`,
     );
   } finally {
     await root.end();

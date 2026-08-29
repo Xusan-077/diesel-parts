@@ -187,6 +187,23 @@ describe("planMigration", () => {
     expect(plan.reviews).toEqual({ toInsert: [], skipped: [] });
   });
 
+  it("remaps an inquiry's productId onto the erp row a skipped product collided with", () => {
+    const rootProducts = [
+      { id: "r1", sku: "DUP-1", slug: "dup-1", nameUz: "X", nameRu: "X", nameEn: "X" },
+    ];
+    const rootInquiries = [{ id: "inq-1", productId: "r1", assignedSellerId: null }];
+
+    const plan = planMigration({
+      rootProducts,
+      erpSkus: new Set(["DUP-1"]),
+      erpSlugs: new Set(),
+      rootInquiries,
+      erpSkuToId: new Map([["DUP-1", "erp-product-1"]]),
+    });
+
+    expect(plan.inquiries.remapped[0].productId).toBe("erp-product-1");
+  });
+
   it("plans an insert for a synthetic review row", () => {
     const rootReviews = [{ id: "rev-1", productId: "p1", authorPhone: "+998901234567" }];
     const plan = planMigration({
