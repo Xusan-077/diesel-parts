@@ -23,7 +23,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { MANAGER_UP } from '../common/roles';
+import { ALL_ROLES, MANAGER_UP } from '../common/roles';
 
 /**
  * Full admin view (includes purchase_price). Restricted to MANAGER_UP so a
@@ -46,7 +46,14 @@ export class ProductsController {
     return this.products.importCsv(dto.csv, actorId);
   }
 
+  /**
+   * Widened from the class's MANAGER_UP: this is the order form's lookup
+   * (root's `product-lookup-repository.ts`), and raising an order is a
+   * seller's job, not just a manager's. The response never carries
+   * purchasePrice, so opening it to every staff role leaks nothing.
+   */
   @Get('search')
+  @Roles(...ALL_ROLES)
   search(@Query() query: SearchProductDto) {
     return this.products.search(query.q);
   }

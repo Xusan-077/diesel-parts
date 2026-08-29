@@ -7,7 +7,11 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction, Prisma } from '../../generated/prisma/client';
+import {
+  AuditAction,
+  OrderStatus,
+  Prisma,
+} from '../../generated/prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
@@ -186,6 +190,77 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
     return this.toSellerView(this.withStock(product));
+  }
+
+  /** Every active product's slug, for the sitemap. Slugs only — no row mapping. */
+  async findActiveSlugs(): Promise<string[]> {
+    const rows = await this.prisma.product.findMany({
+      where: { isActive: true },
+      select: { slug: true },
+      orderBy: { id: 'asc' },
+    });
+    return rows.map((row) => row.slug);
+  }
+
+  /**
+   * The rating, review count and units sold for a page of products —
+   * ported from root's `product-stats-repository.ts`. Only approved reviews
+   * count, and only COMPLETED orders count, matching that file's rules.
+   */
+  async productStats(ids: string[]) {
+    const stats = new Map<
+      string,
+      {
+        productId: string;
+        rating: number | null;
+        reviewCount: number;
+        soldCount: number;
+      }
+    >(
+      ids.map((id) => [
+        id,
+        { productId: id, rating: null, reviewCount: 0, soldCount: 0 },
+      ]),
+    );
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const [reviews, sold] = await Promise.all([
+      this.prisma.review.groupBy({
+        by: ['productId'],
+        where: { productId: { in: ids }, isApproved: true },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+      this.prisma.orderItem.groupBy({
+        by: ['productId'],
+        where: {
+          productId: { in: ids },
+          order: { status: OrderStatus.COMPLETED },
+        },
+        _sum: { quantity: true },
+      }),
+    ]);
+
+    for (const row of reviews) {
+      const average = row._avg.rating;
+      stats.set(row.productId, {
+        ...stats.get(row.productId)!,
+        rating: average === null ? null : Math.round(average * 10) / 10,
+        reviewCount: row._count._all,
+      });
+    }
+
+    for (const row of sold) {
+      stats.set(row.productId, {
+        ...stats.get(row.productId)!,
+        soldCount: row._sum.quantity ?? 0,
+      });
+    }
+
+    return [...stats.values()];
   }
 
   async findOneAdmin(id: string) {

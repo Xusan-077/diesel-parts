@@ -10,6 +10,8 @@ function makePrisma(
     product?: Record<string, unknown>;
     warehouse?: Record<string, unknown>;
     inventory?: Record<string, unknown>;
+    review?: Record<string, unknown>;
+    orderItem?: Record<string, unknown>;
   } = {},
 ) {
   return {
@@ -28,6 +30,14 @@ function makePrisma(
     inventory: {
       upsert: jest.fn().mockResolvedValue(undefined),
       ...overrides.inventory,
+    },
+    review: {
+      groupBy: jest.fn().mockResolvedValue([]),
+      ...overrides.review,
+    },
+    orderItem: {
+      groupBy: jest.fn().mockResolvedValue([]),
+      ...overrides.orderItem,
     },
   } as unknown as PrismaService;
 }
@@ -371,6 +381,83 @@ describe('ProductsService public reads', () => {
 
       expect(result.data.map((p) => p.id)).toEqual(['low', 'high']);
     });
+  });
+});
+
+describe('ProductsService.findActiveSlugs', () => {
+  it('returns only active product slugs', async () => {
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([{ slug: 'a' }, { slug: 'b' }]);
+    const service = new ProductsService(
+      makePrisma({ product: { findMany } }),
+      makeAudit().audit,
+    );
+
+    const result = await service.findActiveSlugs();
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { isActive: true } }),
+    );
+    expect(result).toEqual(['a', 'b']);
+  });
+});
+
+describe('ProductsService.productStats', () => {
+  it('returns empty stats for every id when there is nothing to aggregate', async () => {
+    const service = new ProductsService(makePrisma(), makeAudit().audit);
+
+    const result = await service.productStats(['p1', 'p2']);
+
+    expect(result).toEqual([
+      { productId: 'p1', rating: null, reviewCount: 0, soldCount: 0 },
+      { productId: 'p2', rating: null, reviewCount: 0, soldCount: 0 },
+    ]);
+  });
+
+  it('rounds the average rating to one decimal and reports units sold from completed orders', async () => {
+    const groupByReview = jest
+      .fn()
+      .mockResolvedValue([
+        { productId: 'p1', _avg: { rating: 4.333 }, _count: { _all: 3 } },
+      ]);
+    const groupByOrderItem = jest
+      .fn()
+      .mockResolvedValue([{ productId: 'p1', _sum: { quantity: 12 } }]);
+    const service = new ProductsService(
+      makePrisma({
+        review: { groupBy: groupByReview },
+        orderItem: { groupBy: groupByOrderItem },
+      }),
+      makeAudit().audit,
+    );
+
+    const result = await service.productStats(['p1']);
+
+    expect(result).toEqual([
+      { productId: 'p1', rating: 4.3, reviewCount: 3, soldCount: 12 },
+    ]);
+    expect(groupByReview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { productId: { in: ['p1'] }, isApproved: true },
+      }),
+    );
+    expect(groupByOrderItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { productId: { in: ['p1'] }, order: { status: 'COMPLETED' } },
+      }),
+    );
+  });
+
+  it('returns an empty array for an empty id list, without querying', async () => {
+    const groupByReview = jest.fn();
+    const service = new ProductsService(
+      makePrisma({ review: { groupBy: groupByReview } }),
+      makeAudit().audit,
+    );
+
+    expect(await service.productStats([])).toEqual([]);
+    expect(groupByReview).not.toHaveBeenCalled();
   });
 });
 
