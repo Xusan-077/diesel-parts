@@ -58,3 +58,6 @@ next-env.d.ts
 # endpoints, not build output. Seed photos live in /public/seed-images instead,
 # which IS committed, so a fresh checkout's catalog is never missing images.
 /public/uploads/
+
+# project-local git worktrees used for isolated plan execution
+/.worktrees/
