@@ -68,6 +68,19 @@ export class CreateProductDto {
   @Min(0)
   minStock?: number;
 
+  /**
+   * Not a Product column (stock is Inventory-derived) — when given, the
+   * service upserts it onto the catalog warehouse's Inventory row, the same
+   * one CSV import writes to (see ProductsService.setCatalogStock).
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock?: number;
+
+  @IsOptional()
+  specs?: unknown;
+
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

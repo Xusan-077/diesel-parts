@@ -137,6 +137,78 @@ describe('ProductsService audit', () => {
   });
 });
 
+describe('ProductsService stock on create/update', () => {
+  it('writes stock onto the catalog warehouse, not the Product row, on create', async () => {
+    const create = jest.fn().mockResolvedValue(row);
+    const upsert = jest.fn().mockResolvedValue(undefined);
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+      inventory: { upsert },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await service.create({ sku: 'DP-1', stock: 9 } as never, 'actor-1');
+
+    expect(create).toHaveBeenCalledWith({ data: { sku: 'DP-1' } });
+    expect(upsert).toHaveBeenCalledWith({
+      where: {
+        productId_warehouseId: { productId: 'p1', warehouseId: 'wh-catalog' },
+      },
+      create: {
+        productId: 'p1',
+        warehouseId: 'wh-catalog',
+        quantity: 9,
+        reservedQuantity: 0,
+      },
+      update: { quantity: 9 },
+    });
+  });
+
+  it('does not touch Inventory on create when stock is omitted', async () => {
+    const create = jest.fn().mockResolvedValue(row);
+    const upsert = jest.fn();
+    const findFirst = jest.fn();
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+      inventory: { upsert },
+      warehouse: { findFirst },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await service.create({ sku: 'DP-1' } as never, 'actor-1');
+
+    expect(upsert).not.toHaveBeenCalled();
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it('writes stock onto the catalog warehouse on update', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const update = jest.fn().mockResolvedValue(row);
+    const upsert = jest.fn().mockResolvedValue(undefined);
+    const prisma = makePrisma({
+      product: { findUnique, update },
+      inventory: { upsert },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await service.update('p1', { stock: 4 }, 'actor-1');
+
+    expect(update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: {} });
+    expect(upsert).toHaveBeenCalledWith({
+      where: {
+        productId_warehouseId: { productId: 'p1', warehouseId: 'wh-catalog' },
+      },
+      create: {
+        productId: 'p1',
+        warehouseId: 'wh-catalog',
+        quantity: 4,
+        reservedQuantity: 0,
+      },
+      update: { quantity: 4 },
+    });
+  });
+});
+
 function makePublicProduct(overrides: Record<string, unknown> = {}) {
   return {
     id: 'p1',
@@ -239,6 +311,65 @@ describe('ProductsService public reads', () => {
       const result = await service.findOnePublic('sku-1');
 
       expect(result).not.toHaveProperty('purchasePrice');
+    });
+  });
+
+  describe('findAllPublic with ids', () => {
+    it('filters to the given id list, for a batch lookup', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ ids: 'p1,p2' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, id: { in: ['p1', 'p2'] } },
+        }),
+      );
+    });
+  });
+
+  describe('findAllPublic with sort', () => {
+    it('orders by id when sort=id, instead of the newest-first default', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ sort: 'id' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { id: 'asc' } }),
+      );
+    });
+
+    it('sorts by computed available stock, ascending, when sort=stock', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        makePublicProduct({
+          id: 'high',
+          inventories: [
+            { quantity: 9, reservedQuantity: 0, warehouseId: 'w1' },
+          ],
+        }),
+        makePublicProduct({
+          id: 'low',
+          inventories: [
+            { quantity: 2, reservedQuantity: 0, warehouseId: 'w1' },
+          ],
+        }),
+      ]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      const result = await service.findAllPublic({ sort: 'stock' });
+
+      expect(result.data.map((p) => p.id)).toEqual(['low', 'high']);
     });
   });
 });

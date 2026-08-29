@@ -36,7 +36,7 @@ export interface ImportProductsResult {
 }
 
 const ADMIN_INCLUDE = {
-  category: { select: { id: true, nameEn: true } },
+  category: { select: { id: true, nameUz: true, nameRu: true, nameEn: true } },
   brand: { select: { id: true, name: true } },
   inventories: {
     select: { quantity: true, reservedQuantity: true, warehouseId: true },
@@ -122,17 +122,28 @@ export class ProductsService {
     }
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.brandId) where.brandId = query.brandId;
+    if (query.ids) {
+      where.id = { in: query.ids.split(',').map((id) => id.trim()) };
+    }
 
     const all = await this.prisma.product.findMany({
       where,
       include: ADMIN_INCLUDE,
-      orderBy: { createdAt: 'desc' },
+      orderBy: query.sort === 'id' ? { id: 'asc' } : { createdAt: 'desc' },
     });
 
     let withStock = all.map((product) => this.withStock(product));
     if (query.stockStatus) {
       withStock = withStock.filter(
         (product) => product.stockStatus === query.stockStatus,
+      );
+    }
+    // Not a column: sorted here, over whatever the DB already ordered by id/createdAt.
+    // Ascending — every admin caller of this (the stock-overview page, the
+    // product list's own "stock" sort) wants the shortest stock first.
+    if (query.sort === 'stock') {
+      withStock = [...withStock].sort(
+        (a, b) => a.availableQuantity - b.availableQuantity,
       );
     }
 
@@ -218,7 +229,17 @@ export class ProductsService {
       where: { sku: dto.sku },
     });
     if (existing) throw new ConflictException('SKU already exists');
-    const created = await this.prisma.product.create({ data: dto });
+    const { stock, ...write } = dto;
+    const created = await this.prisma.product.create({
+      data: write as Prisma.ProductUncheckedCreateInput,
+    });
+    if (stock !== undefined) {
+      await this.setCatalogStock(
+        created.id,
+        await this.catalogWarehouseId(),
+        stock,
+      );
+    }
     await this.audit.record({
       userId: actorId,
       action: AuditAction.CREATE,
@@ -231,10 +252,14 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto, actorId: string) {
     const before = await this.getOrThrow(id);
+    const { stock, ...write } = dto;
     const after = await this.prisma.product.update({
       where: { id },
-      data: dto,
+      data: write as Prisma.ProductUncheckedUpdateInput,
     });
+    if (stock !== undefined) {
+      await this.setCatalogStock(id, await this.catalogWarehouseId(), stock);
+    }
     await this.audit.record({
       userId: actorId,
       action: AuditAction.UPDATE,
