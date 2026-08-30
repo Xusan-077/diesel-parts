@@ -322,8 +322,20 @@ describe('CustomersService.findAll', () => {
     const result = await service.findAll({ page: 1, limit: 20 });
 
     expect(result.data).toEqual([
-      { id: 'cus-1', name: 'Aziz', orderCount: 3, totalSpent: 1500 },
-      { id: 'cus-2', name: 'Vali', orderCount: 0, totalSpent: 0 },
+      {
+        id: 'cus-1',
+        name: 'Aziz',
+        assignedSellerName: null,
+        orderCount: 3,
+        totalSpent: 1500,
+      },
+      {
+        id: 'cus-2',
+        name: 'Vali',
+        assignedSellerName: null,
+        orderCount: 0,
+        totalSpent: 0,
+      },
     ]);
     expect(groupBy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -395,6 +407,7 @@ describe('CustomersService.findOne', () => {
     expect(result).toEqual({
       id: 'cus-1',
       name: 'Aziz',
+      assignedSellerName: null,
       orderCount: 2,
       totalSpent: 500,
     });

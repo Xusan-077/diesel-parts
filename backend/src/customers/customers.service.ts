@@ -139,43 +139,57 @@ export class CustomersService {
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
-        include: { _count: { select: { orders: true } } },
+        include: {
+          _count: { select: { orders: true } },
+          assignedSeller: { select: { name: true } },
+        },
       }),
       this.prisma.customer.count({ where }),
     ]);
 
     const spent = await this.spendByCustomer(rows.map((row) => row.id));
-    const data = rows.map((row) => {
-      const { _count, ...rest } = row;
-      return {
-        ...rest,
-        orderCount: _count.orders,
-        totalSpent: spent.get(row.id) ?? 0,
-      };
-    });
+    const data = rows.map((row) => this.toRow(row, spent.get(row.id) ?? 0));
 
     return { data, meta: paginationMeta(page, limit, total) };
   }
 
   async findOne(id: string, actor?: ScopeActor) {
+    const include = {
+      _count: { select: { orders: true } },
+      assignedSeller: { select: { name: true } },
+    } as const;
+
     const customer = actor
       ? await this.prisma.customer.findFirst({
           where: { id, ...customerReadScope(actor, { includePool: true }) },
-          include: { _count: { select: { orders: true } } },
+          include,
         })
-      : await this.prisma.customer.findUnique({
-          where: { id },
-          include: { _count: { select: { orders: true } } },
-        });
+      : await this.prisma.customer.findUnique({ where: { id }, include });
 
     if (!customer) throw new NotFoundException('Customer not found');
 
     const spent = await this.spendByCustomer([customer.id]);
-    const { _count, ...rest } = customer;
+    return this.toRow(customer, spent.get(customer.id) ?? 0);
+  }
+
+  /**
+   * Flattens the `_count`/`assignedSeller` relations `findAll`/`findOne`
+   * include into the plain `orderCount`/`assignedSellerName` fields root's
+   * `CustomerRow` expects — the raw relation objects are never shipped over
+   * HTTP as-is.
+   */
+  private toRow<
+    T extends {
+      _count: { orders: number };
+      assignedSeller: { name: string } | null;
+    },
+  >(row: T, totalSpent: number) {
+    const { _count, assignedSeller, ...rest } = row;
     return {
       ...rest,
+      assignedSellerName: assignedSeller?.name ?? null,
       orderCount: _count.orders,
-      totalSpent: spent.get(customer.id) ?? 0,
+      totalSpent,
     };
   }
 
