@@ -65,6 +65,28 @@ function createSnapshot(row: {
 }
 
 /**
+ * Trims incoming string fields and turns an empty optional field into
+ * `null` before a write ever reaches the database — matching root's
+ * pre-rewire normalization (`name.trim()`, `phone.trim()`,
+ * `email?.trim() || null`, etc.) exactly. Only touches keys actually
+ * present on the DTO: `PartialType`'s omitted fields on an update must
+ * stay untouched, not get forced to `null`. `telegram` is intentionally
+ * excluded — it's a backend-only column root never normalized.
+ */
+function normalizeCustomerWrite<T extends Record<string, unknown>>(dto: T): T {
+  const next: Record<string, unknown> = { ...dto };
+  if (typeof next.name === 'string') next.name = next.name.trim();
+  if (typeof next.phone === 'string') next.phone = next.phone.trim();
+  for (const key of ['email', 'company', 'notes'] as const) {
+    if (key in dto && dto[key] !== undefined) {
+      const value = dto[key];
+      next[key] = typeof value === 'string' ? value.trim() || null : value;
+    }
+  }
+  return next as T;
+}
+
+/**
  * update()'s diff fields. `assignedSellerId` is deliberately excluded here —
  * only claim()'s own audit entry touches it.
  */
@@ -128,6 +150,12 @@ export class CustomersService {
           OR: [
             { name: { contains: query.search, mode: 'insensitive' as const } },
             { phone: { contains: query.search, mode: 'insensitive' as const } },
+            {
+              company: {
+                contains: query.search,
+                mode: 'insensitive' as const,
+              },
+            },
           ],
         }
       : {};
@@ -311,8 +339,12 @@ export class CustomersService {
         : actor.id
       : null;
 
+    const normalized = normalizeCustomerWrite(
+      dto as unknown as Record<string, unknown>,
+    ) as unknown as CreateCustomerDto;
+
     const created = await this.prisma.customer.create({
-      data: { ...dto, assignedSellerId },
+      data: { ...normalized, assignedSellerId },
     });
     await this.audit.record({
       userId: actorId,
@@ -344,9 +376,13 @@ export class CustomersService {
       throw new NotFoundException('Customer not found');
     }
 
+    const normalized = normalizeCustomerWrite(
+      dto as unknown as Record<string, unknown>,
+    ) as unknown as UpdateCustomerDto;
+
     const after = await this.prisma.customer.update({
       where: { id },
-      data: dto,
+      data: normalized,
     });
 
     const diff = diffFields(updateSnapshot(before), updateSnapshot(after));

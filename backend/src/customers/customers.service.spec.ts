@@ -345,6 +345,163 @@ describe('CustomersService.findAll', () => {
   });
 });
 
+describe('CustomersService.findAll — search', () => {
+  it('searches company in addition to name and phone', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const prisma = makePrisma({ customer: { findMany, count } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.findAll({ page: 1, limit: 20, search: 'Acme' });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            {},
+            {
+              OR: [
+                { name: { contains: 'Acme', mode: 'insensitive' } },
+                { phone: { contains: 'Acme', mode: 'insensitive' } },
+                { company: { contains: 'Acme', mode: 'insensitive' } },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+  });
+});
+
+describe('CustomersService.create — normalization', () => {
+  it('trims name and phone before writing', async () => {
+    const create = jest.fn().mockResolvedValue({
+      id: 'cus-1',
+      name: 'Aziz',
+      phone: '998901234567',
+      assignedSellerId: null,
+    });
+    const prisma = makePrisma({ customer: { create } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.create(
+      { name: '  Aziz  ', phone: ' 998901234567 ' },
+      'actor-1',
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        name: 'Aziz',
+        phone: '998901234567',
+        assignedSellerId: null,
+      },
+    });
+  });
+
+  it('normalizes empty optional fields to null', async () => {
+    const create = jest.fn().mockResolvedValue({
+      id: 'cus-1',
+      name: 'Aziz',
+      phone: '1',
+      company: null,
+      assignedSellerId: null,
+    });
+    const prisma = makePrisma({ customer: { create } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.create(
+      { name: 'Aziz', phone: '1', company: '  ', email: '', notes: '' },
+      'actor-1',
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        name: 'Aziz',
+        phone: '1',
+        company: null,
+        email: null,
+        notes: null,
+        assignedSellerId: null,
+      },
+    });
+  });
+});
+
+describe('CustomersService.update — normalization', () => {
+  it('trims a present required field', async () => {
+    const before = {
+      id: 'cus-1',
+      name: 'Aziz',
+      phone: '1',
+      email: null,
+      company: null,
+      notes: null,
+    };
+    const findFirst = jest.fn().mockResolvedValue(before);
+    const update = jest
+      .fn()
+      .mockResolvedValue({ ...before, name: 'Aziz Karimov' });
+    const prisma = makePrisma({ customer: { findFirst, update } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.update(
+      'cus-1',
+      { name: '  Aziz Karimov  ' },
+      seller.id,
+      seller,
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'cus-1' },
+      data: { name: 'Aziz Karimov' },
+    });
+  });
+
+  it('normalizes an empty optional field to null when present in the partial DTO', async () => {
+    const before = {
+      id: 'cus-1',
+      name: 'Aziz',
+      phone: '1',
+      email: 'a@x.com',
+      company: 'Old LLC',
+      notes: 'note',
+    };
+    const findFirst = jest.fn().mockResolvedValue(before);
+    const update = jest.fn().mockResolvedValue({ ...before, company: null });
+    const prisma = makePrisma({ customer: { findFirst, update } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.update('cus-1', { company: '   ' }, seller.id, seller);
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'cus-1' },
+      data: { company: null },
+    });
+  });
+
+  it('leaves fields omitted from the partial DTO untouched (not forced to null)', async () => {
+    const before = {
+      id: 'cus-1',
+      name: 'Aziz',
+      phone: '1',
+      email: 'a@x.com',
+      company: 'Old LLC',
+      notes: 'note',
+    };
+    const findFirst = jest.fn().mockResolvedValue(before);
+    const update = jest.fn().mockResolvedValue(before);
+    const prisma = makePrisma({ customer: { findFirst, update } });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.update('cus-1', { name: 'Aziz' }, seller.id, seller);
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'cus-1' },
+      data: { name: 'Aziz' },
+    });
+  });
+});
+
 describe('CustomersService.findOne', () => {
   it('uses findUnique (unscoped) when no actor is given', async () => {
     const findUnique = jest
