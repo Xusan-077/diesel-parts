@@ -40,14 +40,25 @@ interface OrderDataArgs {
   };
 }
 
-interface AuditCall {
-  action: AuditAction;
-  entityType: string;
-}
-
 function firstArg<T>(mock: jest.Mock): T {
   const calls = mock.mock.calls as unknown[][];
   return calls[0][0] as T;
+}
+
+interface AuditRow {
+  action: AuditAction;
+  entityType: string;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+}
+
+/** Every `Order` `UPDATE` audit row recorded, in call order. */
+function orderUpdateAudits(record: jest.Mock): AuditRow[] {
+  return (record.mock.calls as unknown[][])
+    .map((call) => call[0] as AuditRow)
+    .filter(
+      (row) => row.action === AuditAction.UPDATE && row.entityType === 'Order',
+    );
 }
 
 const seller: AuthenticatedUser = {
@@ -551,18 +562,21 @@ describe('OrdersService.update', () => {
     });
   });
 
-  it('moves a legal status and audits the change', async () => {
+  it('records exactly one audit row for a pure status change (the updateStatus one)', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       sellerId: 'seller-1',
       status: OrderStatus.CONFIRMED,
       warehouseId: 'w1',
+      subtotal: new Prisma.Decimal(200),
+      total: new Prisma.Decimal(180),
+      notes: null,
       items: [],
     });
     const findUniqueOrThrow = jest.fn().mockResolvedValue({
       status: OrderStatus.PREPARING,
-      subtotal: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(0),
+      subtotal: new Prisma.Decimal(200),
+      total: new Prisma.Decimal(180),
       notes: null,
       items: [],
     });
@@ -584,20 +598,74 @@ describe('OrdersService.update', () => {
 
     await service.update(seller, 'order-1', { status: OrderStatus.PREPARING });
 
-    const auditCalls = record.mock.calls as unknown[][];
-    const auditedOrderUpdate = auditCalls.some((call) => {
-      const arg = call[0] as AuditCall;
-      return arg.action === AuditAction.UPDATE && arg.entityType === 'Order';
-    });
-    expect(auditedOrderUpdate).toBe(true);
+    const rows = orderUpdateAudits(record);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].before).toEqual({ status: OrderStatus.CONFIRMED });
+    expect(rows[0].after).toEqual({ status: OrderStatus.PREPARING });
   });
 
-  it('re-lines and recomputes subtotal/total against the approved percent', async () => {
+  it('combined status + re-line: the updateStatus status row plus one content row that omits status', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      sellerId: 'seller-1',
+      status: OrderStatus.NEW,
+      warehouseId: 'w1',
+      discountApprovedPercent: new Prisma.Decimal(10),
+      subtotal: new Prisma.Decimal(0),
+      total: new Prisma.Decimal(0),
+      notes: null,
+      items: [],
+    });
+    const findUniqueOrThrow = jest.fn().mockResolvedValue({
+      status: OrderStatus.CONFIRMED,
+      subtotal: new Prisma.Decimal(200),
+      total: new Prisma.Decimal(180),
+      notes: null,
+      items: [{ id: 'li-1' }],
+    });
+    const tx = makeTx({
+      order: {
+        create: jest.fn(),
+        update: jest
+          .fn()
+          .mockResolvedValue({ id: 'order-1', status: OrderStatus.CONFIRMED }),
+      },
+    });
+    const { prisma } = makePrisma({
+      order: { findUnique, findUniqueOrThrow },
+      product: { findMany: jest.fn().mockResolvedValue([product()]) },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit, record } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.update(seller, 'order-1', {
+      status: OrderStatus.CONFIRMED,
+      items: [{ productId: 'prod-1', quantity: 2 }],
+    });
+
+    const rows = orderUpdateAudits(record);
+    expect(rows).toHaveLength(2);
+
+    const statusRow = rows.find((row) => 'status' in (row.after ?? {}));
+    expect(statusRow?.after).toEqual({ status: OrderStatus.CONFIRMED });
+
+    const contentRow = rows.find((row) => !('status' in (row.after ?? {})));
+    expect(contentRow).toBeDefined();
+    expect(contentRow!.after).not.toHaveProperty('status');
+    expect(contentRow!.after).toMatchObject({ subtotal: 200, total: 180 });
+  });
+
+  it('re-lines and recomputes subtotal/total against the approved percent, recording one content audit row', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       sellerId: 'seller-1',
       status: OrderStatus.NEW,
       discountApprovedPercent: new Prisma.Decimal(10),
+      subtotal: new Prisma.Decimal(0),
+      total: new Prisma.Decimal(0),
+      notes: null,
       items: [],
     });
     const findUniqueOrThrow = jest.fn().mockResolvedValue({
@@ -614,7 +682,7 @@ describe('OrdersService.update', () => {
       tx,
     });
     const { products } = makeProducts();
-    const { audit } = makeAudit();
+    const { audit, record } = makeAudit();
     const service = new OrdersService(prisma, makeInventory(), products, audit);
 
     await service.update(seller, 'order-1', {
@@ -627,6 +695,10 @@ describe('OrdersService.update', () => {
     const { data } = firstArg<OrderDataArgs>(tx.order.update);
     expect(data.subtotal).toEqual(new Prisma.Decimal(200));
     expect(data.total).toEqual(new Prisma.Decimal(180));
+
+    const rows = orderUpdateAudits(record);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].after).not.toHaveProperty('status');
   });
 
   it('surfaces insufficient_stock when a re-line exceeds availability', async () => {

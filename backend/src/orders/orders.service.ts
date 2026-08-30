@@ -302,8 +302,11 @@ export class OrdersService {
       });
     }
 
+    // `status` is deliberately not in this diff set: a real transition is
+    // delegated to `updateStatus`, which records its own `{status}` before/after
+    // `UPDATE` audit row. Recording it again here would double every
+    // order-status event in the activity trail.
     const before: Record<string, AuditValue> = {
-      status: existing.status,
       subtotal: Number(existing.subtotal),
       total: Number(existing.total),
       notes: existing.notes,
@@ -353,7 +356,6 @@ export class OrdersService {
     });
 
     const after: Record<string, AuditValue> = {
-      status: updated.status,
       subtotal: Number(updated.subtotal),
       total: Number(updated.total),
       notes: updated.notes,
