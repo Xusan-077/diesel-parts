@@ -17,6 +17,11 @@ import {
 } from '../common/scope';
 import { diffFields, type AuditValue } from '../common/audit-diff';
 import {
+  extractNationalDigits,
+  isValidPhone,
+  phoneTail,
+} from '../common/phone';
+import {
   INQUIRY_COLUMNS,
   inquiryColumn,
   inquiryColumnFilter,
@@ -37,6 +42,13 @@ import { UpdateInquiryDto } from './dto/update-inquiry.dto';
  */
 
 export const SELLER_PAGE_SIZE = 20;
+
+/**
+ * How many rows a phone match may scan — see `CustomersService`'s identical
+ * constant for the full reasoning (free-text phone, no SQL `equals`, JS
+ * comparison on canonical digits after a `contains` prefilter).
+ */
+const PHONE_SCAN_LIMIT = 1000;
 
 const ROW_SELECT = {
   id: true,
@@ -212,6 +224,38 @@ export class InquiriesService {
     );
 
     return Object.fromEntries(columns) as InquiryBoard;
+  }
+
+  /**
+   * The inquiries that came from this phone number, for a customer's
+   * history in the CRM. Matched on the phone because there is no foreign key
+   * to match on: an `Inquiry` is raised by an anonymous visitor before
+   * anybody knows which account they belong to.
+   */
+  async byPhone(phone: string, actor: ScopeActor): Promise<InquiryRow[]> {
+    // A half-written number would match on two digits alone and pull in
+    // strangers.
+    if (!isValidPhone(phone)) {
+      return [];
+    }
+
+    const national = extractNationalDigits(phone);
+
+    const rows = await this.prisma.inquiry.findMany({
+      where: {
+        AND: [
+          inquiryReadScope(actor),
+          { phone: { contains: phoneTail(national) } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: PHONE_SCAN_LIMIT,
+      select: ROW_SELECT,
+    });
+
+    return rows
+      .filter((row) => extractNationalDigits(row.phone) === national)
+      .map(toRow);
   }
 
   /**
