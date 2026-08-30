@@ -166,6 +166,8 @@ export class ProductsService {
 
     const where: Record<string, unknown> = {};
     if (options.publicOnly) where.isActive = true;
+    else if (query.isActive !== undefined)
+      where.isActive = query.isActive === 'true';
     if (query.search) {
       // A locale narrows the match to what that reader actually sees; without
       // one (the admin/seller lookup, which searches every language a staff

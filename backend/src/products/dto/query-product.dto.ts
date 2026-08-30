@@ -30,6 +30,16 @@ export class QueryProductDto extends PaginationDto {
   @IsEnum(StockStatus)
   stockStatus?: StockStatus;
 
+  /**
+   * Scopes the admin listing to active-only products. `findAllAdmin` shows
+   * both by default (unlike `findAllPublic`, which always forces this via
+   * its own internal flag) — a string rather than a real boolean so "false"
+   * cannot implicitly-convert to a truthy value off a query string.
+   */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  isActive?: 'true' | 'false';
+
   /** Comma-separated id list — a batch lookup (cart/wishlist/compare), not a filter a person types. */
   @IsOptional()
   @IsString()

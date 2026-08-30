@@ -621,6 +621,50 @@ describe('ProductsService public reads', () => {
       );
     });
   });
+
+  describe('findAllAdmin with isActive', () => {
+    it('scopes to active-only when isActive=true', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllAdmin({ isActive: 'true' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { isActive: true } }),
+      );
+    });
+
+    it('scopes to inactive-only when isActive=false', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllAdmin({ isActive: 'false' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { isActive: false } }),
+      );
+    });
+
+    it('shows both when isActive is omitted, unchanged from before this field existed', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllAdmin({});
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
+    });
+  });
 });
 
 describe('ProductsService.findActiveSlugs', () => {
