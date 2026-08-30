@@ -1,8 +1,12 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction } from '../../generated/prisma/client';
+import { AuditAction, Prisma } from '../../generated/prisma/client';
 import { toCsv, type ProductCsvRow } from './product-csv';
 
 function makePrisma(
@@ -216,6 +220,67 @@ describe('ProductsService stock on create/update', () => {
       },
       update: { quantity: 4 },
     });
+  });
+});
+
+describe('ProductsService create/update error translation', () => {
+  it('reports a slug collision on create -- the proactive check only covers sku', async () => {
+    const create = jest.fn().mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['slug'] },
+      }),
+    );
+    const service = new ProductsService(
+      makePrisma({
+        product: { findUnique: jest.fn().mockResolvedValue(null), create },
+      }),
+      makeAudit().audit,
+    );
+
+    await expect(
+      service.create({ sku: 'DP-1', slug: 'taken' } as never, 'actor-1'),
+    ).rejects.toMatchObject({
+      response: { statusCode: 409, message: 'slug already exists' },
+    });
+  });
+
+  it('reports a missing category/brand as a 400 on create', async () => {
+    const create = jest.fn().mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('FK violation', {
+        code: 'P2003',
+        clientVersion: 'test',
+      }),
+    );
+    const service = new ProductsService(
+      makePrisma({
+        product: { findUnique: jest.fn().mockResolvedValue(null), create },
+      }),
+      makeAudit().audit,
+    );
+
+    await expect(
+      service.create({ sku: 'DP-1' } as never, 'actor-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('reports a missing category/brand as a 400 on update', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const update = jest.fn().mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('FK violation', {
+        code: 'P2003',
+        clientVersion: 'test',
+      }),
+    );
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique, update } }),
+      makeAudit().audit,
+    );
+
+    await expect(
+      service.update('p1', { categoryId: 'missing' }, 'actor-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 

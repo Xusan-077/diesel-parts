@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -57,6 +58,32 @@ function splitIds(value: string): string[] {
     .split(',')
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
+}
+
+/**
+ * Translates a raw Prisma write failure into the same client-facing errors
+ * `importFailureMessage` already gives CSV rows -- `create`/`update` need it
+ * too, since neither guards against anything but a duplicate SKU up front.
+ */
+function translateWriteError(error: unknown): never {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  ) {
+    const target = error.meta?.target;
+    const field =
+      Array.isArray(target) && typeof target[0] === 'string'
+        ? target[0]
+        : 'sku';
+    throw new ConflictException(`${field} already exists`);
+  }
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2003'
+  ) {
+    throw new BadRequestException('Category or brand not found');
+  }
+  throw error;
 }
 
 function computeOrderBy(
@@ -369,9 +396,9 @@ export class ProductsService {
     });
     if (existing) throw new ConflictException('SKU already exists');
     const { stock, ...write } = dto;
-    const created = await this.prisma.product.create({
-      data: write as Prisma.ProductUncheckedCreateInput,
-    });
+    const created = await this.prisma.product
+      .create({ data: write as Prisma.ProductUncheckedCreateInput })
+      .catch((error: unknown) => translateWriteError(error));
     if (stock !== undefined) {
       await this.setCatalogStock(
         created.id,
@@ -392,10 +419,12 @@ export class ProductsService {
   async update(id: string, dto: UpdateProductDto, actorId: string) {
     const before = await this.getOrThrow(id);
     const { stock, ...write } = dto;
-    const after = await this.prisma.product.update({
-      where: { id },
-      data: write as Prisma.ProductUncheckedUpdateInput,
-    });
+    const after = await this.prisma.product
+      .update({
+        where: { id },
+        data: write as Prisma.ProductUncheckedUpdateInput,
+      })
+      .catch((error: unknown) => translateWriteError(error));
     if (stock !== undefined) {
       await this.setCatalogStock(id, await this.catalogWarehouseId(), stock);
     }
