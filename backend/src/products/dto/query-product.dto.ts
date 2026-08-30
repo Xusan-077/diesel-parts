@@ -10,7 +10,8 @@ import { Type } from 'class-transformer';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { StockStatus } from '../stock-status';
 
-export type ProductSort = 'newest' | 'id' | 'stock' | 'name-asc' | 'name-desc';
+export type ProductSort =
+  'newest' | 'id' | 'stock' | 'name-asc' | 'name-desc' | 'price-desc';
 export type NameLocale = 'uz' | 'ru' | 'en';
 
 export class QueryProductDto extends PaginationDto {
@@ -87,8 +88,10 @@ export class QueryProductDto extends PaginationDto {
    * a real popularity signal to sort by. `stock` is ascending by computed
    * available quantity — the admin product list and the stock-overview page
    * both want the shortest stock first. `name-asc`/`name-desc` need `lang`.
+   * `price-desc` is the admin product list's third sort option — there is no
+   * `price-asc` because root never asks for one.
    */
   @IsOptional()
-  @IsEnum(['newest', 'id', 'stock', 'name-asc', 'name-desc'])
+  @IsEnum(['newest', 'id', 'stock', 'name-asc', 'name-desc', 'price-desc'])
   sort?: ProductSort;
 }

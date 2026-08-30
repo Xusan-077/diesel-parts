@@ -422,6 +422,20 @@ describe('ProductsService public reads', () => {
       );
     });
 
+    it("orders by price, descending, when sort=price-desc -- the admin list's third sort option", async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllAdmin({ sort: 'price-desc' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { price: 'desc' } }),
+      );
+    });
+
     it('sorts by computed available stock, ascending, when sort=stock', async () => {
       const findMany = jest.fn().mockResolvedValue([
         makePublicProduct({

@@ -94,6 +94,7 @@ function computeOrderBy(
     return { [nameColumn(query.lang)]: 'asc' };
   if (query.sort === 'name-desc' && query.lang)
     return { [nameColumn(query.lang)]: 'desc' };
+  if (query.sort === 'price-desc') return { price: 'desc' };
   return { createdAt: 'desc' };
 }
 
