@@ -1,40 +1,24 @@
 import "server-only";
-import { prisma } from "@/lib/db";
-import { recordAudit } from "./audit";
-import { diffFields, type AuditValue } from "./audit-diff";
-import { classifyDiscount, DIRECTOR_DISCOUNT_LIMIT } from "./discount-policy";
-import { SELLER_PAGE_SIZE } from "./inquiry-board-repository";
-import { applyDiscount, subtotalOf } from "./order-money";
-import { nextOrderNumber } from "./order-number";
-import { canTransition, isEditable } from "./order-status";
-import {
-  customerReadScope,
-  inquiryReadScope,
-  isDirector,
-  orderReadScope,
-  orderWriteScope,
-  type ScopeActor,
-} from "./seller-scope";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
+import type { ScopeActor } from "./seller-scope";
 import type {
   DiscountRequestInput,
   OrderCreateInput,
-  OrderItemInput,
   OrderListQuery,
   OrderUpdateInput,
 } from "@/lib/schemas";
-import type { Prisma } from "@/prisma/generated/prisma/client";
 import type { DiscountStatus, OrderStatus } from "@/prisma/generated/prisma/enums";
 
 /**
  * Manual order entry, its lifecycle, and the discount path.
  *
- * Nothing here writes `Product.stock`. The director's product editor stays the
- * only writer, which is what keeps the derived `stockStatus` column from
- * drifting away from the numbers it describes.
+ * Every read and write goes to backend/'s `seller/orders`, which owns line
+ * building, stock, numbering, the transition table and the audit trail. This
+ * module only translates between the root contract (root `OrderStatus` enum,
+ * money as `number`) and the wire shape (backend status names, `Decimal`
+ * serialised as a JSON string).
  */
-
-/** How many times a reference collision is retried before the write fails. */
-const ORDER_NUMBER_ATTEMPTS = 3;
 
 export interface OrderLineRow {
   id: string;
@@ -90,134 +74,6 @@ export interface OrderPage {
   totalPages: number;
 }
 
-const ROW_SELECT = {
-  id: true,
-  orderNumber: true,
-  customerId: true,
-  sellerId: true,
-  status: true,
-  currency: true,
-  subtotal: true,
-  discountRequestedPercent: true,
-  discountApprovedPercent: true,
-  totalAmount: true,
-  notes: true,
-  inquiryId: true,
-  createdAt: true,
-  updatedAt: true,
-  customer: { select: { name: true } },
-  seller: { select: { name: true } },
-  _count: { select: { items: true } },
-} satisfies Prisma.OrderSelect;
-
-type OrderRecord = Prisma.OrderGetPayload<{ select: typeof ROW_SELECT }>;
-
-function toRow(row: OrderRecord): OrderRow {
-  return {
-    id: row.id,
-    orderNumber: row.orderNumber,
-    customerId: row.customerId,
-    customerName: row.customer.name,
-    sellerId: row.sellerId,
-    sellerName: row.seller.name,
-    status: row.status,
-    currency: row.currency,
-    subtotal: Number(row.subtotal),
-    discountRequestedPercent: Number(row.discountRequestedPercent),
-    discountApprovedPercent: Number(row.discountApprovedPercent),
-    totalAmount: Number(row.totalAmount),
-    notes: row.notes,
-    inquiryId: row.inquiryId,
-    itemCount: row._count.items,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-export async function listOrders(actor: ScopeActor, query: OrderListQuery): Promise<OrderPage> {
-  const filters: Prisma.OrderWhereInput[] = [orderReadScope(actor)];
-
-  if (query.status) {
-    filters.push({ status: query.status });
-  }
-  if (query.customerId) {
-    filters.push({ customerId: query.customerId });
-  }
-
-  const where: Prisma.OrderWhereInput = { AND: filters };
-
-  const total = await prisma.order.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / SELLER_PAGE_SIZE));
-  const page = Math.min(Math.max(1, query.page), totalPages);
-
-  const rows = await prisma.order.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * SELLER_PAGE_SIZE,
-    take: SELLER_PAGE_SIZE,
-    select: ROW_SELECT,
-  });
-
-  return { items: rows.map(toRow), total, page, pageSize: SELLER_PAGE_SIZE, totalPages };
-}
-
-export async function getOrder(id: string, actor: ScopeActor): Promise<OrderDetail | null> {
-  const row = await prisma.order.findFirst({
-    where: { id, ...orderReadScope(actor) },
-    select: {
-      ...ROW_SELECT,
-      items: {
-        select: {
-          id: true,
-          productId: true,
-          productSku: true,
-          productName: true,
-          qty: true,
-          unitPrice: true,
-        },
-      },
-      discountRequests: {
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          requestedPercent: true,
-          reason: true,
-          status: true,
-          decisionNote: true,
-          createdAt: true,
-          reviewedAt: true,
-        },
-      },
-    },
-  });
-
-  if (row === null) {
-    return null;
-  }
-
-  return {
-    ...toRow(row),
-    items: row.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      productSku: item.productSku,
-      productName: item.productName,
-      qty: item.qty,
-      unitPrice: Number(item.unitPrice),
-      lineTotal: Number(item.unitPrice) * item.qty,
-    })),
-    discountRequests: row.discountRequests.map((request) => ({
-      id: request.id,
-      requestedPercent: Number(request.requestedPercent),
-      reason: request.reason,
-      status: request.status,
-      decisionNote: request.decisionNote,
-      createdAt: request.createdAt,
-      reviewedAt: request.reviewedAt,
-    })),
-  };
-}
-
 export type OrderWriteResult =
   | { ok: true; id: string }
   | { ok: false; reason: "not_found" }
@@ -237,332 +93,6 @@ export type OrderWriteResult =
   | { ok: false; reason: "illegal_transition"; from: OrderStatus; to: OrderStatus }
   | { ok: false; reason: "number_conflict" };
 
-interface BuiltLine {
-  productId: string;
-  productSku: string;
-  productName: string;
-  qty: number;
-  unitPrice: number;
-}
-
-type LineResult =
-  | { ok: true; lines: BuiltLine[] }
-  | Extract<
-      OrderWriteResult,
-      { reason: "product_not_found" | "price_required" | "insufficient_stock" }
-    >;
-
-/**
- * Turns requested lines into stored ones.
- *
- * `unitPrice` is snapshotted from the catalog rather than taken from the
- * caller. This is the rule that makes `User.discountLimit` mean anything: a
- * freely set line price lets a seller reach any total they like and routes
- * around the approval path entirely. A product priced on request is the one
- * exception — there is no catalog figure to copy, so one must be supplied.
- *
- * Stock is checked here rather than only in the browser. The order form warns
- * as the seller types, but that warning is advice a stale tab can miss: two
- * sellers can promise the same last three pumps within a minute of each other,
- * and only the write is in a position to refuse the second one. Quantities are
- * summed per product first, so two lines of the same part cannot each pass a
- * check the pair of them fails.
- */
-async function buildLines(items: readonly OrderItemInput[]): Promise<LineResult> {
-  const ids = [...new Set(items.map((item) => item.productId))];
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids }, isActive: true },
-    select: { id: true, sku: true, nameUz: true, price: true, stock: true },
-  });
-  const byId = new Map(products.map((product) => [product.id, product]));
-
-  const lines: BuiltLine[] = [];
-
-  for (const item of items) {
-    const product = byId.get(item.productId);
-
-    // A retired product is not sellable, so it reads the same as a missing one.
-    if (product === undefined) {
-      return { ok: false, reason: "product_not_found", productId: item.productId };
-    }
-
-    const catalogPrice = product.price === null ? null : Number(product.price);
-    const unitPrice = catalogPrice ?? item.unitPrice ?? null;
-
-    if (unitPrice === null) {
-      return { ok: false, reason: "price_required", productId: item.productId };
-    }
-
-    lines.push({
-      productId: product.id,
-      productSku: product.sku,
-      productName: product.nameUz,
-      qty: item.qty,
-      unitPrice,
-    });
-  }
-
-  for (const [productId, requested] of totalQtyByProduct(lines)) {
-    // Non-null: every line above came from a product found in `byId`.
-    const product = byId.get(productId)!;
-
-    if (requested > product.stock) {
-      return {
-        ok: false,
-        reason: "insufficient_stock",
-        productId,
-        productName: product.nameUz,
-        requested,
-        available: product.stock,
-      };
-    }
-  }
-
-  return { ok: true, lines };
-}
-
-/** Two lines of the same part are one claim on the shelf, not two. */
-function totalQtyByProduct(lines: readonly BuiltLine[]): Map<string, number> {
-  const totals = new Map<string, number>();
-
-  for (const line of lines) {
-    totals.set(line.productId, (totals.get(line.productId) ?? 0) + line.qty);
-  }
-
-  return totals;
-}
-
-/** The highest reference issued this year, or null if none has been. */
-async function latestOrderNumber(year: number): Promise<string | null> {
-  const row = await prisma.order.findFirst({
-    where: { orderNumber: { startsWith: "DP-" + year + "-" } },
-    orderBy: { orderNumber: "desc" },
-    select: { orderNumber: true },
-  });
-
-  return row?.orderNumber ?? null;
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (error as { code?: string })?.code === "P2002";
-}
-
-export async function createOrder(
-  input: OrderCreateInput,
-  actor: ScopeActor,
-): Promise<OrderWriteResult> {
-  // A seller may raise an order for their own customer or for one still in the
-  // pool; the pooled one becomes theirs below, because an order is a working
-  // relationship and leaving the account unowned would strand it.
-  const customer = await prisma.customer.findFirst({
-    where: { id: input.customerId, ...customerReadScope(actor, { includePool: true }) },
-    select: { id: true, assignedSellerId: true },
-  });
-
-  if (customer === null) {
-    return { ok: false, reason: "customer_not_found" };
-  }
-
-  if (input.inquiryId) {
-    const inquiry = await prisma.inquiry.findFirst({
-      where: { id: input.inquiryId, ...inquiryReadScope(actor) },
-      select: { id: true },
-    });
-
-    if (inquiry === null) {
-      return { ok: false, reason: "inquiry_not_found" };
-    }
-  }
-
-  const built = await buildLines(input.items);
-  if (!built.ok) {
-    return built;
-  }
-
-  const subtotal = subtotalOf(built.lines);
-  const year = new Date().getFullYear();
-
-  for (let attempt = 0; attempt < ORDER_NUMBER_ATTEMPTS; attempt += 1) {
-    const orderNumber = nextOrderNumber(await latestOrderNumber(year), year);
-
-    try {
-      const created = await prisma.$transaction(async (tx) => {
-        const order = await tx.order.create({
-          data: {
-            orderNumber,
-            customerId: customer.id,
-            sellerId: actor.id,
-            subtotal,
-            // No discount at creation: it is asked for separately, so every
-            // reduction passes the ceiling check on its own way in.
-            totalAmount: subtotal,
-            notes: input.notes?.trim() || null,
-            inquiryId: input.inquiryId ?? null,
-            items: { create: built.lines },
-          },
-          select: { id: true, orderNumber: true, status: true },
-        });
-
-        if (customer.assignedSellerId === null && !isDirector(actor)) {
-          await tx.customer.update({
-            where: { id: customer.id },
-            data: { assignedSellerId: actor.id },
-          });
-        }
-
-        return order;
-      });
-
-      await recordAudit({
-        userId: actor.id,
-        action: "CREATE",
-        entityType: "Order",
-        entityId: created.id,
-        after: {
-          orderNumber: created.orderNumber,
-          status: created.status,
-          customerId: customer.id,
-          subtotal,
-          totalAmount: subtotal,
-          itemCount: built.lines.length,
-        },
-      });
-
-      return { ok: true, id: created.id };
-    } catch (error) {
-      // `orderNumber` is unique, so two sellers saving in the same second
-      // collide here rather than producing two orders with one reference.
-      if (!isUniqueViolation(error)) {
-        throw error;
-      }
-    }
-  }
-
-  return { ok: false, reason: "number_conflict" };
-}
-
-function auditSnapshot(row: {
-  status: OrderStatus;
-  subtotal: unknown;
-  totalAmount: unknown;
-  notes: string | null;
-  itemCount: number;
-}): Record<string, AuditValue> {
-  return {
-    status: row.status,
-    subtotal: Number(row.subtotal),
-    totalAmount: Number(row.totalAmount),
-    notes: row.notes,
-    itemCount: row.itemCount,
-  };
-}
-
-/**
- * Moves the order along, re-lines it, or both.
- *
- * Items and notes are editable in DRAFT and PENDING only: from CONFIRMED on,
- * the order is the record of an agreement and only its status may still move.
- * Every transition lands in the audit trail, which is the control the whole
- * seller-driven lifecycle rests on.
- */
-export async function updateOrder(
-  id: string,
-  input: OrderUpdateInput,
-  actor: ScopeActor,
-): Promise<OrderWriteResult> {
-  const before = await prisma.order.findFirst({
-    where: { id, ...orderWriteScope(actor) },
-    select: {
-      id: true,
-      status: true,
-      subtotal: true,
-      totalAmount: true,
-      notes: true,
-      discountApprovedPercent: true,
-      _count: { select: { items: true } },
-    },
-  });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
-  }
-
-  const editsContent = input.items !== undefined || input.notes !== undefined;
-
-  if (editsContent && !isEditable(before.status)) {
-    return { ok: false, reason: "locked" };
-  }
-
-  if (input.status !== undefined && !canTransition(before.status, input.status)) {
-    return { ok: false, reason: "illegal_transition", from: before.status, to: input.status };
-  }
-
-  const data: Prisma.OrderUpdateInput = {};
-
-  if (input.status !== undefined) {
-    data.status = input.status;
-  }
-  if (input.notes !== undefined) {
-    data.notes = input.notes?.trim() || null;
-  }
-
-  let lines: BuiltLine[] | null = null;
-
-  if (input.items !== undefined) {
-    const built = await buildLines(input.items);
-    if (!built.ok) {
-      return built;
-    }
-
-    lines = built.lines;
-    const subtotal = subtotalOf(lines);
-    data.subtotal = subtotal;
-    // The approved percent survives a re-line; the total it produces cannot.
-    data.totalAmount = applyDiscount(subtotal, Number(before.discountApprovedPercent));
-  }
-
-  const after = await prisma.$transaction(async (tx) => {
-    if (lines !== null) {
-      // Replaced wholesale rather than reconciled: a line carries only
-      // snapshots, so there is no per-row history to preserve.
-      await tx.orderItem.deleteMany({ where: { orderId: id } });
-      await tx.orderItem.createMany({
-        data: lines.map((line) => ({ ...line, orderId: id })),
-      });
-    }
-
-    return tx.order.update({
-      where: { id },
-      data,
-      select: {
-        status: true,
-        subtotal: true,
-        totalAmount: true,
-        notes: true,
-        _count: { select: { items: true } },
-      },
-    });
-  });
-
-  const diff = diffFields(
-    auditSnapshot({ ...before, itemCount: before._count.items }),
-    auditSnapshot({ ...after, itemCount: after._count.items }),
-  );
-
-  if (diff !== null) {
-    await recordAudit({
-      userId: actor.id,
-      action: "UPDATE",
-      entityType: "Order",
-      entityId: id,
-      before: diff.before,
-      after: diff.after,
-    });
-  }
-
-  return { ok: true, id };
-}
-
 export interface DiscountActor extends ScopeActor {
   /** Percent this account may discount without asking a director. */
   discountLimit: number;
@@ -575,125 +105,358 @@ export type OrderDiscountResult =
   | { ok: false; reason: "locked" }
   | { ok: false; reason: "pending_exists" };
 
+/* -------------------------------------------------------------------------- */
+/*  Wire shapes — backend/'s `ORDER_INCLUDE` payload                          */
+/* -------------------------------------------------------------------------- */
+
+interface BackendOrderItem {
+  id: string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  quantity: number;
+  price: string;
+  total: string;
+}
+
+interface BackendDiscountRequest {
+  id: string;
+  requestedPercent: string;
+  reason: string | null;
+  status: string;
+  decisionNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+interface BackendOrder {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  sellerId: string;
+  status: string;
+  currency: string;
+  subtotal: string;
+  discountRequestedPercent: string;
+  discountApprovedPercent: string;
+  total: string;
+  notes: string | null;
+  inquiryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer: { id: string; name: string; phone: string };
+  seller: { id: string; user: { id: string; name: string; phone: string | null } };
+  items: BackendOrderItem[];
+  discountRequests?: BackendDiscountRequest[];
+}
+
+interface BackendOrderPage {
+  data: BackendOrder[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Status translation                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** backend status -> root status (reads). */
+function toRootStatus(s: string): OrderStatus {
+  if (s === "NEW") return "PENDING";
+  if (s === "PREPARING") return "CONFIRMED";
+  return s as OrderStatus; // DRAFT, CONFIRMED, COMPLETED, CANCELLED pass through
+}
+
+/** root status -> backend status (writes / query filter). */
+function toBackendStatus(s: OrderStatus): string {
+  return s === "PENDING" ? "NEW" : s;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Mapping                                                                  */
+/* -------------------------------------------------------------------------- */
+
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
+}
+
+function toRow(o: BackendOrder): OrderRow {
+  return {
+    id: o.id,
+    orderNumber: o.orderNumber,
+    customerId: o.customerId,
+    customerName: o.customer.name,
+    sellerId: o.sellerId,
+    sellerName: o.seller.user.name,
+    status: toRootStatus(o.status),
+    currency: o.currency,
+    subtotal: Number(o.subtotal),
+    discountRequestedPercent: Number(o.discountRequestedPercent),
+    discountApprovedPercent: Number(o.discountApprovedPercent),
+    totalAmount: Number(o.total),
+    notes: o.notes,
+    inquiryId: o.inquiryId,
+    itemCount: o.items.length,
+    createdAt: new Date(o.createdAt),
+    updatedAt: new Date(o.updatedAt),
+  };
+}
+
+function toLine(it: BackendOrderItem): OrderLineRow {
+  return {
+    id: it.id,
+    productId: it.productId,
+    productSku: it.productSku,
+    productName: it.productName,
+    qty: it.quantity,
+    unitPrice: Number(it.price),
+    lineTotal: Number(it.total),
+  };
+}
+
+function toDiscountRow(d: BackendDiscountRequest): OrderDiscountRow {
+  return {
+    id: d.id,
+    requestedPercent: Number(d.requestedPercent),
+    reason: d.reason,
+    status: d.status as DiscountStatus,
+    decisionNote: d.decisionNote,
+    createdAt: new Date(d.createdAt),
+    reviewedAt: d.reviewedAt ? new Date(d.reviewedAt) : null,
+  };
+}
+
 /**
- * Applies a discount, or asks for one.
- *
- * Inside the seller's own ceiling both percents are written and the total is
- * recomputed in a single write. Above it, only the requested percent is
- * recorded and a PENDING `DiscountRequest` goes to the director's existing
- * queue — the order keeps quoting the total the seller may actually honour
- * until an answer comes back.
+ * The line-building refusals `createOrder` and `updateOrder` map identically —
+ * backend/ builds lines the same way for a create and a re-line. Returns
+ * `null` when the failure is not one of these three, so the caller can carry on
+ * to its own cases or rethrow.
  */
-export async function requestOrderDiscount(
-  id: string,
-  input: DiscountRequestInput,
-  actor: DiscountActor,
-): Promise<OrderDiscountResult> {
-  const order = await prisma.order.findFirst({
-    where: { id, ...orderWriteScope(actor) },
-    select: {
-      id: true,
-      status: true,
-      subtotal: true,
-      discountRequestedPercent: true,
-      discountApprovedPercent: true,
+function lineBuildFailure(
+  error: BackendApiError,
+): Extract<
+  OrderWriteResult,
+  { reason: "product_not_found" | "price_required" | "insufficient_stock" }
+> | null {
+  const body = (error.body ?? {}) as {
+    productId?: string;
+    productName?: string;
+    requested?: number;
+    available?: number;
+  };
+
+  switch (error.code) {
+    case "insufficient_stock":
+      return {
+        ok: false,
+        reason: "insufficient_stock",
+        productId: body.productId ?? "",
+        productName: body.productName ?? "",
+        requested: body.requested ?? 0,
+        available: body.available ?? 0,
+      };
+    case "price_required":
+      return { ok: false, reason: "price_required", productId: body.productId ?? "" };
+    case "product_not_found":
+      return { ok: false, reason: "product_not_found", productId: body.productId ?? "" };
+    default:
+      return null;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Public API                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `_actor` is not sent to backend/: `seller/orders` scopes every read and write
+ * from the caller's own access token via `@CurrentUser()`, never a
+ * client-supplied actor object (the parameter stays here only because every
+ * caller already has one to hand — see `lib/api/customer-repository.ts`'s
+ * identical `_actor` doc comment).
+ */
+export async function listOrders(
+  _actor: ScopeActor,
+  query: OrderListQuery,
+): Promise<OrderPage> {
+  const result = await backendRequest<BackendOrderPage>("/seller/orders", {
+    accessToken: await accessToken(),
+    query: {
+      status: query.status ? toBackendStatus(query.status) : undefined,
+      customerId: query.customerId,
+      page: query.page,
     },
   });
 
-  if (order === null) {
-    return { ok: false, reason: "not_found" };
-  }
+  return {
+    items: result.data.map(toRow),
+    total: result.meta.total,
+    page: result.meta.page,
+    pageSize: result.meta.limit,
+    totalPages: result.meta.totalPages,
+  };
+}
 
-  if (!isEditable(order.status)) {
-    return { ok: false, reason: "locked" };
-  }
-
-  const subtotal = Number(order.subtotal);
-  const percent = input.percent;
-  const limit = isDirector(actor) ? DIRECTOR_DISCOUNT_LIMIT : actor.discountLimit;
-
-  if (classifyDiscount(percent, limit).kind === "immediate") {
-    const totalAmount = applyDiscount(subtotal, percent);
-
-    await prisma.order.update({
-      where: { id },
-      data: {
-        discountRequestedPercent: percent,
-        discountApprovedPercent: percent,
-        totalAmount,
-      },
+export async function getOrder(id: string, _actor: ScopeActor): Promise<OrderDetail | null> {
+  try {
+    const o = await backendRequest<BackendOrder>(`/seller/orders/${id}`, {
+      accessToken: await accessToken(),
     });
 
-    await recordAudit({
-      userId: actor.id,
-      action: "UPDATE",
-      entityType: "Order",
-      entityId: id,
-      before: {
-        discountApprovedPercent: Number(order.discountApprovedPercent),
-        totalAmount: applyDiscount(subtotal, Number(order.discountApprovedPercent)),
-      },
-      after: { discountApprovedPercent: percent, totalAmount },
-    });
-
-    return { ok: true, kind: "immediate", totalAmount };
+    return {
+      ...toRow(o),
+      items: o.items.map(toLine),
+      discountRequests: (o.discountRequests ?? []).map(toDiscountRow),
+    };
+  } catch (error) {
+    // 404 (missing) and 403 (another seller's order) both read as "not there":
+    // root's `orderReadScope` made it invisible, it did not forbid it.
+    if (
+      error instanceof BackendApiError &&
+      (error.status === 404 || error.status === 403)
+    ) {
+      return null;
+    }
+    throw error;
   }
+}
 
-  // One open request per order. A second would give the director two percents
-  // to answer for the same total and no way to tell which one is current.
-  const pending = await prisma.discountRequest.findFirst({
-    where: { orderId: id, status: "PENDING" },
-    select: { id: true },
-  });
-
-  if (pending !== null) {
-    return { ok: false, reason: "pending_exists" };
-  }
-
-  const directors = await prisma.user.findMany({
-    where: { role: "DIRECTOR", isActive: true },
-    select: { id: true },
-  });
-
-  const created = await prisma.$transaction(async (tx) => {
-    const request = await tx.discountRequest.create({
-      data: {
-        orderId: id,
-        sellerId: actor.id,
-        requestedPercent: percent,
-        reason: input.reason?.trim() || null,
-      },
-      select: { id: true },
-    });
-
-    // The approved percent is deliberately untouched: until a director answers,
-    // the order still totals what the seller may actually honour.
-    await tx.order.update({
-      where: { id },
-      data: { discountRequestedPercent: percent },
-    });
-
-    if (directors.length > 0) {
-      await tx.notification.createMany({
-        data: directors.map((director) => ({
-          userId: director.id,
-          type: "DISCOUNT_REQUESTED" as const,
-          entityId: id,
-          message: percent + "% chegirma so'raldi.",
+export async function createOrder(
+  input: OrderCreateInput,
+  _actor: ScopeActor,
+): Promise<OrderWriteResult> {
+  try {
+    const created = await backendRequest<{ id: string }>("/seller/orders", {
+      method: "POST",
+      accessToken: await accessToken(),
+      body: {
+        customerId: input.customerId,
+        items: input.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.qty,
+          price: i.unitPrice ?? undefined,
         })),
-      });
+        notes: input.notes ?? undefined,
+        inquiryId: input.inquiryId ?? undefined,
+      },
+    });
+
+    return { ok: true, id: created.id };
+  } catch (error) {
+    if (!(error instanceof BackendApiError)) {
+      throw error;
     }
 
-    return request;
-  });
+    const lineFailure = lineBuildFailure(error);
+    if (lineFailure) {
+      return lineFailure;
+    }
 
-  await recordAudit({
-    userId: actor.id,
-    action: "CREATE",
-    entityType: "DiscountRequest",
-    entityId: created.id,
-    after: { orderId: id, requestedPercent: percent, status: "PENDING", sellerLimit: limit },
-  });
+    switch (error.code) {
+      case "customer_not_found":
+        return { ok: false, reason: "customer_not_found" };
+      case "inquiry_not_found":
+        return { ok: false, reason: "inquiry_not_found" };
+      case "number_conflict":
+        return { ok: false, reason: "number_conflict" };
+      default:
+        throw error;
+    }
+  }
+}
 
-  return { ok: true, kind: "needs_approval", requestId: created.id };
+export async function updateOrder(
+  id: string,
+  input: OrderUpdateInput,
+  _actor: ScopeActor,
+): Promise<OrderWriteResult> {
+  try {
+    const updated = await backendRequest<{ id: string }>(`/seller/orders/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: {
+        status: input.status ? toBackendStatus(input.status) : undefined,
+        items: input.items?.map((i) => ({
+          productId: i.productId,
+          quantity: i.qty,
+          price: i.unitPrice ?? undefined,
+        })),
+        // Clearing notes back to null is not currently expressible — the
+        // backend DTO is `@IsString() @IsOptional()`, so a `null` would 400.
+        // No caller does it.
+        notes: input.notes ?? undefined,
+      },
+    });
+
+    return { ok: true, id: updated.id };
+  } catch (error) {
+    if (!(error instanceof BackendApiError)) {
+      throw error;
+    }
+
+    if (error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+
+    const lineFailure = lineBuildFailure(error);
+    if (lineFailure) {
+      return lineFailure;
+    }
+
+    switch (error.code) {
+      case "locked":
+        return { ok: false, reason: "locked" };
+      case "illegal_transition": {
+        const body = (error.body ?? {}) as { from?: string; to?: string };
+        return {
+          ok: false,
+          reason: "illegal_transition",
+          from: toRootStatus(body.from ?? ""),
+          to: toRootStatus(body.to ?? ""),
+        };
+      }
+      default:
+        throw error;
+    }
+  }
+}
+
+export async function requestOrderDiscount(
+  id: string,
+  input: DiscountRequestInput,
+  _actor: DiscountActor,
+): Promise<OrderDiscountResult> {
+  try {
+    const res = await backendRequest<
+      | { kind: "immediate"; totalAmount: number }
+      | { kind: "needs_approval"; requestId: string }
+    >(`/seller/orders/${id}/discount-request`, {
+      method: "POST",
+      accessToken: await accessToken(),
+      body: { percent: input.percent, reason: input.reason ?? undefined },
+    });
+
+    return res.kind === "immediate"
+      ? { ok: true, kind: "immediate", totalAmount: res.totalAmount }
+      : { ok: true, kind: "needs_approval", requestId: res.requestId };
+  } catch (error) {
+    if (!(error instanceof BackendApiError)) {
+      throw error;
+    }
+
+    if (error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+
+    if (error.status === 409) {
+      if (error.code === "pending_exists") {
+        return { ok: false, reason: "pending_exists" };
+      }
+      if (error.code === "locked") {
+        return { ok: false, reason: "locked" };
+      }
+    }
+
+    throw error;
+  }
 }

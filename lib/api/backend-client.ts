@@ -5,12 +5,20 @@ const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_
 export class BackendApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /**
+   * The parsed JSON error body, when backend/ sent one. Structured refusals
+   * (e.g. `insufficient_stock` carrying `productName`/`requested`/`available`)
+   * put the fields a caller needs to map the failure here; `code` is just
+   * `body.error`. `undefined` when the response had no JSON body.
+   */
+  readonly body?: unknown;
 
-  constructor(message: string, status: number, code: string) {
+  constructor(message: string, status: number, code: string, body?: unknown) {
     super(message);
     this.name = "BackendApiError";
     this.status = status;
     this.code = code;
+    this.body = body;
   }
 }
 
@@ -52,7 +60,12 @@ async function performRequest(path: string, options: RequestOptions): Promise<{ 
     const message = Array.isArray((data as { message?: unknown })?.message)
       ? (data as { message: string[] }).message.join(", ")
       : ((data as { message?: string })?.message ?? res.statusText);
-    throw new BackendApiError(message, res.status, (data as { error?: string })?.error ?? String(res.status));
+    throw new BackendApiError(
+      message,
+      res.status,
+      (data as { error?: string })?.error ?? String(res.status),
+      data,
+    );
   }
 
   return { res, data };
