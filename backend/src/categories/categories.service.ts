@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -34,7 +35,10 @@ export class CategoriesService {
   ) {}
 
   findAll() {
-    return this.prisma.category.findMany({ orderBy: { nameEn: 'asc' } });
+    return this.prisma.category.findMany({
+      orderBy: { nameEn: 'asc' },
+      include: { _count: { select: { children: true, products: true } } },
+    });
   }
 
   /**
@@ -75,6 +79,10 @@ export class CategoriesService {
 
   async create(dto: CreateCategoryDto, actorId: string) {
     await this.assertSlugFree(dto.slug);
+    if (dto.parentId != null) {
+      await this.assertValidParent(dto.parentId, null);
+    }
+
     const created = await this.prisma.category.create({ data: dto });
     await this.audit.record({
       userId: actorId,
@@ -89,6 +97,26 @@ export class CategoriesService {
   async update(id: string, dto: UpdateCategoryDto, actorId: string) {
     const before = await this.findOne(id);
     if (dto.slug) await this.assertSlugFree(dto.slug, id);
+
+    if (dto.parentId != null) {
+      await this.assertValidParent(dto.parentId, id);
+
+      // A root with children cannot become a child itself: that would push
+      // its own children onto a third level the menu does not draw.
+      if (before.parentId === null) {
+        const children = await this.prisma.category.count({
+          where: { parentId: id },
+        });
+        if (children > 0) {
+          throw new ConflictException({
+            statusCode: 409,
+            message: 'Category has child categories',
+            error: 'has_children',
+          });
+        }
+      }
+    }
+
     const after = await this.prisma.category.update({
       where: { id },
       data: dto,
@@ -104,8 +132,39 @@ export class CategoriesService {
     return after;
   }
 
+  /**
+   * Deletes a category, or refuses.
+   *
+   * Both guards exist because the alternative is worse than an error message:
+   * `Category.parentId` defaults to `SetNull` on delete, so without the
+   * children guard this would silently orphan a whole column of the menu.
+   * `Product.categoryId` is a required relation (`Restrict`), so without the
+   * products guard this would instead surface as a raw, untranslated P2003.
+   */
   async remove(id: string, actorId: string) {
     const before = await this.findOne(id);
+
+    const [children, products] = await Promise.all([
+      this.prisma.category.count({ where: { parentId: id } }),
+      this.prisma.product.count({ where: { categoryId: id } }),
+    ]);
+
+    if (children > 0) {
+      throw new ConflictException({
+        statusCode: 409,
+        message: 'Category has child categories',
+        error: 'has_children',
+      });
+    }
+
+    if (products > 0) {
+      throw new ConflictException({
+        statusCode: 409,
+        message: 'Category has products',
+        error: 'has_products',
+      });
+    }
+
     await this.prisma.category.delete({ where: { id } });
     await this.audit.record({
       userId: actorId,
@@ -117,10 +176,54 @@ export class CategoriesService {
     return { success: true };
   }
 
+  /**
+   * Checks the parent a write asks for.
+   *
+   * The menu is two levels deep — a root is a column, its children are that
+   * column's entries — so a parent that is itself a child is refused rather
+   * than silently rendered nowhere. Pointing a category at itself is caught
+   * here too: it would otherwise detach that row and everything under it from
+   * the tree.
+   */
+  private async assertValidParent(parentId: string, selfId: string | null) {
+    if (parentId === selfId) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: 'Parent must be a top-level category',
+        error: 'parent_not_root',
+      });
+    }
+
+    const parent = await this.prisma.category.findUnique({
+      where: { id: parentId },
+      select: { parentId: true },
+    });
+
+    if (parent === null) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: 'Parent category not found',
+        error: 'parent_not_found',
+      });
+    }
+
+    if (parent.parentId !== null) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: 'Parent must be a top-level category',
+        error: 'parent_not_root',
+      });
+    }
+  }
+
   private async assertSlugFree(slug: string, excludeId?: string) {
     const existing = await this.prisma.category.findUnique({ where: { slug } });
     if (existing && existing.id !== excludeId) {
-      throw new ConflictException('Category slug already exists');
+      throw new ConflictException({
+        statusCode: 409,
+        message: 'Category slug already exists',
+        error: 'duplicate_slug',
+      });
     }
   }
 }

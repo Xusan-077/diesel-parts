@@ -1,16 +1,28 @@
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../../generated/prisma/client';
 
-function makePrisma(overrides: { category?: Record<string, unknown> } = {}) {
+function makePrisma(
+  overrides: {
+    category?: Record<string, unknown>;
+    product?: Record<string, unknown>;
+  } = {},
+) {
   return {
     category: {
       findUnique: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn().mockResolvedValue({}),
       ...overrides.category,
+    },
+    product: {
+      count: jest.fn().mockResolvedValue(0),
+      ...overrides.product,
     },
   } as unknown as PrismaService;
 }
@@ -141,5 +153,162 @@ describe('CategoriesService.findTree', () => {
     const tree = await service.findTree();
 
     expect(tree.map((n) => n.id)).toEqual(['orphan']);
+  });
+});
+
+describe('CategoriesService.findAll', () => {
+  it('includes the child and product counts the admin listing needs', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = makePrisma({ category: { findMany } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    await service.findAll();
+
+    expect(findMany).toHaveBeenCalledWith({
+      orderBy: { nameEn: 'asc' },
+      include: { _count: { select: { children: true, products: true } } },
+    });
+  });
+});
+
+describe('CategoriesService.create parent validation', () => {
+  it('refuses a parent that does not exist', async () => {
+    const findUnique = jest
+      .fn()
+      .mockResolvedValueOnce(null) // assertSlugFree
+      .mockResolvedValueOnce(null); // assertValidParent's own lookup
+    const prisma = makePrisma({ category: { findUnique } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.create(
+        { slug: 'engine', parentId: 'missing' } as never,
+        'actor-1',
+      );
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      error: 'parent_not_found',
+    });
+  });
+
+  it('refuses a parent that is itself not a root', async () => {
+    const findUnique = jest
+      .fn()
+      .mockResolvedValueOnce(null) // assertSlugFree
+      .mockResolvedValueOnce({ parentId: 'root-a' }); // assertValidParent: parent has its own parent
+    const prisma = makePrisma({ category: { findUnique } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.create(
+        { slug: 'engine', parentId: 'child-x' } as never,
+        'actor-1',
+      );
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      error: 'parent_not_root',
+    });
+  });
+});
+
+describe('CategoriesService.update parent validation', () => {
+  it('refuses a category pointing at itself as its own parent', async () => {
+    const findUnique = jest.fn().mockResolvedValueOnce(row); // findOne
+    const prisma = makePrisma({ category: { findUnique } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.update('c1', { parentId: 'c1' }, 'actor-1');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      error: 'parent_not_root',
+    });
+  });
+
+  it('refuses turning a root with children into a child', async () => {
+    const findUnique = jest
+      .fn()
+      .mockResolvedValueOnce(row) // findOne — a root (parentId: null)
+      .mockResolvedValueOnce({ parentId: null }); // assertValidParent: the new parent is a valid root
+    const count = jest.fn().mockResolvedValue(2); // it has children
+    const prisma = makePrisma({ category: { findUnique, count } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.update('c1', { parentId: 'other-root' }, 'actor-1');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      error: 'has_children',
+    });
+    expect(count).toHaveBeenCalledWith({ where: { parentId: 'c1' } });
+  });
+});
+
+describe('CategoriesService.remove delete guards', () => {
+  it('refuses when the category has children', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const count = jest.fn().mockResolvedValue(1);
+    const prisma = makePrisma({ category: { findUnique, count } });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.remove('c1', 'actor-1');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      error: 'has_children',
+    });
+  });
+
+  it('refuses when the category has products', async () => {
+    const findUnique = jest.fn().mockResolvedValue(row);
+    const prisma = makePrisma({
+      category: { findUnique },
+      product: { count: jest.fn().mockResolvedValue(3) },
+    });
+    const { audit } = makeAudit();
+    const service = new CategoriesService(prisma, audit);
+
+    let error: unknown;
+    try {
+      await service.remove('c1', 'actor-1');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(ConflictException);
+    expect((error as ConflictException).getResponse()).toMatchObject({
+      error: 'has_products',
+    });
   });
 });
