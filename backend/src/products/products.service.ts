@@ -164,12 +164,16 @@ export class ProductsService {
             { sku: { contains: query.search, mode: 'insensitive' } },
           ];
     }
-    // The multi-select scope wins over the single value when present -- an
-    // empty list is a real scope (every box unticked) that matches nothing,
-    // not an absent filter falling through to the single id.
-    if (query.brandIds !== undefined) {
-      where.brandId = { in: splitIds(query.brandIds) };
-    } else if (query.brandId) {
+    // Unlike categoryIds below, root's storefront query has no separate
+    // single-value brand filter to fall back to -- brandIds is the only
+    // brand filter it ever sends, and an empty list there means "every box
+    // unticked", i.e. no filter at all, not "matches nothing". brandId
+    // (singular) stays for the admin/seller panel's own single-brand select.
+    const brandIdList =
+      query.brandIds !== undefined ? splitIds(query.brandIds) : undefined;
+    if (brandIdList !== undefined && brandIdList.length > 0) {
+      where.brandId = { in: brandIdList };
+    } else if (brandIdList === undefined && query.brandId) {
       where.brandId = query.brandId;
     }
     if (query.categoryIds !== undefined) {

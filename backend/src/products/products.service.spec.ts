@@ -428,6 +428,36 @@ describe('ProductsService public reads', () => {
       );
     });
 
+    it('applies no brand filter at all for an empty brandIds -- unlike categoryIds, there is no single value to fall back to', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ brandIds: '', brandId: 'ignored' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { isActive: true } }),
+      );
+    });
+
+    it('falls back to the single brandId when brandIds is entirely absent', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const service = new ProductsService(
+        makePrisma({ product: { findMany } }),
+        audit,
+      );
+
+      await service.findAllPublic({ brandId: 'b1' });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { isActive: true, brandId: 'b1' },
+        }),
+      );
+    });
+
     it('treats an empty categoryIds as a real scope matching nothing', async () => {
       const findMany = jest.fn().mockResolvedValue([]);
       const service = new ProductsService(
