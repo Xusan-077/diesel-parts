@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import { prisma } from "@/lib/db";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
 import { isCatalogIconKey } from "@/lib/data/catalog-menu";
 import {
   buildCatalogTree,
@@ -10,22 +11,9 @@ import {
   type CatalogScope,
 } from "@/lib/catalog-tree";
 import type { CategoryWriteInput } from "@/lib/schemas";
-import { recordAudit } from "./audit";
 
-/** The columns the menu and the panel read. `createdAt` is not one of them. */
-const ROW_SELECT = {
-  id: true,
-  slug: true,
-  nameUz: true,
-  nameRu: true,
-  nameEn: true,
-  type: true,
-  order: true,
-  icon: true,
-  parentId: true,
-} as const;
-
-interface CategoryRecord {
+/** One category row as backend/'s `/catalog/categories` and `/categories` return it. */
+interface BackendCategoryRow {
   id: string;
   slug: string;
   nameUz: string;
@@ -37,7 +25,22 @@ interface CategoryRecord {
   parentId: string | null;
 }
 
-function toRow(record: CategoryRecord): CatalogRow {
+/** backend/'s public `/catalog/categories` tree node — `findTree`'s nested shape. */
+interface BackendCategoryTreeNode extends BackendCategoryRow {
+  children: BackendCategoryTreeNode[];
+}
+
+/** backend/'s staff-authed `/categories` row, with the admin listing's aggregate counts. */
+interface BackendCategoryAdminRow extends BackendCategoryRow {
+  _count: { children: number; products: number };
+}
+
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
+}
+
+function toRow(record: BackendCategoryRow): CatalogRow {
   return {
     id: record.id,
     slug: record.slug,
@@ -51,30 +54,35 @@ function toRow(record: CategoryRecord): CatalogRow {
   };
 }
 
-async function readRows(): Promise<CatalogRow[]> {
-  const records = await prisma.category.findMany({
-    select: ROW_SELECT,
-    orderBy: [{ order: "asc" }, { nameUz: "asc" }],
-  });
-
-  return records.map(toRow);
+/** Flattens backend/'s nested category tree back to the flat list `buildCatalogTree` nests itself. */
+function flattenCategoryTree(nodes: readonly BackendCategoryTreeNode[]): CatalogRow[] {
+  const flat: CatalogRow[] = [];
+  for (const node of nodes) {
+    const { children, ...row } = node;
+    flat.push(toRow(row));
+    flat.push(...flattenCategoryTree(children));
+  }
+  return flat;
 }
 
 /**
  * The whole menu, roots first.
  *
- * One query for every level: the tree is ~50 rows, so reading them flat and
- * shaping them in memory beats a nested include that fans out a query per root.
+ * backend/'s only public endpoint returns a pre-nested tree; flattened here
+ * and handed to `buildCatalogTree`, which expects a flat list it nests itself
+ * (it also owns the sibling-ordering rule, so re-nesting here would be a
+ * second opinion about the same question).
  */
 export const getCatalogTree = cache(async (): Promise<CatalogNode[]> => {
-  return buildCatalogTree(await readRows());
+  const tree = await backendRequest<BackendCategoryTreeNode[]>("/catalog/categories");
+  return buildCatalogTree(flattenCategoryTree(tree));
 });
 
 /**
  * Resolves `/products?group=…` / `?category=…` against the menu.
  *
  * `cache` matters here: `generateMetadata` and the page body both ask, and
- * without it every catalog page would read the table twice per request.
+ * without it every catalog page would read the tree twice per request.
  */
 export const getCatalogScope = cache(
   async (params: { group?: string; category?: string }): Promise<CatalogScope | null> => {
@@ -94,30 +102,16 @@ export interface CatalogAdminRow extends CatalogRow {
   childCount: number;
 }
 
-/**
- * Every category with the two counts that decide whether it can be deleted.
- *
- * Both come from grouped counts rather than from `_count` on each row, so the
- * listing stays three queries however long the tree gets.
- */
+/** Every category with the two counts that decide whether it can be deleted. */
 export async function listCatalogRows(): Promise<CatalogAdminRow[]> {
-  const [rows, productCounts, childCounts] = await Promise.all([
-    readRows(),
-    prisma.product.groupBy({ by: ["categoryId"], _count: { _all: true } }),
-    prisma.category.groupBy({ by: ["parentId"], _count: { _all: true } }),
-  ]);
-
-  const products = new Map(productCounts.map((row) => [row.categoryId, row._count._all]));
-  const children = new Map(
-    childCounts
-      .filter((row): row is typeof row & { parentId: string } => row.parentId !== null)
-      .map((row) => [row.parentId, row._count._all]),
-  );
+  const rows = await backendRequest<BackendCategoryAdminRow[]>("/categories", {
+    accessToken: await accessToken(),
+  });
 
   return rows.map((row) => ({
-    ...row,
-    productCount: products.get(row.id) ?? 0,
-    childCount: children.get(row.id) ?? 0,
+    ...toRow(row),
+    productCount: row._count.products,
+    childCount: row._count.children,
   }));
 }
 
@@ -133,152 +127,98 @@ export type CategoryWriteResult =
   | { ok: true; id: string }
   | { ok: false; reason: CategoryWriteRefusal };
 
-/**
- * Checks the parent a write asks for.
- *
- * The menu is two levels — a root is a column, its children are that column's
- * entries — so a parent that is itself a child is refused rather than silently
- * rendered nowhere. Pointing a category at itself is caught here too: it would
- * otherwise detach that row and everything under it from the tree.
- */
-async function checkParent(
-  parentId: string,
-  self: string | null,
-): Promise<CategoryWriteRefusal | null> {
-  if (parentId === self) {
-    return "parent_not_root";
-  }
+const KNOWN_REFUSALS: readonly CategoryWriteRefusal[] = [
+  "duplicate_slug",
+  "not_found",
+  "parent_not_found",
+  "parent_not_root",
+  "has_children",
+  "has_products",
+];
 
-  const parent = await prisma.category.findUnique({
-    where: { id: parentId },
-    select: { parentId: true },
-  });
-
-  if (parent === null) {
-    return "parent_not_found";
-  }
-
-  return parent.parentId === null ? null : "parent_not_root";
+function isCategoryWriteRefusal(code: string): code is CategoryWriteRefusal {
+  return (KNOWN_REFUSALS as readonly string[]).includes(code);
 }
 
-function auditFields(input: CategoryWriteInput) {
+/**
+ * Turns a write's `BackendApiError` into a typed refusal.
+ *
+ * A plain 404 (the category itself missing) carries no custom `error` field
+ * — backend/ leaves that path as Nest's default `NotFoundException` body,
+ * since 404 is unambiguous and nothing else in this domain uses it. Every
+ * other refusal comes back as a 400/409 with `.code` set to one of this
+ * file's own six reason strings (Part A used the exact same strings), so
+ * those are read off `.code` instead. A code that matches neither is a bug
+ * in backend/, not a case to guess at — it is rethrown rather than mapped.
+ */
+function toWriteResult(error: BackendApiError): CategoryWriteResult {
+  if (error.status === 404) {
+    return { ok: false, reason: "not_found" };
+  }
+
+  if (isCategoryWriteRefusal(error.code)) {
+    return { ok: false, reason: error.code };
+  }
+
+  throw error;
+}
+
+function writeBody(input: CategoryWriteInput) {
   return {
     slug: input.slug,
-    name: input.name.uz,
+    nameUz: input.name.uz,
+    nameRu: input.name.ru,
+    nameEn: input.name.en,
     type: input.type,
-    parentId: input.parentId,
     order: input.order,
+    icon: input.icon,
+    parentId: input.parentId,
   };
 }
 
+/**
+ * `_actorId` is not sent to backend/: `POST /categories` takes the actor from
+ * the caller's own access token via `@CurrentUser('id')`, never a body field
+ * (the parameter stays here only because every route handler already passes
+ * `guard.user.id`, and that id is always the same session's own).
+ */
 export async function createCategory(
   input: CategoryWriteInput,
-  actorId: string,
+  _actorId: string,
 ): Promise<CategoryWriteResult> {
-  const taken = await prisma.category.findUnique({ where: { slug: input.slug } });
-  if (taken !== null) {
-    return { ok: false, reason: "duplicate_slug" };
-  }
-
-  if (input.parentId !== null) {
-    const refusal = await checkParent(input.parentId, null);
-    if (refusal !== null) {
-      return { ok: false, reason: refusal };
+  try {
+    const created = await backendRequest<{ id: string }>("/categories", {
+      method: "POST",
+      accessToken: await accessToken(),
+      body: writeBody(input),
+    });
+    return { ok: true, id: created.id };
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return toWriteResult(error);
     }
+    throw error;
   }
-
-  const created = await prisma.category.create({
-    data: {
-      // The slug is the id, as it is for every category the seed writes: this
-      // catalog's ids are readable strings rather than cuids, and a product
-      // import keyed by category id is far easier to check by eye that way.
-      id: input.slug,
-      slug: input.slug,
-      nameUz: input.name.uz,
-      nameRu: input.name.ru,
-      nameEn: input.name.en,
-      type: input.type,
-      order: input.order,
-      icon: input.icon,
-      parentId: input.parentId,
-    },
-    select: { id: true },
-  });
-
-  await recordAudit({
-    userId: actorId,
-    action: "CREATE",
-    entityType: "Category",
-    entityId: created.id,
-    after: auditFields(input),
-  });
-
-  return { ok: true, id: created.id };
 }
 
 export async function updateCategory(
   id: string,
   input: CategoryWriteInput,
-  actorId: string,
+  _actorId: string,
 ): Promise<CategoryWriteResult> {
-  const before = await prisma.category.findUnique({ where: { id }, select: ROW_SELECT });
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
-  }
-
-  if (input.slug !== before.slug) {
-    const taken = await prisma.category.findUnique({ where: { slug: input.slug } });
-    if (taken !== null) {
-      return { ok: false, reason: "duplicate_slug" };
+  try {
+    const updated = await backendRequest<{ id: string }>(`/categories/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: writeBody(input),
+    });
+    return { ok: true, id: updated.id };
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return toWriteResult(error);
     }
+    throw error;
   }
-
-  if (input.parentId !== null) {
-    const refusal = await checkParent(input.parentId, id);
-    if (refusal !== null) {
-      return { ok: false, reason: refusal };
-    }
-
-    // A root with children cannot become a child itself: that would push its
-    // own children onto a third level the menu does not draw.
-    if (before.parentId === null) {
-      const children = await prisma.category.count({ where: { parentId: id } });
-      if (children > 0) {
-        return { ok: false, reason: "has_children" };
-      }
-    }
-  }
-
-  await prisma.category.update({
-    where: { id },
-    data: {
-      slug: input.slug,
-      nameUz: input.name.uz,
-      nameRu: input.name.ru,
-      nameEn: input.name.en,
-      type: input.type,
-      order: input.order,
-      icon: input.icon,
-      parentId: input.parentId,
-    },
-  });
-
-  await recordAudit({
-    userId: actorId,
-    action: "UPDATE",
-    entityType: "Category",
-    entityId: id,
-    before: {
-      slug: before.slug,
-      name: before.nameUz,
-      type: before.type,
-      parentId: before.parentId,
-      order: before.order,
-    },
-    after: auditFields(input),
-  });
-
-  return { ok: true, id };
 }
 
 /**
@@ -287,36 +227,20 @@ export async function updateCategory(
  * Both refusals exist because the alternative is worse than a message:
  * cascading would take a whole column of the menu down with one click, and the
  * product reference would be refused by Postgres anyway — as a foreign-key
- * error the panel could only report as "something went wrong".
+ * error the panel could only report as "something went wrong". backend/ (Part
+ * A) now enforces both guards server-side; this only translates the result.
  */
-export async function deleteCategory(id: string, actorId: string): Promise<CategoryWriteResult> {
-  const before = await prisma.category.findUnique({ where: { id }, select: ROW_SELECT });
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
+export async function deleteCategory(id: string, _actorId: string): Promise<CategoryWriteResult> {
+  try {
+    await backendRequest(`/categories/${id}`, {
+      method: "DELETE",
+      accessToken: await accessToken(),
+    });
+    return { ok: true, id };
+  } catch (error) {
+    if (error instanceof BackendApiError) {
+      return toWriteResult(error);
+    }
+    throw error;
   }
-
-  const [children, products] = await Promise.all([
-    prisma.category.count({ where: { parentId: id } }),
-    prisma.product.count({ where: { categoryId: id } }),
-  ]);
-
-  if (children > 0) {
-    return { ok: false, reason: "has_children" };
-  }
-
-  if (products > 0) {
-    return { ok: false, reason: "has_products" };
-  }
-
-  await prisma.category.delete({ where: { id } });
-
-  await recordAudit({
-    userId: actorId,
-    action: "DELETE",
-    entityType: "Category",
-    entityId: id,
-    before: { slug: before.slug, name: before.nameUz, parentId: before.parentId },
-  });
-
-  return { ok: true, id };
 }
