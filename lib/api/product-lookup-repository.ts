@@ -1,7 +1,6 @@
 import "server-only";
-import { prisma } from "@/lib/db";
-import { deriveStockStatus } from "./stock-status";
-import { PRODUCT_SEARCH_LIMIT, PRODUCT_SEARCH_ORDER, sellableProductWhere } from "./product-search";
+import { backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
 import type { StockStatus } from "@/lib/types";
 
 /** One catalog row as the order form needs it. */
@@ -17,39 +16,28 @@ export interface ProductLookupRow {
   stockStatus: StockStatus;
 }
 
+interface BackendLookupRow {
+  id: string;
+  sku: string;
+  name: string;
+  oemNumbers: string[];
+  price: string | null;
+  currency: string;
+  stock: number;
+  stockStatus: StockStatus;
+}
+
 /**
- * Searches the catalog for the order form.
- *
- * `stockStatus` is recomputed from `stock` and `minStock` rather than read
- * from the persisted column: the column is correct, but recomputing keeps the
- * form honest if a write path ever forgets `deriveStockStatus`, and it costs a
- * comparison on at most eight rows.
+ * Searches the catalog for the order form, via backend/'s `GET
+ * /products/search` (widened from MANAGER_UP to every staff role in Part 1
+ * Task 8's follow-up, since raising an order is a seller's job).
  */
 export async function searchSellableProducts(term: string): Promise<ProductLookupRow[]> {
-  const rows = await prisma.product.findMany({
-    where: sellableProductWhere(term),
-    orderBy: PRODUCT_SEARCH_ORDER,
-    take: PRODUCT_SEARCH_LIMIT,
-    select: {
-      id: true,
-      sku: true,
-      nameUz: true,
-      oemNumbers: true,
-      price: true,
-      currency: true,
-      stock: true,
-      minStock: true,
-    },
+  const session = await getStaffSession();
+  const rows = await backendRequest<BackendLookupRow[]>("/products/search", {
+    accessToken: session?.accessToken,
+    query: { q: term },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    sku: row.sku,
-    name: row.nameUz,
-    oemNumbers: row.oemNumbers,
-    price: row.price === null ? null : Number(row.price),
-    currency: row.currency,
-    stock: row.stock,
-    stockStatus: deriveStockStatus(row.stock, row.minStock),
-  }));
+  return rows.map((row) => ({ ...row, price: row.price === null ? null : Number(row.price) }));
 }

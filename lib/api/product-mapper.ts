@@ -1,18 +1,49 @@
-import type {
-  Brand as BrandRow,
-  Category as CategoryRow,
-  Product as PrismaProduct,
-} from "@/prisma/generated/prisma/client";
-import type { Brand, Category, Product, ProductSpec } from "@/lib/types";
+import type { Brand, Category, Product, ProductSpec, StockStatus } from "@/lib/types";
 
-export type ProductRow = PrismaProduct;
+/** One product row as backend/'s catalog endpoints return it. */
+export interface ProductRow {
+  id: string;
+  slug: string;
+  sku: string;
+  oemNumbers: string[];
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  descriptionUz: string;
+  descriptionRu: string;
+  descriptionEn: string;
+  // Decimal columns serialize as a numeric string over the wire, never a number.
+  price: string | null;
+  categoryId: string;
+  brandId: string;
+  compatibleModels: string[];
+  specs: unknown;
+  imageUrl: string | null;
+  stockStatus: StockStatus;
+}
+
+export interface CategoryRow {
+  id: string;
+  slug: string;
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  parentId: string | null;
+}
+
+export interface BrandRow {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+}
 
 /**
- * Maps a database row to the public `Product`.
+ * Maps backend/'s JSON row to the public `Product`.
  *
- * Two things this deliberately drops: `stock` and `minStock` never reach a
- * public payload, and the per-locale columns are folded back into
- * `LocalizedText` so no component has to know how the table is shaped.
+ * Two things this deliberately drops: `stock`/`minStock` never reach a public
+ * payload, and the per-locale fields are folded back into `LocalizedText` so
+ * no component has to know how the row is shaped.
  */
 export function toProduct(row: ProductRow): Product {
   return {
@@ -22,13 +53,12 @@ export function toProduct(row: ProductRow): Product {
     oemNumbers: row.oemNumbers,
     name: { uz: row.nameUz, ru: row.nameRu, en: row.nameEn },
     description: { uz: row.descriptionUz, ru: row.descriptionRu, en: row.descriptionEn },
-    // Decimal is an object; JSON-serialising it would ship "{s,e,d}" to the client.
-    price: row.price === null ? null : row.price.toNumber(),
+    price: row.price === null ? null : Number(row.price),
     categoryId: row.categoryId,
     brandId: row.brandId,
     compatibleModels: row.compatibleModels,
     stockStatus: row.stockStatus,
-    specs: row.specs as unknown as ProductSpec[],
+    specs: row.specs as ProductSpec[],
     imageUrl: row.imageUrl,
   };
 }

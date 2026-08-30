@@ -1,17 +1,21 @@
 import "server-only";
-import { prisma } from "@/lib/db";
+import { backendRequest } from "./backend-client";
 import { EMPTY_STATS, type ProductStats } from "@/lib/product-stats";
+
+interface BackendProductStats {
+  productId: string;
+  rating: number | null;
+  reviewCount: number;
+  soldCount: number;
+}
 
 /**
  * The rating, review count and units sold for a page of products.
  *
- * Two grouped queries for the whole page rather than two per card: a
- * nine-card grid would otherwise cost eighteen round trips, and the numbers
- * are decoration on a listing that must stay fast.
- *
- * Only approved reviews count, so an unmoderated review moves nothing, and
- * only COMPLETED orders count, so a draft a seller is still assembling is not
- * advertised as a sale.
+ * One request for the whole page rather than one per card: a nine-card grid
+ * would otherwise cost nine round trips, and the numbers are decoration on a
+ * listing that must stay fast. backend/'s `GET /catalog/products/stats`
+ * (Task 15) does the same two grouped queries this used to run directly.
  */
 export async function getProductStats(
   productIds: readonly string[]
@@ -21,40 +25,15 @@ export async function getProductStats(
     return stats;
   }
 
-  const ids = [...productIds];
+  const rows = await backendRequest<BackendProductStats[]>("/catalog/products/stats", {
+    query: { ids: productIds.join(",") },
+  });
 
-  const [reviews, sold] = await Promise.all([
-    prisma.review.groupBy({
-      by: ["productId"],
-      where: { productId: { in: ids }, isApproved: true },
-      _avg: { rating: true },
-      _count: { _all: true },
-    }),
-    prisma.orderItem.groupBy({
-      by: ["productId"],
-      where: { productId: { in: ids }, order: { status: "COMPLETED" } },
-      _sum: { qty: true },
-    }),
-  ]);
-
-  for (const id of ids) {
-    stats.set(id, EMPTY_STATS);
-  }
-
-  for (const row of reviews) {
-    const average = row._avg.rating;
+  for (const row of rows) {
     stats.set(row.productId, {
-      ...(stats.get(row.productId) ?? EMPTY_STATS),
-      // Postgres returns the mean at full precision; the card shows one decimal.
-      rating: average === null ? null : Math.round(average * 10) / 10,
-      reviewCount: row._count._all,
-    });
-  }
-
-  for (const row of sold) {
-    stats.set(row.productId, {
-      ...(stats.get(row.productId) ?? EMPTY_STATS),
-      soldCount: row._sum.qty ?? 0,
+      rating: row.rating,
+      reviewCount: row.reviewCount,
+      soldCount: row.soldCount,
     });
   }
 

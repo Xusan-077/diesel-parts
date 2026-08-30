@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { Prisma } from "@/prisma/generated/prisma/client";
 import { toProduct, type ProductRow } from "./product-mapper";
 
 function row(overrides: Partial<ProductRow> = {}): ProductRow {
@@ -14,25 +13,20 @@ function row(overrides: Partial<ProductRow> = {}): ProductRow {
     descriptionUz: "uz",
     descriptionRu: "ru",
     descriptionEn: "en",
-    price: new Prisma.Decimal("3450000.00"),
-    currency: "UZS",
-    stock: 25,
-    minStock: 5,
+    // Decimal columns serialize as a numeric string over the wire, never a number.
+    price: "3450000.00",
     stockStatus: "available",
     categoryId: "injector",
     brandId: "cat",
     compatibleModels: ["CAT 320D"],
     specs: [{ label: { uz: "a", ru: "b", en: "c" }, value: "Steel" }],
     imageUrl: null,
-    isActive: true,
-    createdAt: new Date("2026-01-01"),
-    updatedAt: new Date("2026-01-01"),
     ...overrides,
-  } as ProductRow;
+  };
 }
 
 describe("toProduct", () => {
-  it("converts Decimal to a plain number so the value survives serialisation", () => {
+  it("converts the wire-format Decimal string to a plain number", () => {
     const product = toProduct(row());
     expect(product.price).toBe(3450000);
     expect(typeof product.price).toBe("number");
@@ -50,14 +44,8 @@ describe("toProduct", () => {
     expect(toProduct(row()).description).toEqual({ uz: "uz", ru: "ru", en: "en" });
   });
 
-  it("passes the persisted stock status through", () => {
+  it("passes the computed stock status through", () => {
     expect(toProduct(row({ stockStatus: "limited" })).stockStatus).toBe("limited");
-  });
-
-  it("never leaks stock or minStock into the public shape", () => {
-    const product = toProduct(row());
-    expect(product).not.toHaveProperty("stock");
-    expect(product).not.toHaveProperty("minStock");
   });
 
   it("does not leak the raw name columns", () => {
