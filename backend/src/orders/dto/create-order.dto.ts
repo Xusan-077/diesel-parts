@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -17,6 +18,12 @@ class OrderItemInput {
   @IsInt()
   @Min(1)
   quantity: number;
+
+  /** Unit price — only honoured for products priced on request (no catalog price). */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
 }
 
 export class CreateOrderDto {
@@ -42,4 +49,15 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(0)
   deliveryFee?: number;
+
+  /** CRM order comment. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+
+  /** Set when the order was raised from a CRM board card. */
+  @IsOptional()
+  @IsString()
+  inquiryId?: string;
 }
