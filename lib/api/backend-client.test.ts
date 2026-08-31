@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { backendAuthRequest, backendRequest } from "./backend-client";
+import { backendAuthRequest, backendRequest, backendRequestText } from "./backend-client";
 
 describe("backendRequest", () => {
   it("sends a bearer token and returns parsed JSON on success", async () => {
@@ -123,6 +123,38 @@ describe("backendAuthRequest", () => {
     await expect(backendAuthRequest("/auth/login", { method: "POST" })).rejects.toMatchObject({
       status: 401,
       message: "Invalid phone or password",
+    });
+  });
+});
+
+describe("backendRequestText", () => {
+  it("returns the raw response body without parsing it as JSON", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => "sku,name\r\nDP-1,Nasos\r\n",
+    });
+
+    const result = await backendRequestText("/products/export", { accessToken: "tok" });
+
+    expect(result).toBe("sku,name\r\nDP-1,Nasos\r\n");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/products/export"),
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer tok" }) }),
+    );
+  });
+
+  it("throws BackendApiError with the raw error text on a non-2xx", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      statusText: "Forbidden",
+      text: async () => "This action is for directors only.",
+    });
+
+    await expect(backendRequestText("/products/export")).rejects.toMatchObject({
+      status: 403,
+      message: "This action is for directors only.",
     });
   });
 });

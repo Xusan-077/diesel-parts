@@ -77,6 +77,29 @@ export async function backendRequest<T>(path: string, options: RequestOptions = 
 }
 
 /**
+ * For the handful of backend/ endpoints that answer with a body that isn't
+ * JSON at all — currently just `GET /products/export`'s CSV. `performRequest`
+ * always calls `res.json()`, which throws on that body, so this issues its
+ * own fetch rather than reusing it; every other request shape (headers,
+ * error mapping) still matches `backendRequest`'s.
+ */
+export async function backendRequestText(path: string, options: RequestOptions = {}): Promise<string> {
+  const { method = "GET", query, accessToken } = options;
+
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const res = await fetch(buildUrl(path, query), { method, headers });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new BackendApiError(text || res.statusText, res.status, String(res.status));
+  }
+
+  return res.text();
+}
+
+/**
  * `POST /auth/login` and `POST /auth/refresh` are the only backend/ endpoints
  * whose result includes a rotated refresh token — delivered only via a
  * `Set-Cookie: refresh_token=...` header (`backend/src/auth/auth.controller.ts`'s
