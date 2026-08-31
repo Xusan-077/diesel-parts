@@ -1,7 +1,6 @@
 import "server-only";
-import { prisma } from "@/lib/db";
-import { recordAudit } from "./audit";
-import { applyDiscount } from "./order-money";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
 
 export interface DiscountRequestView {
   id: string;
@@ -18,34 +17,21 @@ export interface DiscountRequestView {
   createdAt: Date;
 }
 
+interface BackendDiscountRequest extends Omit<DiscountRequestView, "createdAt"> {
+  createdAt: string;
+}
+
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
+}
+
 export async function listPendingDiscounts(): Promise<DiscountRequestView[]> {
-  const rows = await prisma.discountRequest.findMany({
-    where: { status: "PENDING" },
-    orderBy: { createdAt: "asc" },
-    include: {
-      seller: { select: { name: true, discountLimit: true } },
-      order: { select: { orderNumber: true, subtotal: true, customer: { select: { name: true } } } },
-    },
+  const rows = await backendRequest<BackendDiscountRequest[]>("/discount-requests", {
+    accessToken: await accessToken(),
   });
 
-  return rows.map((row) => {
-    const subtotal = Number(row.order.subtotal);
-    const percent = Number(row.requestedPercent);
-
-    return {
-      id: row.id,
-      orderId: row.orderId,
-      orderNumber: row.order.orderNumber,
-      sellerName: row.seller.name,
-      sellerLimit: row.seller.discountLimit,
-      customerName: row.order.customer.name,
-      requestedPercent: percent,
-      reason: row.reason,
-      subtotal,
-      totalIfApproved: applyDiscount(subtotal, percent),
-      createdAt: row.createdAt,
-    };
-  });
+  return rows.map((row) => ({ ...row, createdAt: new Date(row.createdAt) }));
 }
 
 export type DecisionResult =
@@ -56,77 +42,33 @@ export type DecisionResult =
 /**
  * Approves or rejects one request.
  *
- * Approval writes the percent onto the order and recomputes its total in the
- * same transaction as the decision. Two statements could otherwise leave a
- * request marked approved beside an order still priced at the old total, and a
- * seller would quote from whichever they happened to read.
+ * `reviewerId` is not sent to backend/: its `PATCH .../decision` endpoint
+ * takes the reviewer from the caller's own access token, never a body field
+ * (the parameter stays here only because every route handler already passes
+ * `guard.user.id`, and that id is always the same session's own).
  */
 export async function decideDiscount(
   id: string,
   approve: boolean,
-  reviewerId: string,
+  _reviewerId: string,
   note: string | null,
 ): Promise<DecisionResult> {
-  const request = await prisma.discountRequest.findUnique({
-    where: { id },
-    include: { order: { select: { subtotal: true, discountApprovedPercent: true } } },
-  });
-
-  if (request === null) {
-    return { ok: false, reason: "not_found" };
-  }
-
-  if (request.status !== "PENDING") {
-    return { ok: false, reason: "already_decided" };
-  }
-
-  const percent = Number(request.requestedPercent);
-  const subtotal = Number(request.order.subtotal);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.discountRequest.update({
-      where: { id },
-      data: {
-        status: approve ? "APPROVED" : "REJECTED",
-        reviewedByUserId: reviewerId,
-        reviewedAt: new Date(),
-        decisionNote: note,
-      },
+  try {
+    await backendRequest(`/discount-requests/${id}/decision`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: { approve, note },
     });
-
-    if (approve) {
-      await tx.order.update({
-        where: { id: request.orderId },
-        data: {
-          discountApprovedPercent: percent,
-          totalAmount: applyDiscount(subtotal, percent),
-        },
-      });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
     }
-
-    // The seller is waiting on this answer and is not watching the panel.
-    await tx.notification.create({
-      data: {
-        userId: request.sellerId,
-        type: "DISCOUNT_DECIDED",
-        entityId: request.orderId,
-        message: approve
-          ? percent + "% chegirma tasdiqlandi."
-          : percent + "% chegirma rad etildi." + (note ? " " + note : ""),
-      },
-    });
-  });
-
-  await recordAudit({
-    userId: reviewerId,
-    action: approve ? "APPROVE" : "REJECT",
-    entityType: "DiscountRequest",
-    entityId: id,
-    before: { status: "PENDING", requestedPercent: percent },
-    after: { status: approve ? "APPROVED" : "REJECTED", note },
-  });
-
-  return { ok: true };
+    if (error instanceof BackendApiError && error.status === 409) {
+      return { ok: false, reason: "already_decided" };
+    }
+    throw error;
+  }
 }
 
 export interface AuditEntryView {
@@ -147,47 +89,30 @@ export interface AuditPage {
   total: number;
 }
 
-export const AUDIT_PAGE_SIZE = 30;
+interface BackendAuditEntry extends Omit<AuditEntryView, "createdAt"> {
+  createdAt: string;
+}
+
+interface BackendAuditPage {
+  data: BackendAuditEntry[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
 
 export async function listAudit(page: number, entityType?: string): Promise<AuditPage> {
-  const where = entityType ? { entityType } : {};
-
-  const total = await prisma.auditLog.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE));
-  const current = Math.min(Math.max(1, page), totalPages);
-
-  const rows = await prisma.auditLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    skip: (current - 1) * AUDIT_PAGE_SIZE,
-    take: AUDIT_PAGE_SIZE,
-    include: { user: { select: { name: true } } },
+  const result = await backendRequest<BackendAuditPage>("/audit", {
+    accessToken: await accessToken(),
+    query: { page, entityType },
   });
 
   return {
-    items: rows.map((row) => ({
-      id: row.id,
-      action: row.action,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      // Null once the acting account is deleted; the trail outlives it.
-      actorName: row.user?.name ?? null,
-      before: row.before,
-      after: row.after,
-      createdAt: row.createdAt,
-    })),
-    page: current,
-    totalPages,
-    total,
+    items: result.data.map((row) => ({ ...row, createdAt: new Date(row.createdAt) })),
+    page: result.meta.page,
+    totalPages: result.meta.totalPages,
+    total: result.meta.total,
   };
 }
 
 /** Distinct entity types present, so the filter offers only what exists. */
 export async function listAuditEntityTypes(): Promise<string[]> {
-  const rows = await prisma.auditLog.findMany({
-    distinct: ["entityType"],
-    select: { entityType: true },
-    orderBy: { entityType: "asc" },
-  });
-  return rows.map((row) => row.entityType);
+  return backendRequest<string[]>("/audit/entity-types", { accessToken: await accessToken() });
 }

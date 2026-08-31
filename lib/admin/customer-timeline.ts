@@ -1,5 +1,5 @@
 import type { InquiryColumn } from "@/lib/api/inquiry-board";
-import type { OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/api/backend-enums";
 
 /**
  * One customer's history, as a single column.

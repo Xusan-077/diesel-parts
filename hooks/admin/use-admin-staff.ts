@@ -57,7 +57,10 @@ export function useSetStaffActive(onDone?: () => void) {
       updateStaff(user.id, {
         name: user.name,
         phone: user.phone,
-        role: user.role,
+        // Root's own User.role (what this route reads until Task 14 connects
+        // the panel to backend/'s five-role model) only ever has these two
+        // values — this call round-trips the row's existing role unchanged.
+        role: user.role as "DIRECTOR" | "SELLER",
         discountLimit: user.discountLimit,
         isActive,
       }),

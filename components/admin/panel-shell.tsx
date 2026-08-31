@@ -1,4 +1,5 @@
 import { navFor } from "@/lib/auth/admin-nav";
+import { isDirectorTier } from "@/lib/auth/roles";
 import type { StaffUser } from "@/lib/auth/dal";
 import { groupNav } from "@/lib/admin/nav-groups";
 import { getDashboardCounts } from "@/lib/api/analytics-repository";
@@ -42,7 +43,16 @@ export async function PanelShell({
     })),
   }));
 
-  const counts = await getDashboardCounts();
+  // backend/'s /analytics/dashboard-counts is gated DIRECTOR_UP (SUPER_ADMIN,
+  // DIRECTOR, MANAGER) and 403s for anyone else — a SELLER/VIEWER never
+  // reaches this call at all, rather than crashing the whole panel shell on
+  // an uncaught BackendApiError. Known follow-up: this also zeroes out
+  // newInquiries for a seller, who could otherwise see that one (it isn't
+  // director-only data, just bundled into a director-only endpoint) —
+  // backend/ has no seller-permitted inquiry-count endpoint today.
+  const counts = isDirectorTier(user.role)
+    ? await getDashboardCounts()
+    : { newInquiries: 0, pendingDiscounts: 0, activeSellers: 0 };
 
   /*
    * A queue only appears in the chrome if the reader may open the page behind

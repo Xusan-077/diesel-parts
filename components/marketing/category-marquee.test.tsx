@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CategoryMarquee } from "./category-marquee";
 import { stubObservers } from "@/lib/test/stub-observers";
-import { categories } from "@/prisma/seed-data/categories";
+import { categories } from "@/lib/data/mock-catalog/categories";
 
 /*
  * jsdom lays nothing out and observes nothing, so the belt never measures a lap

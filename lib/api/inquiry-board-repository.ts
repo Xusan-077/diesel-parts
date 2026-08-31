@@ -1,28 +1,17 @@
 import "server-only";
-import { prisma } from "@/lib/db";
-import { recordAudit } from "./audit";
-import { diffFields, type AuditValue } from "./audit-diff";
-import {
-  INQUIRY_COLUMNS,
-  inquiryColumn,
-  inquiryColumnFilter,
-  type InquiryColumn,
-} from "./inquiry-board";
-import {
-  inquiryReadScope,
-  inquiryWriteScope,
-  isDirector,
-  unclaimedScope,
-  type ScopeActor,
-} from "./seller-scope";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
+import { INQUIRY_COLUMNS, type InquiryColumn } from "./inquiry-board";
+import type { ScopeActor } from "./seller-scope";
 import type { InquiryListQuery, InquiryUpdateInput } from "@/lib/schemas";
-import type { Prisma } from "@/prisma/generated/prisma/client";
-import type { InquiryStatus, InquirySource } from "@/prisma/generated/prisma/enums";
+import type { InquiryStatus, InquirySource } from "@/lib/api/backend-enums";
 
 /**
- * The seller board's reads and writes. Public-site inquiry creation stays in
- * `inquiry-repository.ts`: that path takes no actor and needs no scoping, and
- * this one drags in the audit trail.
+ * The seller board's reads and writes, over `backend/`'s `seller/inquiries`.
+ * Public-site inquiry creation stays in `inquiry-repository.ts`: that path
+ * takes no actor, needs no scoping, and hits the unauthenticated
+ * `POST /inquiries` endpoint. The audit trail lives server-side now — the
+ * backend's `claim` and `update` write their own entries.
  */
 
 export const SELLER_PAGE_SIZE = 20;
@@ -54,85 +43,56 @@ export interface InquiryPage {
   totalPages: number;
 }
 
-const ROW_SELECT = {
-  id: true,
-  customerName: true,
-  phone: true,
-  email: true,
-  message: true,
-  productId: true,
-  productSku: true,
-  quantity: true,
-  status: true,
-  source: true,
-  assignedSellerId: true,
-  notes: true,
-  followUpAt: true,
-  createdAt: true,
-  assignedSeller: { select: { name: true } },
-} satisfies Prisma.InquirySelect;
+/** The wire shape from `InquiriesService.toRow` — dates as ISO strings. */
+interface BackendInquiryRow extends Omit<InquiryRow, "followUpAt" | "createdAt"> {
+  followUpAt: string | null;
+  createdAt: string;
+}
 
-type InquiryRecord = Prisma.InquiryGetPayload<{ select: typeof ROW_SELECT }>;
+interface BackendInquiryPage {
+  data: BackendInquiryRow[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
+}
 
-function toRow(row: InquiryRecord): InquiryRow {
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
+}
+
+function toRow(row: BackendInquiryRow): InquiryRow {
   return {
-    id: row.id,
-    customerName: row.customerName,
-    phone: row.phone,
-    email: row.email,
-    message: row.message,
-    productId: row.productId,
-    productSku: row.productSku,
-    quantity: row.quantity,
-    status: row.status,
-    source: row.source,
-    column: inquiryColumn(row.status, row.assignedSellerId),
-    assignedSellerId: row.assignedSellerId,
-    assignedSellerName: row.assignedSeller?.name ?? null,
-    notes: row.notes,
-    followUpAt: row.followUpAt,
-    createdAt: row.createdAt,
+    ...row,
+    followUpAt: row.followUpAt === null ? null : new Date(row.followUpAt),
+    createdAt: new Date(row.createdAt),
   };
 }
 
+/**
+ * `_actor` is not sent to backend/: `seller/inquiries` scopes every read and
+ * write from the caller's own access token via `@CurrentUser()`, never a
+ * client-supplied actor object (the parameter stays here only because every
+ * caller already has one to hand, and it is always the same session's own —
+ * see `lib/api/customer-repository.ts`'s identical doc comment).
+ */
 export async function listInquiries(
-  actor: ScopeActor,
+  _actor: ScopeActor,
   query: InquiryListQuery,
 ): Promise<InquiryPage> {
-  const filters: Prisma.InquiryWhereInput[] = [inquiryReadScope(actor)];
-
-  if (query.column) {
-    filters.push(inquiryColumnFilter(query.column));
-  }
-
-  // Only a director can narrow to somebody else: a seller's own scope already
-  // pins the list to their rows and the pool, and honouring the parameter for
-  // them would suggest it does something.
-  if (query.sellerId && isDirector(actor)) {
-    filters.push({ assignedSellerId: query.sellerId });
-  }
-
-  const where: Prisma.InquiryWhereInput = { AND: filters };
-
-  const total = await prisma.inquiry.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / SELLER_PAGE_SIZE));
-  const page = Math.min(Math.max(1, query.page), totalPages);
-
-  const rows = await prisma.inquiry.findMany({
-    where,
-    // Oldest first: a lead nobody has answered is the one that needs answering.
-    orderBy: { createdAt: "asc" },
-    skip: (page - 1) * SELLER_PAGE_SIZE,
-    take: SELLER_PAGE_SIZE,
-    select: ROW_SELECT,
+  const result = await backendRequest<BackendInquiryPage>("/seller/inquiries", {
+    accessToken: await accessToken(),
+    query: {
+      column: query.column,
+      sellerId: query.sellerId,
+      page: query.page,
+    },
   });
 
   return {
-    items: rows.map(toRow),
-    total,
-    page,
-    pageSize: SELLER_PAGE_SIZE,
-    totalPages,
+    items: result.data.map(toRow),
+    total: result.meta.total,
+    page: result.meta.page,
+    pageSize: result.meta.limit ?? SELLER_PAGE_SIZE,
+    totalPages: result.meta.totalPages,
   };
 }
 
@@ -142,106 +102,63 @@ export type ClaimResult =
   | { ok: false; reason: "taken" };
 
 /**
- * Claims one lead.
- *
- * Race-safe without a transaction: the `assignedSellerId: null` in the `where`
- * makes the update its own compare-and-set, and the loser of the race updates
- * nothing. Two sellers tapping the same card a second apart is the expected
- * case, not an edge case, and the loser has to be told the lead is gone rather
- * than shown a silent no-op.
+ * Claims one lead. The backend's `POST :id/claim` is the compare-and-set and
+ * writes its own audit entry; a lost race comes back as a 409, a missing row
+ * as a 404. The route handler owns the user-facing copy for both.
  */
-export async function claimInquiry(id: string, actor: ScopeActor): Promise<ClaimResult> {
-  const claimed = await prisma.inquiry.updateMany({
-    where: { id, ...unclaimedScope() },
-    data: { assignedSellerId: actor.id },
-  });
-
-  if (claimed.count === 0) {
-    const existing = await prisma.inquiry.findUnique({ where: { id }, select: { id: true } });
-    return existing === null ? { ok: false, reason: "not_found" } : { ok: false, reason: "taken" };
+export async function claimInquiry(id: string, _actor: ScopeActor): Promise<ClaimResult> {
+  try {
+    const claimed = await backendRequest<{ id: string }>(`/seller/inquiries/${id}/claim`, {
+      method: "POST",
+      accessToken: await accessToken(),
+    });
+    return { ok: true, id: claimed.id };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    if (error instanceof BackendApiError && error.status === 409) {
+      return { ok: false, reason: "taken" };
+    }
+    throw error;
   }
-
-  await recordAudit({
-    userId: actor.id,
-    action: "UPDATE",
-    entityType: "Inquiry",
-    entityId: id,
-    before: { assignedSellerId: null },
-    after: { assignedSellerId: actor.id },
-  });
-
-  return { ok: true, id };
 }
 
 export type InquiryWriteResult = { ok: true; id: string } | { ok: false; reason: "not_found" };
 
-const UPDATE_SELECT = {
-  status: true,
-  notes: true,
-  followUpAt: true,
-  assignedSellerId: true,
-} satisfies Prisma.InquirySelect;
-
-type InquiryUpdateRecord = Prisma.InquiryGetPayload<{ select: typeof UPDATE_SELECT }>;
-
-/** What the audit trail carries — dates as ISO strings, because it is JSON. */
-function auditSnapshot(row: InquiryUpdateRecord): Record<string, AuditValue> {
-  return {
-    status: row.status,
-    notes: row.notes,
-    followUpAt: row.followUpAt === null ? null : row.followUpAt.toISOString(),
-  };
-}
-
 /**
  * Moves a card, leaves a note, or sets a callback date.
  *
- * An unowned row answers `not_found` rather than a refusal, and the route turns
- * that into a 404. A 403 would confirm the row exists, which tells one seller
- * that another seller's lead is real.
+ * `notes` and `followUpAt` may be an explicit `null` (the schema is
+ * `.nullable().optional()`) and the backend DTO clears the field on `null`, so
+ * the values pass through as-is — `undefined` keys are dropped by
+ * `JSON.stringify`, `null` keys are kept. An unowned or missing row answers a
+ * 404, which the route turns into `not_found`. The backend also rejects a
+ * zero-field body with a 400, but `inquiryUpdateSchema.refine` makes that
+ * unreachable from the route; if it ever surfaces it rethrows.
  */
 export async function updateInquiry(
   id: string,
   input: InquiryUpdateInput,
-  actor: ScopeActor,
+  _actor: ScopeActor,
 ): Promise<InquiryWriteResult> {
-  const before = await prisma.inquiry.findFirst({
-    where: { id, ...inquiryWriteScope(actor) },
-    select: UPDATE_SELECT,
-  });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
-  }
-
-  const data: Prisma.InquiryUpdateInput = {};
-
-  if (input.status !== undefined) {
-    data.status = input.status;
-  }
-  if (input.notes !== undefined) {
-    data.notes = input.notes;
-  }
-  if (input.followUpAt !== undefined) {
-    data.followUpAt = input.followUpAt === null ? null : new Date(input.followUpAt);
-  }
-
-  const after = await prisma.inquiry.update({ where: { id }, data, select: UPDATE_SELECT });
-  const diff = diffFields(auditSnapshot(before), auditSnapshot(after));
-
-  // Nothing moved — a seller pressing save on an unchanged form is not an event.
-  if (diff !== null) {
-    await recordAudit({
-      userId: actor.id,
-      action: "UPDATE",
-      entityType: "Inquiry",
-      entityId: id,
-      before: diff.before,
-      after: diff.after,
+  try {
+    const updated = await backendRequest<{ id: string }>(`/seller/inquiries/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: {
+        status: input.status,
+        notes: input.notes,
+        followUpAt: input.followUpAt,
+      },
     });
+    return { ok: true, id: updated.id };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    throw error;
   }
-
-  return { ok: true, id };
 }
 
 export interface InquiryBoardColumn {
@@ -253,40 +170,19 @@ export interface InquiryBoardColumn {
 export type InquiryBoard = Record<InquiryColumn, InquiryBoardColumn>;
 
 /**
- * Every column at once, for the board screen.
- *
- * Not five calls to `listInquiries`: that function sorts oldest-first because an
- * unanswered lead is the one that needs answering, which is right for the three
- * live columns and wrong for the two closed ones — a seller opening "Yutildi"
- * wants this month's wins, not the oldest deal on record. The scope and the
- * column filter are the same helpers, so the rule that matters is still stated
- * once.
- *
- * Each column is capped at one page. A board that loaded an unbounded "Yutildi"
- * would grow without limit as the business does; the count beside the heading
- * tells the seller when there is more than they are looking at.
+ * Every column at once, for the board screen. The backend computes each
+ * column, its per-column ordering (closed columns newest-first), and the
+ * one-page cap; this only maps the wire rows' dates back to `Date`.
  */
-export async function listInquiryBoard(actor: ScopeActor): Promise<InquiryBoard> {
-  const scope = inquiryReadScope(actor);
+export async function listInquiryBoard(_actor: ScopeActor): Promise<InquiryBoard> {
+  const board = await backendRequest<
+    Record<InquiryColumn, { items: BackendInquiryRow[]; total: number }>
+  >("/seller/inquiries/board", { accessToken: await accessToken() });
 
-  const columns = await Promise.all(
-    INQUIRY_COLUMNS.map(async (column) => {
-      const where: Prisma.InquiryWhereInput = { AND: [scope, inquiryColumnFilter(column)] };
-      const closed = column === "won" || column === "lost";
-
-      const [total, rows] = await Promise.all([
-        prisma.inquiry.count({ where }),
-        prisma.inquiry.findMany({
-          where,
-          orderBy: { createdAt: closed ? "desc" : "asc" },
-          take: SELLER_PAGE_SIZE,
-          select: ROW_SELECT,
-        }),
-      ]);
-
-      return [column, { items: rows.map(toRow), total }] as const;
-    }),
-  );
-
-  return Object.fromEntries(columns) as InquiryBoard;
+  return Object.fromEntries(
+    INQUIRY_COLUMNS.map((column) => [
+      column,
+      { items: board[column].items.map(toRow), total: board[column].total },
+    ]),
+  ) as InquiryBoard;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminHomePath, canAccessAdminPath, isAdminPath, isDirectorPath } from "./roles";
+import { adminHomePath, canAccessAdminPath, isAdminPath, isDirectorPath, isDirectorTier } from "./roles";
 
 describe("isAdminPath", () => {
   it("matches the panel root and everything under it", () => {
@@ -43,12 +43,23 @@ describe("adminHomePath", () => {
     expect(adminHomePath("DIRECTOR")).toBe("/director");
     expect(adminHomePath("SELLER")).toBe("/admin/seller");
   });
+
+  it("sends MANAGER, SUPER_ADMIN and VIEWER to the director root, same as DIRECTOR", () => {
+    expect(adminHomePath("MANAGER")).toBe("/director");
+    expect(adminHomePath("SUPER_ADMIN")).toBe("/director");
+    expect(adminHomePath("VIEWER")).toBe("/director");
+  });
 });
 
 describe("canAccessAdminPath", () => {
   it("opens the seller area to both roles, so a director can support a seller", () => {
     expect(canAccessAdminPath("/admin/seller/inquiries", "SELLER")).toBe(true);
     expect(canAccessAdminPath("/admin/seller/inquiries", "DIRECTOR")).toBe(true);
+  });
+
+  it("also opens the seller area to MANAGER and SUPER_ADMIN, same reasoning as DIRECTOR", () => {
+    expect(canAccessAdminPath("/admin/seller/inquiries", "MANAGER")).toBe(true);
+    expect(canAccessAdminPath("/admin/seller/inquiries", "SUPER_ADMIN")).toBe(true);
   });
 
   it("lets either role hit the signpost at /admin", () => {
@@ -71,5 +82,18 @@ describe("canAccessAdminPath", () => {
 
   it("ignores a trailing slash", () => {
     expect(canAccessAdminPath("/admin/seller/", "SELLER")).toBe(true);
+  });
+});
+
+describe("isDirectorTier", () => {
+  it("matches backend/'s own DIRECTOR_UP set exactly", () => {
+    expect(isDirectorTier("SUPER_ADMIN")).toBe(true);
+    expect(isDirectorTier("DIRECTOR")).toBe(true);
+    expect(isDirectorTier("MANAGER")).toBe(true);
+  });
+
+  it("excludes SELLER and VIEWER, who backend/'s DIRECTOR_UP-gated endpoints 403 for", () => {
+    expect(isDirectorTier("SELLER")).toBe(false);
+    expect(isDirectorTier("VIEWER")).toBe(false);
   });
 });

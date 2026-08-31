@@ -1,15 +1,15 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
-import { prisma } from "@/lib/db";
-import { deriveStockStatus } from "./stock-status";
-import { recordAudit } from "./audit";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
 import type { ProductWriteInput } from "@/lib/schemas";
-import type { Prisma } from "@/prisma/generated/prisma/client";
 
 /**
  * Writes to the catalog. Reads live in `product-repository.ts`; they are split
- * because every page reads and only the director's panel writes, and the write
- * path drags in the audit trail.
+ * because every page reads and only the director's panel writes.
+ *
+ * No `recordAudit` calls here: backend/'s `ProductsService` already logs
+ * every create/update/retire itself (Part 1 Task 4) — doing it again here
+ * would double-log every write.
  */
 
 export type WriteResult<T> =
@@ -18,25 +18,24 @@ export type WriteResult<T> =
   | { ok: false; reason: "missing_reference"; field: string }
   | { ok: false; reason: "not_found" };
 
-/** Prisma's unique-violation code, and the field list it reports with it. */
-function duplicateField(error: unknown): string | null {
-  const candidate = error as { code?: string; meta?: { target?: unknown } };
-  if (candidate?.code !== "P2002") {
-    return null;
-  }
-  const target = candidate.meta?.target;
-  if (Array.isArray(target) && typeof target[0] === "string") {
-    return target[0];
-  }
-  return "sku";
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
 }
 
-/** Prisma's foreign-key violation — a category or brand id that does not exist. */
-function isMissingReference(error: unknown): boolean {
-  return (error as { code?: string })?.code === "P2003";
+/** Maps a caught backend/ failure onto `WriteResult`'s error union, or rethrows. */
+function writeFailure(error: unknown): WriteResult<never> {
+  if (error instanceof BackendApiError && error.status === 409) {
+    // ConflictException's message is "<field> already exists" (Part 1 Task 8's follow-up).
+    return { ok: false, reason: "duplicate", field: error.message.split(" ")[0] };
+  }
+  if (error instanceof BackendApiError && error.status === 400) {
+    return { ok: false, reason: "missing_reference", field: "categoryId" };
+  }
+  throw error;
 }
 
-function toRow(input: ProductWriteInput) {
+function toBody(input: ProductWriteInput) {
   return {
     sku: input.sku.trim().toUpperCase(),
     slug: input.slug.trim(),
@@ -52,100 +51,47 @@ function toRow(input: ProductWriteInput) {
     price: input.price,
     stock: input.stock,
     minStock: input.minStock,
-    // Never taken from the caller: the column has to agree with the numbers.
-    stockStatus: deriveStockStatus(input.stock, input.minStock),
     categoryId: input.categoryId,
     brandId: input.brandId,
     compatibleModels: input.compatibleModels,
-    specs: input.specs as unknown as Prisma.InputJsonValue,
+    specs: input.specs,
     isActive: input.isActive,
-  };
-}
-
-/** The shape written to the audit trail — enough to see what changed. */
-function auditSnapshot(row: {
-  sku: string;
-  slug: string;
-  nameUz: string;
-  price: unknown;
-  stock: number;
-  minStock: number;
-  isActive: boolean;
-}) {
-  return {
-    sku: row.sku,
-    slug: row.slug,
-    name: row.nameUz,
-    price: row.price === null ? null : Number(row.price),
-    stock: row.stock,
-    minStock: row.minStock,
-    isActive: row.isActive,
   };
 }
 
 export async function createProduct(
   input: ProductWriteInput,
-  actorId: string,
+  _actorId: string,
 ): Promise<WriteResult<{ id: string }>> {
   try {
-    const created = await prisma.product.create({
-      data: { id: randomUUID(), ...toRow(input) },
+    const created = await backendRequest<{ id: string }>("/products", {
+      method: "POST",
+      accessToken: await accessToken(),
+      body: toBody(input),
     });
-
-    await recordAudit({
-      userId: actorId,
-      action: "CREATE",
-      entityType: "Product",
-      entityId: created.id,
-      after: auditSnapshot(created),
-    });
-
     return { ok: true, value: { id: created.id } };
   } catch (error) {
-    const field = duplicateField(error);
-    if (field) {
-      return { ok: false, reason: "duplicate", field };
-    }
-    if (isMissingReference(error)) {
-      return { ok: false, reason: "missing_reference", field: "categoryId" };
-    }
-    throw error;
+    return writeFailure(error);
   }
 }
 
 export async function updateProduct(
   id: string,
   input: ProductWriteInput,
-  actorId: string,
+  _actorId: string,
 ): Promise<WriteResult<{ id: string }>> {
-  const before = await prisma.product.findUnique({ where: { id } });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
-  }
-
   try {
-    const after = await prisma.product.update({ where: { id }, data: toRow(input) });
-
-    await recordAudit({
-      userId: actorId,
-      action: "UPDATE",
-      entityType: "Product",
-      entityId: id,
-      before: auditSnapshot(before),
-      after: auditSnapshot(after),
+    await backendRequest(`/products/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: toBody(input),
     });
-
     return { ok: true, value: { id } };
   } catch (error) {
-    const field = duplicateField(error);
-    if (field) {
-      return { ok: false, reason: "duplicate", field };
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
     }
-    if (isMissingReference(error)) {
-      return { ok: false, reason: "missing_reference", field: "categoryId" };
-    }
-    throw error;
+    return writeFailure(error);
   }
 }
 
@@ -159,26 +105,21 @@ export async function updateProduct(
 export async function setProductActive(
   id: string,
   isActive: boolean,
-  actorId: string,
+  _actorId: string,
 ): Promise<WriteResult<{ id: string }>> {
-  const before = await prisma.product.findUnique({ where: { id } });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
+  try {
+    await backendRequest(`/products/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: { isActive },
+    });
+    return { ok: true, value: { id } };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    throw error;
   }
-
-  const after = await prisma.product.update({ where: { id }, data: { isActive } });
-
-  await recordAudit({
-    userId: actorId,
-    action: isActive ? "UPDATE" : "DELETE",
-    entityType: "Product",
-    entityId: id,
-    before: auditSnapshot(before),
-    after: auditSnapshot(after),
-  });
-
-  return { ok: true, value: { id } };
 }
 
 export interface AdminProductRow {
@@ -205,10 +146,25 @@ export interface AdminProductPage {
 
 export const ADMIN_PAGE_SIZE = 20;
 
+interface BackendAdminRow {
+  id: string;
+  sku: string;
+  slug: string;
+  nameUz: string;
+  price: string | null;
+  availableQuantity: number;
+  minStock: number;
+  category: { nameUz: string };
+  brand: { name: string };
+  isActive: boolean;
+  imageUrl: string | null;
+}
+
 /**
  * The panel's own listing. It differs from the public one in three ways that
- * matter: inactive products are included, stock numbers are exposed, and the
- * sort defaults to what a director looks for — the shortest stock first.
+ * matter: inactive products are included (or excluded, via `includeInactive`),
+ * stock numbers are exposed, and the sort defaults to what a director looks
+ * for — the shortest stock first.
  */
 export async function listProductsForAdmin(options: {
   search: string;
@@ -216,57 +172,39 @@ export async function listProductsForAdmin(options: {
   includeInactive: boolean;
   sort: "stock" | "name" | "price";
 }): Promise<AdminProductPage> {
-  const term = options.search.trim();
-  const where: Prisma.ProductWhereInput = {
-    ...(options.includeInactive ? {} : { isActive: true }),
-    ...(term
-      ? {
-          OR: [
-            { sku: { contains: term, mode: "insensitive" } },
-            { nameUz: { contains: term, mode: "insensitive" } },
-            { oemNumbers: { has: term.toUpperCase() } },
-          ],
-        }
-      : {}),
-  };
-
-  const orderBy: Prisma.ProductOrderByWithRelationInput =
-    options.sort === "name"
-      ? { nameUz: "asc" }
-      : options.sort === "price"
-        ? { price: "desc" }
-        : { stock: "asc" };
-
-  const total = await prisma.product.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
-  const page = Math.min(Math.max(1, options.page), totalPages);
-
-  const rows = await prisma.product.findMany({
-    where,
-    orderBy,
-    skip: (page - 1) * ADMIN_PAGE_SIZE,
-    take: ADMIN_PAGE_SIZE,
-    include: { category: true, brand: true },
+  const result = await backendRequest<{
+    data: BackendAdminRow[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }>("/products", {
+    accessToken: await accessToken(),
+    query: {
+      search: options.search.trim() || undefined,
+      isActive: options.includeInactive ? undefined : "true",
+      sort: options.sort === "name" ? "name-asc" : options.sort === "price" ? "price-desc" : "stock",
+      lang: options.sort === "name" ? "uz" : undefined,
+      page: options.page,
+      limit: ADMIN_PAGE_SIZE,
+    },
   });
 
   return {
-    items: rows.map((row) => ({
+    items: result.data.map((row) => ({
       id: row.id,
       sku: row.sku,
       slug: row.slug,
       name: row.nameUz,
       price: row.price === null ? null : Number(row.price),
-      stock: row.stock,
+      stock: row.availableQuantity,
       minStock: row.minStock,
       categoryName: row.category.nameUz,
       brandName: row.brand.name,
       isActive: row.isActive,
       imageUrl: row.imageUrl,
     })),
-    total,
-    page,
-    pageSize: ADMIN_PAGE_SIZE,
-    totalPages,
+    total: result.meta.total,
+    page: result.meta.page,
+    pageSize: result.meta.limit,
+    totalPages: result.meta.totalPages,
   };
 }
 
@@ -280,12 +218,29 @@ export interface ProductEditRecord extends ProductWriteInput {
   imageUrl: string | null;
 }
 
+interface BackendEditRow extends BackendAdminRow {
+  oemNumbers: string[];
+  nameRu: string;
+  nameEn: string;
+  descriptionUz: string;
+  descriptionRu: string;
+  descriptionEn: string;
+  categoryId: string;
+  brandId: string;
+  compatibleModels: string[];
+  specs: unknown;
+}
+
 /** One product in the shape the edit form expects. */
 export async function getProductForEdit(id: string): Promise<ProductEditRecord | null> {
-  const row = await prisma.product.findUnique({ where: { id } });
-
-  if (row === null) {
-    return null;
+  let row: BackendEditRow;
+  try {
+    row = await backendRequest<BackendEditRow>(`/products/${id}`, { accessToken: await accessToken() });
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
   }
 
   return {
@@ -295,12 +250,12 @@ export async function getProductForEdit(id: string): Promise<ProductEditRecord |
     name: { uz: row.nameUz, ru: row.nameRu, en: row.nameEn },
     description: { uz: row.descriptionUz, ru: row.descriptionRu, en: row.descriptionEn },
     price: row.price === null ? null : Number(row.price),
-    stock: row.stock,
+    stock: row.availableQuantity,
     minStock: row.minStock,
     categoryId: row.categoryId,
     brandId: row.brandId,
     compatibleModels: row.compatibleModels,
-    specs: row.specs as unknown as ProductWriteInput["specs"],
+    specs: row.specs as ProductWriteInput["specs"],
     isActive: row.isActive,
     imageUrl: row.imageUrl,
   };
@@ -308,7 +263,17 @@ export async function getProductForEdit(id: string): Promise<ProductEditRecord |
 
 /** Just enough to know whether a product exists and what it was photographed with. */
 export async function findProductImageUrl(id: string): Promise<{ imageUrl: string | null } | null> {
-  return prisma.product.findUnique({ where: { id }, select: { imageUrl: true } });
+  try {
+    const row = await backendRequest<{ imageUrl: string | null }>(`/products/${id}`, {
+      accessToken: await accessToken(),
+    });
+    return { imageUrl: row.imageUrl };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -320,24 +285,19 @@ export async function findProductImageUrl(id: string): Promise<{ imageUrl: strin
 export async function setProductImage(
   id: string,
   imageUrl: string,
-  actorId: string,
+  _actorId: string,
 ): Promise<WriteResult<{ imageUrl: string }>> {
-  const before = await prisma.product.findUnique({ where: { id } });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
+  try {
+    await backendRequest(`/products/${id}/image`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: { imageUrl },
+    });
+    return { ok: true, value: { imageUrl } };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    throw error;
   }
-
-  const after = await prisma.product.update({ where: { id }, data: { imageUrl } });
-
-  await recordAudit({
-    userId: actorId,
-    action: "UPDATE",
-    entityType: "Product",
-    entityId: id,
-    before: auditSnapshot(before),
-    after: auditSnapshot(after),
-  });
-
-  return { ok: true, value: { imageUrl } };
 }

@@ -324,7 +324,85 @@ describe('InquiriesService', () => {
         after: { status: InquiryStatus.IN_PROGRESS },
       });
     });
+  });
 
+  describe('byPhone', () => {
+    it('returns [] for an invalid phone without querying', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const prisma = makePrisma({ inquiry: { findMany } });
+      const { audit } = makeAudit();
+      const service = new InquiriesService(prisma, audit);
+
+      const result = await service.byPhone('123', seller);
+
+      expect(result).toEqual([]);
+      expect(findMany).not.toHaveBeenCalled();
+    });
+
+    it('matches by canonical digits and respects inquiryReadScope', async () => {
+      const findMany = jest.fn().mockResolvedValue([
+        {
+          id: 'inq-1',
+          customerName: 'Ali',
+          phone: '+998 90 123-45-67',
+          email: null,
+          message: 'Need a filter',
+          productId: null,
+          productSku: 'SKU-1',
+          quantity: 2,
+          status: InquiryStatus.NEW,
+          source: InquirySource.CONTACT_FORM,
+          assignedSellerId: null,
+          notes: null,
+          followUpAt: null,
+          createdAt: new Date('2026-08-01T00:00:00.000Z'),
+          assignedSeller: null,
+        },
+        {
+          id: 'inq-2',
+          customerName: 'Vali',
+          phone: '998907654321',
+          email: null,
+          message: 'Other',
+          productId: null,
+          productSku: null,
+          quantity: null,
+          status: InquiryStatus.NEW,
+          source: InquirySource.CONTACT_FORM,
+          assignedSellerId: null,
+          notes: null,
+          followUpAt: null,
+          createdAt: new Date('2026-08-01T00:00:00.000Z'),
+          assignedSeller: null,
+        },
+      ]);
+      const prisma = makePrisma({ inquiry: { findMany } });
+      const { audit } = makeAudit();
+      const service = new InquiriesService(prisma, audit);
+
+      const result = await service.byPhone('998901234567', seller);
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [
+              {
+                OR: [
+                  { assignedSellerId: seller.id },
+                  { assignedSellerId: null },
+                ],
+              },
+              { phone: { contains: '67' } },
+            ],
+          },
+        }),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('inq-1');
+    });
+  });
+
+  describe('update (followUpAt conversion)', () => {
     it('converts a non-null followUpAt string to a Date and clears it on null', async () => {
       const row = {
         status: InquiryStatus.NEW,

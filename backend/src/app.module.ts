@@ -27,6 +27,7 @@ import { AiModule } from './ai/ai.module';
 import { CartsModule } from './carts/carts.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { PaymeModule } from './payme/payme.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { PaymeModule } from './payme/payme.module';
     CartsModule,
     CheckoutModule,
     PaymeModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
 })

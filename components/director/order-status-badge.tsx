@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/shadcn/badge";
-import type { OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/api/backend-enums";
 
 /**
  * Which badge tone an order status wears, director-panel wide.

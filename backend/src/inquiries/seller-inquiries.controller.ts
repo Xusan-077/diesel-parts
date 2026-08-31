@@ -39,6 +39,17 @@ export class SellerInquiriesController {
     return this.inquiries.board(toActor(user));
   }
 
+  // No `:id`-shaped GET route exists on this controller, so registration
+  // order doesn't matter for this one — kept alongside `board` regardless,
+  // matching the sibling `by-phone` convention in seller-customers.controller.ts.
+  @Get('by-phone')
+  byPhone(
+    @Query('phone') phone: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.inquiries.byPhone(phone ?? '', toActor(user));
+  }
+
   @Post(':id/claim')
   claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.inquiries.claim(id, toActor(user));
