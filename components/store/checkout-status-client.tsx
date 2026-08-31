@@ -48,7 +48,7 @@ export function CheckoutStatusClient({ orderId, dict }: { orderId: string; dict:
     async function poll() {
       try {
         const { data } = await axios.get<{ success: true } & OrderStatusResponse>(
-          `/api/v1/checkout/orders/${orderId}`,
+          `/api/v1/checkout/orders/${encodeURIComponent(orderId)}`,
         );
         if (cancelled) return;
 

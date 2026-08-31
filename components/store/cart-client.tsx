@@ -15,6 +15,9 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/locales";
 import { Icon } from "@/components/ui/icon";
 import { ProductImage } from "@/components/product/product-image";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface CartClientProps {
   lang: Locale;
@@ -72,16 +75,17 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
     <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-start">
       <div>
         <div className="flex justify-end">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               cart.clear();
               toast.success(dict.toastCleared);
             }}
-            className="text-sm text-muted transition-colors hover:text-accent-strong"
           >
             {dict.clear}
-          </button>
+          </Button>
         </div>
 
         <ul className="mt-4 flex flex-col gap-4">
@@ -167,40 +171,44 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         </ul>
       </div>
 
-      <aside className="rounded-lg border border-border bg-surface p-6 lg:sticky lg:top-40">
-        <h2 className="text-base font-semibold text-foreground">{dict.summaryTitle}</h2>
+      <aside className="lg:sticky lg:top-40">
+        <Card>
+          <CardHeader>
+            <CardTitle>{dict.summaryTitle}</CardTitle>
+          </CardHeader>
 
-        <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted">{dict.summaryLines}</dt>
-            <dd className="tabular-nums text-foreground">{lineCount}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">{dict.summaryUnits}</dt>
-            <dd className="tabular-nums text-foreground">{unitCount}</dd>
-          </div>
-          <div className="flex justify-between border-t border-border pt-3">
-            <dt className="text-muted">{dict.summaryPrice}</dt>
-            <dd className="font-medium text-foreground">
-              {total > 0 ? totalLabel : dict.priceOnRequest}
-            </dd>
-          </div>
-        </dl>
+          <CardContent>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted">{dict.summaryLines}</dt>
+                <dd className="tabular-nums text-foreground">{lineCount}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted">{dict.summaryUnits}</dt>
+                <dd className="tabular-nums text-foreground">{unitCount}</dd>
+              </div>
+              <Separator className="my-1" />
+              <div className="flex justify-between">
+                <dt className="text-muted">{dict.summaryPrice}</dt>
+                <dd className="font-medium text-foreground">
+                  {total > 0 ? totalLabel : dict.priceOnRequest}
+                </dd>
+              </div>
+            </dl>
 
-        {unpriced > 0 ? (
-          <p className="mt-3 text-xs leading-relaxed text-accent-strong">
-            {dict.unpricedNote.replace("{count}", String(unpriced))}
-          </p>
-        ) : null}
+            {unpriced > 0 ? (
+              <p className="mt-3 text-xs leading-relaxed text-accent-strong">
+                {dict.unpricedNote.replace("{count}", String(unpriced))}
+              </p>
+            ) : null}
 
-        <p className="mt-3 text-xs leading-relaxed text-muted">{dict.priceNote}</p>
+            <p className="mt-3 text-xs leading-relaxed text-muted">{dict.priceNote}</p>
 
-        <Link
-          href="/request-quote"
-          className="mt-6 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover active:bg-accent-active"
-        >
-          {dict.checkout}
-        </Link>
+            <Link href="/checkout" className={buttonVariants({ size: "lg", className: "mt-6 w-full" })}>
+              {dict.checkout}
+            </Link>
+          </CardContent>
+        </Card>
       </aside>
     </div>
   );
