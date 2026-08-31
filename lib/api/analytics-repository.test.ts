@@ -85,9 +85,9 @@ describe("analytics-repository", () => {
     it("filters to limited/out_of_stock, sorts by stock ascending, and caps at the limit", async () => {
       vi.mocked(backendRequest).mockResolvedValue({
         data: [
-          { id: "p1", sku: "A", nameUz: "A", availableQuantity: 5, minStock: 2, stockStatus: "limited" },
-          { id: "p2", sku: "B", nameUz: "B", availableQuantity: 0, minStock: 2, stockStatus: "out_of_stock" },
-          { id: "p3", sku: "C", nameUz: "C", availableQuantity: 50, minStock: 2, stockStatus: "available" },
+          { id: "p1", sku: "A", nameUz: "A", availableQuantity: 5, minStock: 2, stockStatus: "LOW_STOCK" },
+          { id: "p2", sku: "B", nameUz: "B", availableQuantity: 0, minStock: 2, stockStatus: "OUT_OF_STOCK" },
+          { id: "p3", sku: "C", nameUz: "C", availableQuantity: 50, minStock: 2, stockStatus: "IN_STOCK" },
         ],
       });
 

@@ -2,6 +2,7 @@ import "server-only";
 import { backendRequest } from "./backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
 import { toRootStatus } from "./order-repository";
+import { toRootStockStatus } from "./product-mapper";
 import type { DayPoint, Period } from "@/lib/analytics/period";
 import type { OrderStatus } from "@/lib/api/backend-enums";
 
@@ -98,7 +99,10 @@ export async function getLowStockProducts(limit: number = 8): Promise<LowStockPr
   });
 
   return result.data
-    .filter((row) => row.stockStatus === "limited" || row.stockStatus === "out_of_stock")
+    .filter((row) => {
+      const status = toRootStockStatus(row.stockStatus);
+      return status === "limited" || status === "out_of_stock";
+    })
     .sort((a, b) => a.availableQuantity - b.availableQuantity)
     .slice(0, limit)
     .map((row) => ({

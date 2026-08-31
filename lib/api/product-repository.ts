@@ -3,7 +3,15 @@ import { BackendApiError, backendRequest } from "./backend-client";
 import type { Locale } from "@/lib/i18n/locales";
 import type { ResolvedProduct } from "@/lib/product-lookup";
 import type { Brand, Category, Product } from "@/lib/types";
-import { toBrand, toCategory, toProduct, type BrandRow, type CategoryRow, type ProductRow } from "./product-mapper";
+import {
+  toBackendStockStatus,
+  toBrand,
+  toCategory,
+  toProduct,
+  type BrandRow,
+  type CategoryRow,
+  type ProductRow,
+} from "./product-mapper";
 import { buildPage, type ProductPage, type ProductQuery } from "./product-query";
 import { getProductStats } from "./product-stats-repository";
 
@@ -39,7 +47,7 @@ export async function queryProducts(query: ProductQuery): Promise<ProductPage<Pr
       brandIds: query.brandIds.join(","),
       categoryIds: query.categoryIds?.join(","),
       categoryId: query.categoryIds === undefined && query.categoryId !== "all" ? query.categoryId : undefined,
-      stockStatus: query.availability !== "all" ? query.availability : undefined,
+      stockStatus: query.availability !== "all" ? toBackendStockStatus(query.availability) : undefined,
       priceMin: query.priceMin ?? undefined,
       priceMax: query.priceMax ?? undefined,
       sort: query.sort,
@@ -182,7 +190,7 @@ export async function getProductsForHomeRows(count: number): Promise<{
     backendRequest<BackendPage<ProductRow>>("/catalog/products", { query: { sort: "id", limit: count } }),
     backendRequest<BackendPage<ProductRow>>("/catalog/products", { query: { limit: count } }),
     backendRequest<BackendPage<ProductRow>>("/catalog/products", {
-      query: { sort: "id", stockStatus: "available", limit: count },
+      query: { sort: "id", stockStatus: toBackendStockStatus("available"), limit: count },
     }),
   ]);
 

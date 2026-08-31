@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toProduct, type ProductRow } from "./product-mapper";
+import { toBackendStockStatus, toProduct, toRootStockStatus, type ProductRow } from "./product-mapper";
 
 function row(overrides: Partial<ProductRow> = {}): ProductRow {
   return {
@@ -15,7 +15,7 @@ function row(overrides: Partial<ProductRow> = {}): ProductRow {
     descriptionEn: "en",
     // Decimal columns serialize as a numeric string over the wire, never a number.
     price: "3450000.00",
-    stockStatus: "available",
+    stockStatus: "IN_STOCK",
     categoryId: "injector",
     brandId: "cat",
     compatibleModels: ["CAT 320D"],
@@ -44,8 +44,24 @@ describe("toProduct", () => {
     expect(toProduct(row()).description).toEqual({ uz: "uz", ru: "ru", en: "en" });
   });
 
-  it("passes the computed stock status through", () => {
-    expect(toProduct(row({ stockStatus: "limited" })).stockStatus).toBe("limited");
+  it("translates backend/'s stock status enum to root's own vocabulary", () => {
+    expect(toProduct(row({ stockStatus: "IN_STOCK" })).stockStatus).toBe("available");
+    expect(toProduct(row({ stockStatus: "LOW_STOCK" })).stockStatus).toBe("limited");
+    expect(toProduct(row({ stockStatus: "OUT_OF_STOCK" })).stockStatus).toBe("out_of_stock");
+  });
+
+  it("defaults specs to an empty array rather than crashing on backend/'s default {} object", () => {
+    // backend/prisma/schema.prisma's Product.specs defaults to the JSON
+    // object "{}", not "[]" — a product whose specs were never edited comes
+    // back this way and used to crash SpecsTable's .map().
+    expect(toProduct(row({ specs: {} })).specs).toEqual([]);
+    expect(toProduct(row({ specs: null })).specs).toEqual([]);
+    expect(toProduct(row({ specs: undefined })).specs).toEqual([]);
+  });
+
+  it("keeps a real specs array intact", () => {
+    const specs = [{ label: { uz: "a", ru: "b", en: "c" }, value: "Steel" }];
+    expect(toProduct(row({ specs })).specs).toEqual(specs);
   });
 
   it("does not leak the raw name columns", () => {
@@ -58,5 +74,20 @@ describe("toProduct", () => {
       "/uploads/products/a.jpg",
     );
     expect(toProduct(row({ imageUrl: null })).imageUrl).toBeNull();
+  });
+});
+
+describe("toRootStockStatus / toBackendStockStatus", () => {
+  it("round-trips every value", () => {
+    expect(toRootStockStatus("IN_STOCK")).toBe("available");
+    expect(toRootStockStatus("LOW_STOCK")).toBe("limited");
+    expect(toRootStockStatus("OUT_OF_STOCK")).toBe("out_of_stock");
+    expect(toBackendStockStatus("available")).toBe("IN_STOCK");
+    expect(toBackendStockStatus("limited")).toBe("LOW_STOCK");
+    expect(toBackendStockStatus("out_of_stock")).toBe("OUT_OF_STOCK");
+  });
+
+  it("fails safe to out_of_stock on an unrecognized backend value", () => {
+    expect(toRootStockStatus("SOME_FUTURE_VALUE")).toBe("out_of_stock");
   });
 });

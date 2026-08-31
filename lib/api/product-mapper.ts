@@ -1,5 +1,30 @@
 import type { Brand, Category, Product, ProductSpec, StockStatus } from "@/lib/types";
 
+/** backend/'s raw `Product.stockStatus` enum (backend/prisma/schema.prisma) — not root's own `StockStatus` vocabulary. */
+export type BackendStockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+
+/**
+ * backend status -> root status.
+ *
+ * Same shape as order-repository.ts's toRootStatus()/toBackendStatus() for
+ * OrderStatus: backend/'s schema enum and root's storefront-facing StockStatus
+ * (lib/types.ts) have never shared a vocabulary (`IN_STOCK` vs `available`,
+ * etc.) — every reader of a product's stock status goes through this so the
+ * mismatch has exactly one fix point, not one per call site.
+ */
+export function toRootStockStatus(s: string): StockStatus {
+  if (s === "IN_STOCK") return "available";
+  if (s === "LOW_STOCK") return "limited";
+  return "out_of_stock"; // OUT_OF_STOCK, and any unrecognized value fails safe to "out of stock" rather than "available"
+}
+
+/** root status -> backend status (writes / query filters). */
+export function toBackendStockStatus(s: StockStatus): BackendStockStatus {
+  if (s === "available") return "IN_STOCK";
+  if (s === "limited") return "LOW_STOCK";
+  return "OUT_OF_STOCK";
+}
+
 /** One product row as backend/'s catalog endpoints return it. */
 export interface ProductRow {
   id: string;
@@ -19,7 +44,7 @@ export interface ProductRow {
   compatibleModels: string[];
   specs: unknown;
   imageUrl: string | null;
-  stockStatus: StockStatus;
+  stockStatus: BackendStockStatus;
 }
 
 export interface CategoryRow {
@@ -57,8 +82,11 @@ export function toProduct(row: ProductRow): Product {
     categoryId: row.categoryId,
     brandId: row.brandId,
     compatibleModels: row.compatibleModels,
-    stockStatus: row.stockStatus,
-    specs: row.specs as ProductSpec[],
+    stockStatus: toRootStockStatus(row.stockStatus),
+    // backend/'s Product.specs defaults to the JSON object "{}", not "[]" —
+    // real (non-default) rows are arrays; guard rather than let a
+    // never-edited product's specs crash SpecsTable's .map().
+    specs: Array.isArray(row.specs) ? (row.specs as ProductSpec[]) : [],
     imageUrl: row.imageUrl,
   };
 }

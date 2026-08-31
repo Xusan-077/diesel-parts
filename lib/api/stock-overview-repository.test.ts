@@ -24,7 +24,7 @@ function stockRow(overrides: Record<string, unknown> = {}) {
     nameUz: "Nasos",
     availableQuantity: 5,
     minStock: 2,
-    stockStatus: "available",
+    stockStatus: "IN_STOCK",
     category: { nameUz: "Nasoslar" },
     ...overrides,
   };
@@ -41,10 +41,10 @@ describe("stock-overview-repository", () => {
     it("tallies statuses across a full active-catalog read", async () => {
       vi.mocked(backendRequest).mockResolvedValue({
         data: [
-          stockRow({ stockStatus: "available" }),
-          stockRow({ stockStatus: "available" }),
-          stockRow({ stockStatus: "limited" }),
-          stockRow({ stockStatus: "out_of_stock" }),
+          stockRow({ stockStatus: "IN_STOCK" }),
+          stockRow({ stockStatus: "IN_STOCK" }),
+          stockRow({ stockStatus: "LOW_STOCK" }),
+          stockRow({ stockStatus: "OUT_OF_STOCK" }),
         ],
       });
 
@@ -75,7 +75,7 @@ describe("stock-overview-repository", () => {
 
       expect(backendRequest).toHaveBeenCalledWith("/products", {
         accessToken: "tok",
-        query: { isActive: "true", stockStatus: "limited", sort: "stock", page: 1, limit: 20 },
+        query: { isActive: "true", stockStatus: "LOW_STOCK", sort: "stock", page: 1, limit: 20 },
       });
       expect(page.items).toEqual([
         {

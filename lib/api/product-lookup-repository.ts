@@ -1,6 +1,7 @@
 import "server-only";
 import { backendRequest } from "./backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
+import { toRootStockStatus, type BackendStockStatus } from "./product-mapper";
 import type { StockStatus } from "@/lib/types";
 
 /** One catalog row as the order form needs it. */
@@ -24,7 +25,7 @@ interface BackendLookupRow {
   price: string | null;
   currency: string;
   stock: number;
-  stockStatus: StockStatus;
+  stockStatus: BackendStockStatus;
 }
 
 /**
@@ -39,5 +40,9 @@ export async function searchSellableProducts(term: string): Promise<ProductLooku
     query: { q: term },
   });
 
-  return rows.map((row) => ({ ...row, price: row.price === null ? null : Number(row.price) }));
+  return rows.map((row) => ({
+    ...row,
+    price: row.price === null ? null : Number(row.price),
+    stockStatus: toRootStockStatus(row.stockStatus),
+  }));
 }

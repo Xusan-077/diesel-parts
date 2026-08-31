@@ -1,6 +1,7 @@
 import "server-only";
 import { backendRequest } from "./backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
+import { toBackendStockStatus, toRootStockStatus, type BackendStockStatus } from "./product-mapper";
 import type { StockStatus } from "@/lib/types";
 
 /**
@@ -28,7 +29,7 @@ interface BackendStockRow {
   nameUz: string;
   availableQuantity: number;
   minStock: number;
-  stockStatus: StockStatus;
+  stockStatus: BackendStockStatus;
   category: { nameUz: string } | null;
 }
 
@@ -52,8 +53,9 @@ export async function getStockCounts(): Promise<StockCounts> {
   const counts = { total: 0, available: 0, limited: 0, outOfStock: 0 };
   for (const row of result.data) {
     counts.total += 1;
-    if (row.stockStatus === "available") counts.available += 1;
-    else if (row.stockStatus === "limited") counts.limited += 1;
+    const status = toRootStockStatus(row.stockStatus);
+    if (status === "available") counts.available += 1;
+    else if (status === "limited") counts.limited += 1;
     else counts.outOfStock += 1;
   }
   return counts;
@@ -98,7 +100,7 @@ export async function listStock(options: {
     accessToken: await accessToken(),
     query: {
       isActive: "true",
-      stockStatus: options.status,
+      stockStatus: options.status ? toBackendStockStatus(options.status) : undefined,
       sort: "stock",
       page: options.page,
       limit: STOCK_PAGE_SIZE,
@@ -113,7 +115,7 @@ export async function listStock(options: {
       categoryName: row.category?.nameUz ?? "",
       stock: row.availableQuantity,
       minStock: row.minStock,
-      status: row.stockStatus,
+      status: toRootStockStatus(row.stockStatus),
     })),
     total: result.meta.total,
     page: result.meta.page,

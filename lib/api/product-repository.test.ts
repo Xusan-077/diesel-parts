@@ -37,7 +37,7 @@ function productRow(overrides: Record<string, unknown> = {}) {
     compatibleModels: [],
     specs: [],
     imageUrl: null,
-    stockStatus: "available",
+    stockStatus: "IN_STOCK",
     ...overrides,
   };
 }
@@ -88,6 +88,20 @@ describe("product-repository", () => {
           limit: 9,
         },
       });
+    });
+
+    it("translates the availability filter to backend/'s stock status vocabulary", async () => {
+      vi.mocked(backendRequest).mockResolvedValueOnce({
+        data: [],
+        meta: { page: 1, limit: 9, total: 0, totalPages: 1 },
+      });
+
+      await queryProducts(baseQuery({ availability: "limited" }));
+
+      expect(backendRequest).toHaveBeenCalledWith(
+        "/catalog/products",
+        expect.objectContaining({ query: expect.objectContaining({ stockStatus: "LOW_STOCK" }) }),
+      );
     });
 
     it("answers locally, without a network call, when categoryIds is a deliberate empty scope", async () => {
@@ -239,7 +253,7 @@ describe("product-repository", () => {
       expect(backendRequest).toHaveBeenCalledWith("/catalog/products", { query: { sort: "id", limit: 4 } });
       expect(backendRequest).toHaveBeenCalledWith("/catalog/products", { query: { limit: 4 } });
       expect(backendRequest).toHaveBeenCalledWith("/catalog/products", {
-        query: { sort: "id", stockStatus: "available", limit: 4 },
+        query: { sort: "id", stockStatus: "IN_STOCK", limit: 4 },
       });
     });
   });
