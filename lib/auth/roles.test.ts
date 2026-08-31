@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminHomePath, canAccessAdminPath, isAdminPath, isDirectorPath } from "./roles";
+import { adminHomePath, canAccessAdminPath, isAdminPath, isDirectorPath, isDirectorTier } from "./roles";
 
 describe("isAdminPath", () => {
   it("matches the panel root and everything under it", () => {
@@ -82,5 +82,18 @@ describe("canAccessAdminPath", () => {
 
   it("ignores a trailing slash", () => {
     expect(canAccessAdminPath("/admin/seller/", "SELLER")).toBe(true);
+  });
+});
+
+describe("isDirectorTier", () => {
+  it("matches backend/'s own DIRECTOR_UP set exactly", () => {
+    expect(isDirectorTier("SUPER_ADMIN")).toBe(true);
+    expect(isDirectorTier("DIRECTOR")).toBe(true);
+    expect(isDirectorTier("MANAGER")).toBe(true);
+  });
+
+  it("excludes SELLER and VIEWER, who backend/'s DIRECTOR_UP-gated endpoints 403 for", () => {
+    expect(isDirectorTier("SELLER")).toBe(false);
+    expect(isDirectorTier("VIEWER")).toBe(false);
   });
 });

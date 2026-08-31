@@ -87,3 +87,13 @@ export function canAccessAdminPath(pathname: string, role: StaffRole): boolean {
   const area = ADMIN_AREAS.find((candidate) => isUnder(path, candidate.prefix));
   return area ? area.roles.includes(role) : false;
 }
+
+/**
+ * Mirrors backend/'s own `DIRECTOR_UP` guard (SUPER_ADMIN, DIRECTOR, MANAGER)
+ * — every backend/ endpoint gated that way (e.g. `/analytics/*`) throws a 403
+ * for SELLER/VIEWER, so any root-side caller of one of those endpoints must
+ * check this first rather than let the request reach backend/ and fail.
+ */
+export function isDirectorTier(role: StaffRole): boolean {
+  return role === "SUPER_ADMIN" || role === "DIRECTOR" || role === "MANAGER";
+}
