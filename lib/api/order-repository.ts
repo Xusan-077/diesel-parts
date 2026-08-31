@@ -159,8 +159,15 @@ interface BackendOrderPage {
 /*  Status translation                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** backend status -> root status (reads). */
-function toRootStatus(s: string): OrderStatus {
+/**
+ * backend status -> root status (reads).
+ *
+ * Exported (an addition, not a change, to this file's public surface) so
+ * `analytics-repository.ts` can apply the same NEW->PENDING/PREPARING->
+ * CONFIRMED fold to the order statuses it reads from `backend/`, rather than
+ * a second copy of this translation drifting from this one.
+ */
+export function toRootStatus(s: string): OrderStatus {
   if (s === "NEW") return "PENDING";
   if (s === "PREPARING") return "CONFIRMED";
   return s as OrderStatus; // DRAFT, CONFIRMED, COMPLETED, CANCELLED pass through
