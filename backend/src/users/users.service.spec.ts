@@ -172,9 +172,12 @@ describe('UsersService audit', () => {
   it('records a CREATE with a snapshot that omits the password hash', async () => {
     const created = {
       id: 'u1',
+      name: 'Vali',
+      email: 'vali@dieselparts.uz',
       phone: '998901234567',
       role: Role.SELLER,
       isActive: true,
+      discountLimit: 5,
     };
     const prisma = makePrisma({
       user: {
@@ -187,6 +190,8 @@ describe('UsersService audit', () => {
 
     await service.create(
       {
+        name: 'Vali',
+        email: 'vali@dieselparts.uz',
         phone: '998901234567',
         password: 'secret123',
         role: Role.SELLER,
@@ -199,7 +204,73 @@ describe('UsersService audit', () => {
       action: AuditAction.CREATE,
       entityType: 'User',
       entityId: 'u1',
-      after: { phone: '998901234567', role: Role.SELLER, isActive: true },
+      after: {
+        name: 'Vali',
+        email: 'vali@dieselparts.uz',
+        phone: '998901234567',
+        role: Role.SELLER,
+        isActive: true,
+        discountLimit: 5,
+      },
+    });
+  });
+
+  it('checks for a duplicate by email, not phone -- an email-primary account has no phone to check', async () => {
+    const findUnique = jest.fn().mockResolvedValue({ id: 'existing' });
+    const create = jest.fn();
+    const prisma = makePrisma({ user: { findUnique, create } });
+    const service = new UsersService(prisma, makeAudit().audit);
+
+    await expect(
+      service.create(
+        {
+          name: 'Director',
+          email: 'director@dieselparts.uz',
+          password: 'secret123',
+          role: Role.DIRECTOR,
+        },
+        'actor-1',
+      ),
+    ).rejects.toThrow(new ConflictException('Email already registered'));
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { email: 'director@dieselparts.uz' },
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('creates an account with no phone at all', async () => {
+    const create = jest.fn().mockResolvedValue({
+      id: 'u2',
+      name: 'Director',
+      email: 'director@dieselparts.uz',
+      phone: null,
+      role: Role.DIRECTOR,
+      isActive: true,
+      discountLimit: 100,
+    });
+    const prisma = makePrisma({
+      user: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const service = new UsersService(prisma, makeAudit().audit);
+
+    await service.create(
+      {
+        name: 'Director',
+        email: 'director@dieselparts.uz',
+        password: 'secret123',
+        role: Role.DIRECTOR,
+      },
+      'actor-1',
+    );
+
+    const [call] = create.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(call.data).toMatchObject({
+      name: 'Director',
+      email: 'director@dieselparts.uz',
+      phone: null,
+      role: Role.DIRECTOR,
+      discountLimit: 5,
+      isActive: true,
     });
   });
 

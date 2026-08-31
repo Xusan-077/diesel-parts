@@ -8,24 +8,42 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { AuditAction, OrderStatus, Role } from '../../generated/prisma/client';
+import {
+  AuditAction,
+  OrderStatus,
+  Prisma,
+  Role,
+} from '../../generated/prisma/client';
 
 const SAFE_SELECT = {
   id: true,
+  name: true,
+  email: true,
   phone: true,
   role: true,
   isActive: true,
+  discountLimit: true,
   createdAt: true,
   updatedAt: true,
 } as const;
 
 /** What the audit trail keeps for a staff write — never the password hash. */
 function auditSnapshot(row: {
+  name: string;
+  email: string | null;
   phone: string | null;
   role: Role;
   isActive: boolean;
+  discountLimit: number;
 }) {
-  return { phone: row.phone, role: row.role, isActive: row.isActive };
+  return {
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    role: row.role,
+    isActive: row.isActive,
+    discountLimit: row.discountLimit,
+  };
 }
 
 @Injectable()
@@ -82,22 +100,38 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, actorId: string) {
+    // `email` (required on this DTO) rather than `phone` (optional): an
+    // email-primary account, like the migrated director, has no phone to
+    // check. A `phone` collision is still possible and still rejected --
+    // caught as a generic P2002 below rather than checked proactively too.
     const existing = await this.prisma.user.findUnique({
-      where: { phone: dto.phone },
+      where: { email: dto.email },
     });
-    if (existing)
-      throw new ConflictException('Phone number already registered');
+    if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const created = await this.prisma.user.create({
-      data: {
-        phone: dto.phone,
-        passwordHash,
-        role: dto.role,
-        isActive: dto.isActive ?? true,
-      },
-      select: SAFE_SELECT,
-    });
+    const created = await this.prisma.user
+      .create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          phone: dto.phone ?? null,
+          passwordHash,
+          role: dto.role,
+          discountLimit: dto.discountLimit ?? 5,
+          isActive: dto.isActive ?? true,
+        },
+        select: SAFE_SELECT,
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          throw new ConflictException('Email already registered');
+        }
+        throw error;
+      });
     await this.audit.record({
       userId: actorId,
       action: AuditAction.CREATE,
