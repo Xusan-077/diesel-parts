@@ -1,3 +1,5 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 /**
  * Placeholder rows for the cart, wishlist and compare screens.
  *
@@ -11,10 +13,9 @@ export function ResolvedProductsSkeleton({ count }: { count: number }) {
   return (
     <ul className="mt-6 flex flex-col gap-4" aria-hidden="true">
       {Array.from({ length: count }, (_, index) => (
-        <li
-          key={index}
-          className="h-28 animate-pulse rounded-lg border border-border bg-surface-muted"
-        />
+        <li key={index}>
+          <Skeleton className="h-28 rounded-lg border border-border" />
+        </li>
       ))}
     </ul>
   );

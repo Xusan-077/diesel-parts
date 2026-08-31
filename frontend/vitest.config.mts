@@ -23,8 +23,7 @@ export default defineConfig({
     // needs none. A React suite opts in with a `@vitest-environment jsdom`
     // docblock rather than paying jsdom's startup cost across the whole run.
     include: ["**/*.test.ts", "**/*.test.tsx"],
-    // Nested node_modules (agent worktrees) ship their own test suites.
-    exclude: ["**/node_modules/**", "**/.next/**", ".claude/**"],
+    exclude: ["**/node_modules/**", "**/.next/**"],
     setupFiles: ["./vitest.setup.ts"],
   },
 });
