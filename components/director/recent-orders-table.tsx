@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/shadcn/table";
 import { OrderStatusBadge } from "./order-status-badge";
-import type { OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/api/backend-enums";
 
 export interface RecentOrderRow {
   id: string;

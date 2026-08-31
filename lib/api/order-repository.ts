@@ -8,7 +8,7 @@ import type {
   OrderListQuery,
   OrderUpdateInput,
 } from "@/lib/schemas";
-import type { DiscountStatus, OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { DiscountStatus, OrderStatus } from "@/lib/api/backend-enums";
 
 /**
  * Manual order entry, its lifecycle, and the discount path.

@@ -1,6 +1,6 @@
 import "server-only";
 import { backendRequest } from "./backend-client";
-import type { InquirySource } from "@/prisma/generated/prisma/enums";
+import type { InquirySource } from "@/lib/api/backend-enums";
 
 export interface CreateInquiryInput {
   customerName: string;

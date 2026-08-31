@@ -4,7 +4,7 @@ import { getStaffSession } from "@/lib/auth/staff-session";
 import { INQUIRY_COLUMNS, type InquiryColumn } from "./inquiry-board";
 import type { ScopeActor } from "./seller-scope";
 import type { InquiryListQuery, InquiryUpdateInput } from "@/lib/schemas";
-import type { InquiryStatus, InquirySource } from "@/prisma/generated/prisma/enums";
+import type { InquiryStatus, InquirySource } from "@/lib/api/backend-enums";
 
 /**
  * The seller board's reads and writes, over `backend/`'s `seller/inquiries`.

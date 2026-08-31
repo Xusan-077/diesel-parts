@@ -3,7 +3,7 @@ import { BackendApiError, backendRequest } from "./backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
 import type { ScopeActor } from "./seller-scope";
 import type { CustomerCreateInput, CustomerListQuery, CustomerUpdateInput } from "@/lib/schemas";
-import type { InquiryStatus } from "@/prisma/generated/prisma/enums";
+import type { InquiryStatus } from "@/lib/api/backend-enums";
 
 /** The seller's own customer book. */
 

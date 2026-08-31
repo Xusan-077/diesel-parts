@@ -1,6 +1,6 @@
 import { INQUIRY_COLUMNS, type InquiryColumn } from "@/lib/api/inquiry-board";
 import { MONTHS_SHORT } from "@/lib/analytics/format";
-import type { InquiryStatus } from "@/prisma/generated/prisma/enums";
+import type { InquiryStatus } from "@/lib/api/backend-enums";
 
 /**
  * The board's client-side state, as pure functions.

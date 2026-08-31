@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { products } from "@/prisma/seed-data/products";
+import { products } from "@/lib/data/mock-catalog/products";
 import { getRelatedProducts } from "./filters";
 
 describe("getRelatedProducts", () => {

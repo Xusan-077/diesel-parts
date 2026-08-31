@@ -3,7 +3,7 @@ import { backendRequest } from "./backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
 import { toRootStatus } from "./order-repository";
 import type { DayPoint, Period } from "@/lib/analytics/period";
-import type { OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/api/backend-enums";
 
 async function accessToken(): Promise<string | undefined> {
   const session = await getStaffSession();

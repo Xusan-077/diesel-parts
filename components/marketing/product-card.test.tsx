@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ProductCard } from "./product-card";
 import { useCartStore, useSnapshotStore, useWishlistStore } from "@/lib/store/stores";
-import { products } from "@/prisma/seed-data/products";
+import { products } from "@/lib/data/mock-catalog/products";
 import dictionary from "@/dictionaries/uz.json";
 
 /*
