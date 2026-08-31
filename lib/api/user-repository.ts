@@ -1,11 +1,8 @@
 import "server-only";
-import { hash } from "bcryptjs";
-import { prisma } from "@/lib/db";
-import { recordAudit } from "./audit";
+import { BackendApiError, backendRequest } from "./backend-client";
+import { getStaffSession } from "@/lib/auth/staff-session";
 import type { UserCreateInput, UserUpdateInput } from "@/lib/schemas";
 import type { StaffRole } from "@/lib/auth/roles";
-
-const BCRYPT_COST = 12;
 
 export interface StaffRow {
   id: string;
@@ -20,29 +17,40 @@ export interface StaffRow {
   completedOrders: number;
 }
 
+interface BackendStaffRow {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: StaffRole;
+  isActive: boolean;
+  discountLimit: number;
+  createdAt: string;
+  completedOrders: number;
+}
+
+async function accessToken(): Promise<string | undefined> {
+  const session = await getStaffSession();
+  return session?.accessToken;
+}
+
 export async function listStaff(): Promise<StaffRow[]> {
-  const [users, orderCounts] = await Promise.all([
-    prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }] }),
-    prisma.order.groupBy({
-      by: ["sellerId"],
-      where: { status: "COMPLETED" },
-      _count: { _all: true },
-    }),
-  ]);
+  const rows = await backendRequest<BackendStaffRow[]>("/users", { accessToken: await accessToken() });
 
-  const ordersBySeller = new Map(orderCounts.map((row) => [row.sellerId, row._count._all]));
-
-  return users.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    isActive: user.isActive,
-    discountLimit: user.discountLimit,
-    createdAt: user.createdAt,
-    completedOrders: ordersBySeller.get(user.id) ?? 0,
+  const staff = rows.map((row) => ({
+    ...row,
+    // `email` is nullable on the row (a phone-primary seller account may
+    // have none); this page's own StaffRow always had one because this
+    // repository's callers all populate it through the form below, which
+    // requires it.
+    email: row.email ?? "",
+    createdAt: new Date(row.createdAt),
   }));
+
+  // backend/'s own order is createdAt desc (it has no sort param); sorted
+  // here to keep this page's original active-first, then-alphabetical order
+  // rather than silently reordering it to newest-account-first.
+  return staff.sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.name.localeCompare(b.name));
 }
 
 export type UserWriteResult =
@@ -51,100 +59,65 @@ export type UserWriteResult =
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "last_director" };
 
-export async function createStaff(
-  input: UserCreateInput,
-  actorId: string,
-): Promise<UserWriteResult> {
-  const email = input.email.trim().toLowerCase();
-  const existing = await prisma.user.findUnique({ where: { email } });
+/** `Cannot deactivate the last active director` is the one 409 that isn't a duplicate. */
+const LAST_DIRECTOR_MESSAGE = "Cannot deactivate the last active director";
 
-  if (existing !== null) {
-    return { ok: false, reason: "duplicate_email" };
+function writeFailure(error: unknown): UserWriteResult {
+  if (error instanceof BackendApiError) {
+    if (error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    if (error.status === 409) {
+      return error.message === LAST_DIRECTOR_MESSAGE
+        ? { ok: false, reason: "last_director" }
+        : { ok: false, reason: "duplicate_email" };
+    }
   }
-
-  const created = await prisma.user.create({
-    data: {
-      name: input.name,
-      email,
-      phone: input.phone?.trim() || null,
-      passwordHash: await hash(input.password, BCRYPT_COST),
-      role: input.role,
-      discountLimit: input.discountLimit,
-    },
-  });
-
-  await recordAudit({
-    userId: actorId,
-    action: "CREATE",
-    entityType: "User",
-    entityId: created.id,
-    // The hash never reaches the audit trail.
-    after: { name: created.name, email: created.email, role: created.role },
-  });
-
-  return { ok: true, id: created.id };
+  throw error;
 }
 
-/**
- * Counts directors other than `excludeId` who could still sign in.
- *
- * Guards the one change that locks everybody out: the last director demoting or
- * deactivating themselves. There is no recovery path from that short of a
- * database console.
- */
-async function otherActiveDirectors(excludeId: string): Promise<number> {
-  return prisma.user.count({
-    where: { role: "DIRECTOR", isActive: true, id: { not: excludeId } },
-  });
+export async function createStaff(
+  input: UserCreateInput,
+  _actorId: string,
+): Promise<UserWriteResult> {
+  try {
+    const created = await backendRequest<{ id: string }>("/users", {
+      method: "POST",
+      accessToken: await accessToken(),
+      body: {
+        name: input.name,
+        email: input.email.trim().toLowerCase(),
+        phone: input.phone?.trim() || null,
+        password: input.password,
+        role: input.role,
+        discountLimit: input.discountLimit,
+      },
+    });
+    return { ok: true, id: created.id };
+  } catch (error) {
+    return writeFailure(error);
+  }
 }
 
 export async function updateStaff(
   id: string,
   input: UserUpdateInput,
-  actorId: string,
+  _actorId: string,
 ): Promise<UserWriteResult> {
-  const before = await prisma.user.findUnique({ where: { id } });
-
-  if (before === null) {
-    return { ok: false, reason: "not_found" };
+  try {
+    await backendRequest(`/users/${id}`, {
+      method: "PATCH",
+      accessToken: await accessToken(),
+      body: {
+        name: input.name,
+        phone: input.phone?.trim() || null,
+        role: input.role,
+        discountLimit: input.discountLimit,
+        isActive: input.isActive,
+      },
+    });
+    return { ok: true, id };
+  } catch (error) {
+    return writeFailure(error);
   }
-
-  const losingDirector =
-    before.role === "DIRECTOR" && (input.role !== "DIRECTOR" || !input.isActive);
-
-  if (losingDirector && (await otherActiveDirectors(id)) === 0) {
-    return { ok: false, reason: "last_director" };
-  }
-
-  const after = await prisma.user.update({
-    where: { id },
-    data: {
-      name: input.name,
-      phone: input.phone?.trim() || null,
-      role: input.role,
-      discountLimit: input.discountLimit,
-      isActive: input.isActive,
-    },
-  });
-
-  await recordAudit({
-    userId: actorId,
-    action: "UPDATE",
-    entityType: "User",
-    entityId: id,
-    before: {
-      name: before.name,
-      role: before.role,
-      isActive: before.isActive,
-      discountLimit: before.discountLimit,
-    },
-    after: {
-      name: after.name,
-      role: after.role,
-      isActive: after.isActive,
-      discountLimit: after.discountLimit,
-    },
-  });
-
-  return { ok: true, id };
 }

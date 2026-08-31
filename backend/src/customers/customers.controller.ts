@@ -16,6 +16,7 @@ import { QueryCustomerDto } from './dto/query-customer.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MANAGER_UP } from '../common/roles';
 
 @Controller('customers')
@@ -35,17 +36,21 @@ export class CustomersController {
   }
 
   @Post()
-  create(@Body() dto: CreateCustomerDto) {
-    return this.customers.create(dto);
+  create(@CurrentUser('id') actorId: string, @Body() dto: CreateCustomerDto) {
+    return this.customers.create(dto, actorId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateCustomerDto) {
-    return this.customers.update(id, dto);
+  update(
+    @CurrentUser('id') actorId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCustomerDto,
+  ) {
+    return this.customers.update(id, dto, actorId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.customers.remove(id);
+  remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
+    return this.customers.remove(id, actorId);
   }
 }

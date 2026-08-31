@@ -10,8 +10,10 @@ import {
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { RequestDiscountDto } from './dto/request-discount.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -52,8 +54,26 @@ export class OrdersController {
     return this.orders.updateStatus(actor, id, dto.status);
   }
 
+  @Patch(':id')
+  update(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderDto,
+  ) {
+    return this.orders.update(actor, id, dto);
+  }
+
   @Post(':id/cancel')
   cancel(@CurrentUser() actor: AuthenticatedUser, @Param('id') id: string) {
     return this.orders.cancel(actor, id);
+  }
+
+  @Post(':id/discount-request')
+  requestDiscount(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RequestDiscountDto,
+  ) {
+    return this.orders.requestDiscount(actor, id, dto);
   }
 }

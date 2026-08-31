@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@/prisma/generated/prisma/enums";
+import type { OrderStatus } from "@/lib/api/backend-enums";
 
 /**
  * The order lifecycle, in the seller's hands from end to end.

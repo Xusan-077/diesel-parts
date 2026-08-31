@@ -1,4 +1,4 @@
-import type { InquiryStatus } from "@/prisma/generated/prisma/enums";
+import type { InquiryStatus } from "@/lib/api/backend-enums";
 
 /**
  * The board's five columns, from four enum values.

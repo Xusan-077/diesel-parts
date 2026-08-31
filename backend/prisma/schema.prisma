@@ -81,6 +81,11 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
+}
+
 model User {
   id            String   @id @default(cuid())
   /// Nullable: some accounts (director/staff created via the old email-based
@@ -154,6 +159,10 @@ model Customer {
   phone            String
   email            String?
   company          String?
+  /// INN — the Uzbek taxpayer id, for a B2B checkout's invoice. Free text,
+  /// not format-checked: it varies by entity type and this project has no
+  /// authoritative check-digit table today.
+  taxId            String?  @map("tax_id")
   telegram         String?
   notes            String?
   debt             Decimal  @default(0) @db.Decimal(14, 2)
@@ -246,6 +255,7 @@ model Product {
   orderItems  OrderItem[]
   inquiries   Inquiry[]
   reviews     Review[]
+  cartItems   CartItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -387,6 +397,18 @@ model Order {
   /// and merging them would change either flow's existing behavior.
   discount                 Decimal            @default(0) @db.Decimal(14, 2)
   deliveryFee              Decimal            @default(0) @map("delivery_fee") @db.Decimal(14, 2)
+  /// Self-checkout only: PICKUP needs no address; DELIVERY requires
+  /// city/district/street, enforced in CreateCheckoutDto (not at the DB
+  /// level, so a CRM-raised order — created through OrdersService.create,
+  /// not CheckoutService — is unaffected and simply keeps the PICKUP
+  /// default with every address column null).
+  deliveryMethod           DeliveryMethod     @default(PICKUP) @map("delivery_method")
+  deliveryCity             String?            @map("delivery_city")
+  deliveryDistrict         String?            @map("delivery_district")
+  deliveryStreet           String?            @map("delivery_street")
+  /// Free-text delivery guidance (entrance, floor, landmark) — distinct
+  /// from `notes`, which is the order's general comment.
+  deliveryNotes            String?            @map("delivery_notes")
   /// Percent the seller asked for (CRM flow). Within their User.discountLimit
   /// it applies immediately; above it, a DiscountRequest gates approval.
   discountRequestedPercent Decimal            @default(0) @map("discount_requested_percent") @db.Decimal(5, 2)
@@ -454,16 +476,38 @@ model DiscountRequest {
 }
 
 model Payment {
-  id        String        @id @default(cuid())
-  orderId   String        @map("order_id")
-  order     Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount    Decimal       @db.Decimal(14, 2)
-  method    PaymentMethod
-  status    PaymentStatus @default(PENDING)
-  paidAt    DateTime?     @map("paid_at")
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
+  id                 String        @id @default(cuid())
+  orderId            String        @map("order_id")
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount             Decimal       @db.Decimal(14, 2)
+  method             PaymentMethod
+  status             PaymentStatus @default(PENDING)
+  /// "payme" once Click is wired in later this becomes "payme" | "click".
+  /// Null for the existing staff-recorded (cash/card/transfer) payments.
+  provider           String?
+  /// The provider's own id for this attempt. Only PaymeService (driven by
+  /// Payme's own webhook, never the frontend) may move a payment to
+  /// COMPLETED — see PaymeService.performTransaction.
+  transactionId      String?
+  /// Payme's `time` (epoch ms) from CreateTransaction, echoed back verbatim
+  /// on every retry — Payme's protocol requires CreateTransaction to be
+  /// idempotent, and this is the value that makes a repeat call return the
+  /// exact same create_time instead of a fresh one.
+  providerCreateTime BigInt?
+  cancelledAt        DateTime?
+  /// Payme's CancelTransaction `reason` code, kept for support/audit only —
+  /// no code branches on its value.
+  cancelReason       Int?
+  paidAt             DateTime?     @map("paid_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
+  /// Guards webhook idempotency: a provider retrying the same callback must
+  /// not be able to create a second row for one transaction and re-fire a
+  /// COMPLETED transition. Postgres treats each NULL as distinct here, so
+  /// the existing staff-recorded rows (provider/transactionId both null)
+  /// are unaffected.
+  @@unique([provider, transactionId])
   @@index([orderId])
   @@map("payments")
 }
@@ -478,6 +522,33 @@ model Invoice {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("invoices")
+}
+
+/// A phone-verified storefront visitor's cart. Keyed by phone rather than a
+/// customer/user id — backend/ has no concept of a storefront visitor's
+/// identity beyond what Next.js's OTP session asserts over the
+/// InternalServiceGuard bridge (see CartsController), and a Customer row is
+/// only created at checkout, not at cart time.
+model Cart {
+  id        String     @id @default(cuid())
+  phone     String     @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String  @map("cart_id")
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
 }
 
 model Notification {

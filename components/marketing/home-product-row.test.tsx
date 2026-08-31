@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HomeProductRow } from "./home-product-row";
 import type { HomeProductsResponse } from "@/lib/product-collections";
 import { stubObservers } from "@/lib/test/stub-observers";
-import { products } from "@/prisma/seed-data/products";
+import { products } from "@/lib/data/mock-catalog/products";
 import dictionary from "@/dictionaries/uz.json";
 
 /*

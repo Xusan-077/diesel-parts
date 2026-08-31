@@ -28,12 +28,26 @@ import { Select } from "@/components/ui/select";
  */
 export type StaffView = StaffListRow;
 
+// Exhaustive over StaffRole (not just the two this panel's forms can assign)
+// because a row this screen displays may already carry one of the other three
+// — backend/'s data model has had them since before this panel could edit
+// them. Assigning SUPER_ADMIN/MANAGER/VIEWER via this UI is a separate,
+// later concern (see lib/auth/roles.ts's adminHomePath comment).
 const ROLE_LABEL: Record<StaffView["role"], string> = {
+  SUPER_ADMIN: "Super admin",
   DIRECTOR: "Direktor",
+  MANAGER: "Menejer",
   SELLER: "Sotuvchi",
+  VIEWER: "Kuzatuvchi",
 };
 
-/** The two fields both forms share, so the pair cannot drift apart. */
+/**
+ * The two fields both forms share, so the pair cannot drift apart.
+ *
+ * Typed against the two roles this dropdown actually offers, not the full
+ * `StaffRole` — assigning SUPER_ADMIN/MANAGER/VIEWER has no UI yet (see
+ * ROLE_LABEL's comment above).
+ */
 function RoleAndLimit({
   role,
   discountLimit,
@@ -42,9 +56,9 @@ function RoleAndLimit({
   onBlurLimit,
   limitError,
 }: {
-  role: StaffView["role"];
+  role: "DIRECTOR" | "SELLER";
   discountLimit: number;
-  onRole: (role: StaffView["role"]) => void;
+  onRole: (role: "DIRECTOR" | "SELLER") => void;
   onLimit: (limit: number) => void;
   onBlurLimit: () => void;
   limitError?: string;
@@ -52,7 +66,7 @@ function RoleAndLimit({
   return (
     <>
       <FormField label="Rol" required>
-        <Select value={role} onChange={(e) => onRole(e.target.value as StaffView["role"])}>
+        <Select value={role} onChange={(e) => onRole(e.target.value as "DIRECTOR" | "SELLER")}>
           <option value="SELLER">Sotuvchi</option>
           <option value="DIRECTOR">Direktor</option>
         </Select>
@@ -91,7 +105,10 @@ function EditModal({
   const [form, setForm] = useState({
     name: user.name,
     phone: user.phone ?? "",
-    role: user.role,
+    // Root's own User.role (what this route reads until Task 14 connects the
+    // panel to backend/'s five-role model) only ever has these two values —
+    // the edit form's role selector below only ever offers them too.
+    role: user.role as "DIRECTOR" | "SELLER",
     discountLimit: user.discountLimit,
     isActive: user.isActive,
   });
@@ -181,7 +198,7 @@ function CreateModal({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
     email: "",
     phone: "",
     password: "",
-    role: "SELLER" as StaffView["role"],
+    role: "SELLER" as "DIRECTOR" | "SELLER",
     discountLimit: 5,
   });
   const [error, setError] = useState<string | null>(null);

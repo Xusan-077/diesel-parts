@@ -69,7 +69,7 @@ export interface CatalogSubcategory {
   name: LocalizedText;
   icon: CatalogIconKey;
   /**
-   * Matching id in `prisma/seed-data/categories.ts` when the mock product catalog
+   * Matching id in `lib/data/mock-catalog/categories.ts` when the mock product catalog
    * covers this subcategory. Absent entries simply return no products yet.
    */
   categoryId?: string;

@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -6,6 +11,11 @@ import { randomUUID } from 'crypto';
 import ms from '../common/ms';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser, JwtAccessPayload } from './auth.types';
+import {
+  checkLoginAllowed,
+  clearLoginFailures,
+  recordLoginFailure,
+} from './login-throttle';
 
 interface RefreshJwtPayload {
   sub: string;
@@ -27,20 +37,45 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async login(phone: string, password: string): Promise<AuthResult> {
-    const user = await this.prisma.user.findUnique({
-      where: { phone },
+  /**
+   * `identifier` is the DTO's `phone` field, kept under that name so the
+   * seller panel's existing `{ phone, password }` login request body
+   * (`lib/api/seller-panel/auth.ts`) doesn't need to change — but it now
+   * accepts either a phone number or an email address, since accounts such
+   * as `director@dieselparts.uz` have no phone on file.
+   */
+  async login(identifier: string, password: string): Promise<AuthResult> {
+    const throttleKey = identifier.toLowerCase();
+    const allowed = checkLoginAllowed(throttleKey);
+    if (!allowed.ok) {
+      throw new HttpException(
+        {
+          message: 'Too many attempts. Try again later.',
+          retryAfterSeconds: allowed.retryAfterSeconds,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ phone: identifier }, { email: identifier.toLowerCase() }],
+      },
       include: { seller: true },
     });
 
     if (!user || !user.isActive) {
+      recordLoginFailure(throttleKey);
       throw new UnauthorizedException('Invalid phone or password');
     }
 
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatches) {
+      recordLoginFailure(throttleKey);
       throw new UnauthorizedException('Invalid phone or password');
     }
+
+    clearLoginFailures(throttleKey);
 
     return this.issueTokens(
       user.id,
@@ -109,8 +144,11 @@ export class AuthService {
       select: {
         id: true,
         phone: true,
+        email: true,
+        name: true,
         role: true,
         isActive: true,
+        discountLimit: true,
         createdAt: true,
         updatedAt: true,
         seller: { select: { id: true, warehouseId: true } },

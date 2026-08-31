@@ -11,4 +11,16 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsString()
   telegram?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

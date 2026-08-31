@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categories } from "@/prisma/seed-data/categories";
+import { categories } from "@/lib/data/mock-catalog/categories";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { slugify } from "@/lib/catalog-tree";
 import { CATALOG_ICON_KEYS, catalogGroups, isCatalogIconKey } from "./catalog-menu";

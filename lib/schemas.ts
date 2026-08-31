@@ -10,6 +10,79 @@ import {
   REVIEWS_PAGE_SIZE,
 } from "@/lib/reviews";
 
+/** One line as the client posts it — no price, no name; backend/ owns those. */
+export const cartSetItemSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.number().int().min(1).max(99),
+});
+
+export type CartSetItemInput = z.infer<typeof cartSetItemSchema>;
+
+/** A guest's localStorage cart, sent up to merge into the server cart. */
+export const cartMergeSchema = z.object({
+  items: z.array(cartSetItemSchema).max(200),
+});
+
+export type CartMergeInput = z.infer<typeof cartMergeSchema>;
+
+export const checkoutDeliveryMethodSchema = z.enum(["PICKUP", "DELIVERY"]);
+
+function optionalTrimmedString(max: number) {
+  return z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().trim().max(max, "tooLong").optional(),
+  );
+}
+
+const optionalEmail = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().max(160, "tooLong").email("invalidEmail").optional(),
+);
+
+/**
+ * Every failure message here is a *code* (`"required"`, `"tooLong"`, ...),
+ * looked up by lib/store/checkout-error-text.ts — same split
+ * profileDetailsSchema already uses, for the same reason: this form renders
+ * in three languages and a Zod schema has no dictionary.
+ *
+ * `deliveryFee` is deliberately not a field here: backend/'s CheckoutService
+ * always charges 0 for it (no client-supplied fee — see checkout.service.ts's
+ * comment) until a real delivery-fee calculation exists to validate one against.
+ * `returnBaseUrl` is deliberately not a field either — see route.ts, which
+ * adds it server-side from NEXT_PUBLIC_SITE_URL rather than trusting it from
+ * the browser's own request body.
+ */
+export const checkoutRequestSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "required").max(60, "tooLong"),
+    lastName: z.string().trim().min(1, "required").max(60, "tooLong"),
+    email: optionalEmail,
+    companyName: optionalTrimmedString(160),
+    taxId: optionalTrimmedString(32),
+    deliveryMethod: checkoutDeliveryMethodSchema,
+    city: optionalTrimmedString(120),
+    district: optionalTrimmedString(120),
+    street: optionalTrimmedString(200),
+    deliveryNotes: optionalTrimmedString(500),
+    notes: z.string().max(2000).optional(),
+    termsAccepted: z.boolean().refine((value) => value === true, "termsRequired"),
+    paymentMethod: z.literal("ONLINE"),
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.city), {
+    message: "required",
+    path: ["city"],
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.district), {
+    message: "required",
+    path: ["district"],
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.street), {
+    message: "required",
+    path: ["street"],
+  });
+
+export type CheckoutRequestInput = z.infer<typeof checkoutRequestSchema>;
+
 /** One cart line carried along with a quote request. */
 export const quoteCartItemSchema = z.object({
   productId: z.string().min(1),
@@ -100,6 +173,13 @@ export const verifyCodeSchema = z.object({
 });
 
 export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;
+
+/** The verify-code body, with the guest's localStorage cart along for the ride. */
+export const verifyCodeWithCartSchema = verifyCodeSchema.extend({
+  cart: cartMergeSchema.optional(),
+});
+
+export type VerifyCodeWithCartInput = z.infer<typeof verifyCodeWithCartSchema>;
 
 /**
  * Staff sign-in. The password is only checked for presence: a length rule here

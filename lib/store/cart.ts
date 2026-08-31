@@ -95,3 +95,21 @@ export function parseCart(raw: unknown): CartItem[] {
 
   return [...byProduct].map(([productId, quantity]) => ({ productId, quantity }));
 }
+
+/**
+ * Folds a guest's localStorage cart into the server cart on login.
+ *
+ * Built on addToCart rather than its own summing logic, so "how two lines of
+ * the same part combine" has exactly one implementation — the one
+ * addToCart's own tests already cover — instead of a second copy that could
+ * drift from it.
+ */
+export function mergeCartItems(
+  serverItems: readonly CartItem[],
+  guestItems: readonly CartItem[]
+): CartItem[] {
+  return guestItems.reduce(
+    (merged, item) => addToCart(merged, item.productId, item.quantity),
+    [...serverItems]
+  );
+}
