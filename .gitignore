@@ -1,48 +1,14 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# This is now a two-app repo (frontend/, backend/), each with its own
+# self-contained .gitignore. Only root-level concerns live here.
 
-# dependencies
+# leftover from before the frontend/ restructure — a locked file (IDE/TS
+# server) blocked moving it into frontend/node_modules; safe to delete by
+# hand once nothing holds it open. frontend/ has its own, freshly installed.
 /node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
 
 # misc
 .DS_Store
 *.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dev_server.log
-build_output.txt
-
-# env files (can opt-in for committing if needed)
-.env*
-# ...except the checked-in template, which holds no real values.
-!.env.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
 
 # stale Claude Code worktree checkouts (each carries its own .git pointer)
 /.claude/worktrees/
@@ -50,11 +16,6 @@ next-env.d.ts
 # SSH keypairs left behind by `railway connect Postgres --tunnel-only`, which
 # names its key after the command. Private material; never commit it.
 /railway connect Postgres*
-
-# director-uploaded product photos — written at runtime by the image-upload
-# endpoints, not build output. Seed photos live in /public/seed-images instead,
-# which IS committed, so a fresh checkout's catalog is never missing images.
-/public/uploads/
 
 # pre-migration database dumps (scripts/migrate-web-dev-to-erp.ts --apply).
 # Full data dumps, real (non-production) dev rows, password hashes — never commit them.
