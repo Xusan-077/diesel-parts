@@ -29,9 +29,18 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
+  /**
+   * `| null`, not just optional: on an update, root always resubmits the
+   * whole form, and clearing this field has to reach backend/ as an explicit
+   * `null` — an omitted (`undefined`) field in a PATCH body leaves the
+   * existing value untouched instead of clearing it. `@IsOptional()` already
+   * lets `null` through class-validator (it skips the rest of a property's
+   * decorators for both `undefined` and `null`), so no extra decorator is
+   * needed for that.
+   */
   @IsOptional()
   @IsString()
-  phone?: string;
+  phone?: string | null;
 
   @IsString()
   @MinLength(6)

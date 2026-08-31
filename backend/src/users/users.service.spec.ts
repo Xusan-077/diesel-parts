@@ -146,6 +146,23 @@ describe('UsersService.update', () => {
     expect(count).not.toHaveBeenCalled();
     expect(update).toHaveBeenCalled();
   });
+
+  it('clears the phone when the patch sends an explicit null, rather than leaving it untouched', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'seller-user',
+      phone: '998901234569',
+      role: Role.SELLER,
+      isActive: true,
+    });
+    const update = jest.fn().mockResolvedValue({});
+    const prisma = makePrisma({ user: { findUnique, update } });
+    const service = new UsersService(prisma, makeAudit().audit);
+
+    await service.update('seller-user', { phone: null }, 'actor-1');
+
+    const [call] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(call.data).toEqual({ phone: null });
+  });
 });
 
 describe('UsersService.remove', () => {
