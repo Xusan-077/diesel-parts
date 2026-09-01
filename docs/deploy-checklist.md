@@ -232,7 +232,7 @@ resolve. Concentrated in `analytics.service.ts` (51), `products.service.ts`
 (21), `inventory.service.ts` (21), `payme.service.ts` (17),
 `dashboard.service.ts` (16), `auth.service.ts` (9).
 
-### DONE — step 2 schema + migration authored, staged (2026-09-01)
+### DONE — step 2 migration authored, staged, and applied to production (2026-09-01)
 
 Migration `20260901120000_backend_step2_additive` (commit `c6d8b96`).
 Purely additive — `grep -E "DROP |RENAME |ALTER COLUMN"` on the SQL is empty:
@@ -265,12 +265,56 @@ Applied to **staging** (`localhost:5433`, byte-for-byte prod copy) via
 to reset staging). `prisma migrate diff` from staging now reports "empty
 migration". `backend/` tsc **234 → 91**; all **360** tests pass.
 
-**Not applied to production.** Prod application waits on explicit approval of
-the SQL, and must use the same `db execute` + `migrate resolve --applied`
-path, not `migrate deploy` — `backend/prisma/migrations/` is not a baseline of
-prod's 9 applied root migrations (it still holds the 6 abandoned consolidated
-migrations, applied nowhere). Reconciling the folder (vendor prod's 9, delete
-the 6) is a tracked follow-up, not required to apply this migration.
+**Applied to production 2026-09-01**, after SQL review and explicit approval.
+Same path as staging — `prisma db execute` + `prisma migrate resolve
+--applied`, **not** `migrate deploy` (`backend/prisma/migrations/` is still
+not a baseline of prod's 9 applied root migrations; it holds the 6 abandoned
+consolidated migrations, applied nowhere — reconciling that folder is a
+tracked follow-up, not required for this migration). Both commands run via
+`railway run --service Postgres -- bash -c '… "$DATABASE_PUBLIC_URL" …'` so
+the credential never touched a file or shell history. Pre-backup taken first:
+`_db-backups/prod_20260901T151115Z.{dump,sql}` (outside the repo).
+
+Post-apply verification against prod, all PASS:
+- `prisma migrate diff --from-config-datasource --to-schema` → **empty
+  migration** (prod now matches `schema.prisma` exactly).
+- Table count 13 → **23** (all 10 new tables present: Warehouse, Inventory,
+  StockMovement, OrderSequence, Payment, Invoice, Cart, CartItem,
+  RefreshToken, Seller).
+- Enum values: `OrderStatus` 5 → 7, `Role` 2 → 5.
+- Existing row counts **unchanged**: Product 19, Brand 7, Category 56,
+  User 4, AuditLog 69, Order 0, Customer 0 — identical to the pre-migration
+  backup.
+
+### 🔴 DISCOVERED — live production outage, pre-existing, unrelated to step 2 (2026-09-01)
+
+While hitting a real endpoint to verify the migration (per this checklist's
+own "after deploying" rule), `GET /api/catalog/products` on
+`https://api.diesel-parts.uz` returned **500**. Railway logs
+(`railway logs --service diesel-parts`) show the cause:
+`relation "public.products" does not exist` (also `public.categories`,
+`public.brands`) — the **currently deployed build** queries lowercase
+`@@map`-ped table names from the old consolidated schema, but production's
+real tables have always been PascalCase (`Product`, `Category`, `Brand` — the
+root schema; see the 2026-08-23 incident above). `catalog/products/slugs` 500s
+the same way; `catalog/products/stats` 400s (separate issue).
+
+**This is not caused by today's migration** — confirmed independently:
+- The live deployment (`72b73ab6`) **succeeded 2026-08-31 18:34:18**, hours
+  before this session's step-1 schema rewrite (`5114bff`) or step-2 migration
+  (`c6d8b96`) existed. It has never run code that matches this checklist's
+  step-1 schema.
+- Step 2 is purely additive (verified above) — an old Prisma client simply
+  doesn't select columns/tables it doesn't know about; it cannot break from
+  something being added.
+- The failure mode (`table … does not exist`, lowercase name) is exactly the
+  root-cause class this whole backend-schema-alignment effort exists to fix,
+  just not yet deployed.
+
+**Not fixed in this pass** — fixing it means finishing step 3 (the 10 files
+in the table above) and shipping a new Railway deploy of `backend/`, which is
+explicitly out of scope for this session. Flagging because the storefront's
+public catalog API is down *right now* independent of anything done here.
 
 ### NEXT — step 3 (code adaptation to the new schema, no migration)
 
