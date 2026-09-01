@@ -83,7 +83,11 @@ export class CategoriesService {
       await this.assertValidParent(dto.parentId, null);
     }
 
-    const created = await this.prisma.category.create({ data: dto });
+    // Category.id has no @default (D1): the slug is the id, and the storefront
+    // URLs depend on that.
+    const created = await this.prisma.category.create({
+      data: { ...dto, id: dto.slug },
+    });
     await this.audit.record({
       userId: actorId,
       action: AuditAction.CREATE,
