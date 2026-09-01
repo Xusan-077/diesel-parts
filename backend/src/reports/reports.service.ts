@@ -20,7 +20,7 @@ export class ReportsService {
           createdAt: { gte: from, lte: to },
           status: { not: OrderStatus.CANCELLED },
         },
-        _sum: { total: true, discount: true },
+        _sum: { totalAmount: true, discount: true },
       }),
       this.prisma.order.count({
         where: {
@@ -30,11 +30,11 @@ export class ReportsService {
       }),
     ]);
 
-    const totalSales = Number(aggregate._sum.total ?? 0);
+    const totalSales = Number(aggregate._sum?.totalAmount ?? 0);
     return {
       range: { from, to },
       totalSales,
-      totalDiscount: Number(aggregate._sum.discount ?? 0),
+      totalDiscount: Number(aggregate._sum?.discount ?? 0),
       orderCount: count,
       averageOrderValue: count > 0 ? totalSales / count : 0,
     };
