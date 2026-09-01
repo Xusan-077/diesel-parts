@@ -168,9 +168,11 @@ models/enums get a purely-additive migration later (step 2). This supersedes
 
 ### DONE — prep & step 1
 
-- Production Postgres backed up and verified — `_db-backups/` (see its
-  `README.md`): custom + plain `pg_dump` of `monorail.proxy.rlwy.net:54377/railway`,
-  taken 2026-08-31T14:00Z, sha256s recorded.
+- Production Postgres backed up and verified — `_db-backups/` (repo-external,
+  see its `README.md`): custom + plain `pg_dump` of
+  `monorail.proxy.rlwy.net:54377/railway`, sha256s recorded. Two restore
+  points: `prod_20260831T140011Z.*` (pre-consolidation) and
+  `prod_20260901T151115Z.*` (taken just before the step-2 prod apply).
 - Staging DB `postgresql://postgres:postgres@localhost:5433/diesel_parts_staging`
   (local PG 18.6) is a verified byte-for-byte copy of production — table
   counts, row counts, columns, constraints, indexes, and `pg_dump --data-only`
@@ -190,8 +192,9 @@ models/enums get a purely-additive migration later (step 2). This supersedes
   `Order.totalAmount` (not `total`); `OrderItem.qty` + `unitPrice` (no `total`);
   `Brand.name` not unique; `Product/Category/Brand.id` has no `@default`
   (id = slug). `tsc` in `backend/` drops from 353 → 299 errors on this schema
-  change alone. **Committed** (`backend/prisma/schema.prisma` was uncommitted
-  through step 1b; the 1b code commits sit on top of it in history).
+  change alone. **Committed as `5114bff`** (`backend/prisma/schema.prisma` was
+  uncommitted through step 1b; the 1b code commits sit on top of it in
+  history).
 
 ### DECIDED (D1–D3)
 
@@ -210,7 +213,8 @@ models/enums get a purely-additive migration later (step 2). This supersedes
 
 Code-only fixes (no migration): permanent renames + enum reductions +
 explicit-id-on-create, one commit per file/spec (14 commits,
-`392461f`..`da587a1`). Touched: `src/common/roles.ts` (+ `roles.guard.spec`),
+`392461f`..`da587a1`; status recorded in `3a3173e`). Touched:
+`src/common/roles.ts` (+ `roles.guard.spec`),
 `src/orders/order-status-transitions.ts` (+ spec), `src/orders/orders.service.ts`
 (+ spec), `src/customers/customers.service.ts` (+ spec — `spendByCustomer` sums
 `Order.totalAmount`), `src/brands/brands.service.ts` (slug-as-id, non-unique
@@ -286,6 +290,9 @@ Post-apply verification against prod, all PASS:
   User 4, AuditLog 69, Order 0, Customer 0 — identical to the pre-migration
   backup.
 
+Status recorded in `0bb88e3` (authored + staged) and `ff30ba0` (prod apply,
+verification, and the outage flagged below).
+
 ### 🔴 DISCOVERED — live production outage, pre-existing, unrelated to step 2 (2026-09-01)
 
 While hitting a real endpoint to verify the migration (per this checklist's
@@ -311,15 +318,15 @@ the same way; `catalog/products/stats` 400s (separate issue).
   root-cause class this whole backend-schema-alignment effort exists to fix,
   just not yet deployed.
 
-**Not fixed in this pass** — fixing it means finishing step 3 (the 10 files
-in the table above) and shipping a new Railway deploy of `backend/`, which is
-explicitly out of scope for this session. Flagging because the storefront's
-public catalog API is down *right now* independent of anything done here.
+**Marked non-urgent but OPEN.** Not fixed in this pass — the fix is finishing
+step 3 (the 11 files below) and shipping a new Railway deploy of `backend/`,
+explicitly out of scope for this session. Flagged because the storefront's
+public catalog API is down *right now*, independent of anything done here.
 
-### NEXT — step 3 (code adaptation to the new schema, no migration)
+### NEXT — step 3 (code adaptation to the new schema, no migration) — NOT STARTED
 
-Wire the service layer onto the now-present models/columns and restore the
-enum maps. tsc-erroring files after step 2:
+**11 files, 91 `tsc` errors.** Wire the service layer onto the now-present
+models/columns and restore the enum maps:
 
 | File | Errs | What it needs |
 | --- | --- | --- |
@@ -337,6 +344,14 @@ enum maps. tsc-erroring files after step 2:
 `inventory.service.ts`, `warehouses.service.ts`, `carts.service.ts`,
 `sellers.service.ts`, `invoices.service.ts`, `auth.service.ts`,
 `users.service.ts` — **now tsc-clean**, no step-3 work.
+
+### THEN — redeploy `backend/` to Railway
+
+After step 3 lands (tsc + eslint + build clean), push and let Railway
+rebuild/deploy `backend/`. That replaces deploy `72b73ab6` and **clears the
+🔴 catalog outage above** — the new build's Prisma client targets prod's
+actual (`Product`/`Category`/`Brand`) tables. Verify `/api/catalog/products`
+returns 200 afterward.
 
 ## Open items (not fixed in this pass — flagging for a decision)
 
@@ -382,3 +397,16 @@ enum maps. tsc-erroring files after step 2:
    consolidated schema, `backend/` is being adapted down to production's
    current shape, with a later purely-additive migration for what's genuinely
    missing. The consolidation plan is on hold, not being executed as written.
+
+4. **Re-baseline `backend/prisma/migrations/` to production.** The folder
+   still holds the 6 abandoned consolidated migrations (`20260823092527_init`
+   … `20260828093445_checkout_customer_delivery_fields`), applied nowhere,
+   and is missing prod's 9 applied root migrations
+   (`20260817145718_init_catalog` … `20260823070819_drop_product_image_labels`).
+   Because of this, step 2 was applied to prod via `db execute` +
+   `migrate resolve --applied` rather than `migrate deploy`, and
+   `prisma migrate status` still reports the divergence. Fix: delete the 6,
+   vendor the 9 (byte-for-byte, so their `_prisma_migrations` checksums still
+   match) plus `20260901120000_backend_step2_additive`, then `migrate status`
+   should read clean and `migrate deploy` becomes usable again. Decide
+   alongside Open item 2.
