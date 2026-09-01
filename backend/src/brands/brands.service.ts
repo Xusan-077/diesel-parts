@@ -23,7 +23,9 @@ export class BrandsService {
 
   async create(dto: CreateBrandDto) {
     await this.assertNameFree(dto.name);
-    return this.prisma.brand.create({ data: dto });
+    // Brand.id has no @default (D1): the slug is the id, and the storefront
+    // URLs depend on that.
+    return this.prisma.brand.create({ data: { ...dto, id: dto.slug } });
   }
 
   async update(id: string, dto: UpdateBrandDto) {
@@ -39,7 +41,9 @@ export class BrandsService {
   }
 
   private async assertNameFree(name: string, excludeId?: string) {
-    const existing = await this.prisma.brand.findUnique({ where: { name } });
+    // Brand.name is not unique in the DB (a findFirst, not findUnique); this
+    // check keeps the app-level "one brand per name" guarantee.
+    const existing = await this.prisma.brand.findFirst({ where: { name } });
     if (existing && existing.id !== excludeId) {
       throw new ConflictException('Brand name already exists');
     }
