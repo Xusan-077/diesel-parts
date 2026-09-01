@@ -9,8 +9,11 @@ datasource db {
 }
 
 enum Role {
+  SUPER_ADMIN
   DIRECTOR
+  MANAGER
   SELLER
+  VIEWER
 }
 
 enum InquiryStatus {
@@ -32,6 +35,38 @@ enum StockStatus {
   available
   limited
   out_of_stock
+}
+
+enum OrderPaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  RESERVE
+  RELEASE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum DeliveryMethod {
+  PICKUP
+  DELIVERY
 }
 
 model Brand {
@@ -85,6 +120,9 @@ model Product {
   descriptionRu    String
   descriptionEn    String
   price            Decimal?    @db.Decimal(14, 2)
+  /// Cost side, for margin reporting. SELLER role never sees this
+  /// (ProductsService.SELLER_HIDDEN_FIELDS). Nullable — unknown on old rows.
+  purchasePrice    Decimal?    @db.Decimal(14, 2)
   currency         String      @default("UZS")
   stock            Int         @default(0)
   minStock         Int         @default(0)
@@ -104,12 +142,19 @@ model Product {
   /// product today — a `ProductImage` table for a real multi-photo gallery is
   /// a later feature this column does not imply.
   imageUrl         String?
+  /// Retired — no code reads it. The column still exists in production only
+  /// because the 2026-08-23 hotfix re-added it (see incident section in
+  /// docs/deploy-checklist.md); modelled here so schema and DB stay in sync.
+  /// Dropping it is a separate, tracked migration, not part of step 2.
+  imageLabels      String[]
   isActive         Boolean     @default(true)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   inquiries        Inquiry[]
   orderItems       OrderItem[]
   reviews          Review[]
+  inventories      Inventory[]
+  cartItems        CartItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -171,6 +216,9 @@ model User {
   /// Percent a SELLER may discount without director approval.
   discountLimit      Int               @default(5)
   createdAt          DateTime          @default(now())
+  /// Added after the table was populated, so it carries a DB default; Prisma
+  /// still stamps it on every write via @updatedAt.
+  updatedAt          DateTime          @updatedAt @default(now())
   inquiries          Inquiry[]         @relation("AssignedInquiries")
   assignedCustomers  Customer[]        @relation("AssignedCustomers")
   orders             Order[]           @relation("SellerOrders")
@@ -178,6 +226,9 @@ model User {
   reviewedDiscounts  DiscountRequest[] @relation("ReviewedDiscounts")
   notifications      Notification[]
   auditLogs          AuditLog[]
+  seller             Seller?
+  refreshTokens      RefreshToken[]
+  stockMovementsMade StockMovement[]
 }
 
 model Inquiry {
@@ -209,8 +260,10 @@ model Inquiry {
 
 enum OrderStatus {
   DRAFT
+  NEW
   PENDING
   CONFIRMED
+  PREPARING
   COMPLETED
   CANCELLED
 }
@@ -248,7 +301,13 @@ model Customer {
   phone            String
   email            String?
   company          String?
+  /// INN — the Uzbek taxpayer id, for a B2B checkout's invoice. Free text.
+  taxId            String?
+  telegram         String?
   notes            String?
+  /// Running balance owed by this buyer (warehouse/POS side). Non-null, starts
+  /// at 0 — the checkout and payment flows adjust it.
+  debt             Decimal  @default(0) @db.Decimal(14, 2)
   /// Null means unassigned — visible to directors, claimable by any seller.
   assignedSellerId String?
   assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
@@ -268,32 +327,51 @@ model Order {
   customer                 Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
   sellerId                 String
   seller                   User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
-  status                   OrderStatus       @default(DRAFT)
-  currency                 String            @default("UZS")
+  status                   OrderStatus        @default(DRAFT)
+  currency                 String             @default("UZS")
   /// Sum of the line items before any discount. Stored rather than derived so a
   /// later price change on the product cannot rewrite a historical order.
-  subtotal                 Decimal           @db.Decimal(14, 2)
+  subtotal                 Decimal            @db.Decimal(14, 2)
+  /// Flat-amount discount (POS quick-sale). Separate from the percent workflow
+  /// below — the two serve different flows.
+  discount                 Decimal            @default(0) @db.Decimal(14, 2)
+  deliveryFee              Decimal            @default(0) @db.Decimal(14, 2)
   /// Percent the seller asked for. Within their User.discountLimit it applies
   /// immediately; above it, a DiscountRequest gates approval.
-  discountRequestedPercent Decimal           @default(0) @db.Decimal(5, 2)
+  discountRequestedPercent Decimal            @default(0) @db.Decimal(5, 2)
   /// Percent actually in force. Equals the requested percent once approved.
-  discountApprovedPercent  Decimal           @default(0) @db.Decimal(5, 2)
+  discountApprovedPercent  Decimal            @default(0) @db.Decimal(5, 2)
   /// subtotal minus discountApprovedPercent, recomputed on every write.
-  totalAmount              Decimal           @db.Decimal(14, 2)
+  totalAmount              Decimal            @db.Decimal(14, 2)
+  paymentStatus            OrderPaymentStatus @default(UNPAID)
+  /// Self-checkout only. DELIVERY requires the address columns below; enforced
+  /// in CreateCheckoutDto, not at the DB level.
+  deliveryMethod           DeliveryMethod     @default(PICKUP)
+  deliveryCity             String?
+  deliveryDistrict         String?
+  deliveryStreet           String?
+  deliveryNotes            String?
   notes                    String?
+  /// Null until a CRM order is confirmed and inventory needs reserving; a POS
+  /// order sets it up front.
+  warehouseId              String?
+  warehouse                Warehouse?         @relation(fields: [warehouseId], references: [id])
   /// Set when the order was raised from a board card, so the conversion figure
   /// is counted rather than estimated and one inquiry cannot be billed twice.
   inquiryId                String?
-  inquiry                  Inquiry?          @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  inquiry                  Inquiry?           @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
   items                    OrderItem[]
   discountRequests         DiscountRequest[]
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
+  payments                 Payment[]
+  invoice                  Invoice?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
   @@index([sellerId, status])
   @@index([customerId])
   @@index([status, createdAt])
   @@index([inquiryId])
+  @@index([warehouseId])
 }
 
 model OrderItem {
@@ -363,4 +441,143 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sellers     Seller[]
+  inventories Inventory[]
+  orders      Order[]
+}
+
+/// availableQuantity is deliberately NOT a column — it is always derived as
+/// (quantity - reservedQuantity) in application code, so it can never drift.
+model Inventory {
+  id               String    @id @default(cuid())
+  productId        String
+  product          Product   @relation(fields: [productId], references: [id])
+  warehouseId      String
+  warehouse        Warehouse @relation(fields: [warehouseId], references: [id])
+  quantity         Int       @default(0)
+  reservedQuantity Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  stockMovements StockMovement[]
+
+  @@unique([productId, warehouseId])
+  @@index([warehouseId])
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  inventoryId String
+  inventory   Inventory         @relation(fields: [inventoryId], references: [id])
+  type        StockMovementType
+  quantity    Int
+  reason      String?
+  createdById String?
+  createdBy   User?             @relation(fields: [createdById], references: [id])
+  createdAt   DateTime          @default(now())
+
+  @@index([inventoryId])
+  @@index([createdAt])
+}
+
+/// Single-row counter used inside a transaction (SELECT ... FOR UPDATE) to hand
+/// out sequential, gapless-per-attempt order numbers without racing.
+model OrderSequence {
+  id         Int @id @default(1)
+  lastNumber Int @default(1000)
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount             Decimal       @db.Decimal(14, 2)
+  method             PaymentMethod
+  status             PaymentStatus @default(PENDING)
+  /// Null for the existing staff-recorded (cash/card/transfer) payments;
+  /// "payme" for gateway payments.
+  provider           String?
+  /// The provider's own id for this attempt. Only PaymeService (driven by
+  /// Payme's webhook) may move a payment to COMPLETED.
+  transactionId      String?
+  /// Payme's `time` (epoch ms) from CreateTransaction, echoed back verbatim on
+  /// every retry to keep CreateTransaction idempotent.
+  providerCreateTime BigInt?
+  cancelledAt        DateTime?
+  /// Payme's CancelTransaction `reason` code — support/audit only.
+  cancelReason       Int?
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  /// Guards webhook idempotency. Postgres treats each NULL as distinct, so the
+  /// staff-recorded rows (provider/transactionId both null) are unaffected.
+  @@unique([provider, transactionId])
+  @@index([orderId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceNumber String   @unique
+  issuedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// A phone-verified storefront visitor's cart. Keyed by phone — backend/ has no
+/// concept of a storefront visitor's identity beyond the OTP session, and a
+/// Customer row is only created at checkout.
+model Cart {
+  id        String     @id @default(cuid())
+  phone     String     @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@unique([cartId, productId])
+}
+
+/// Refresh tokens are stored hashed (bcrypt) and rotated on every /auth/refresh.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Seller {
+  id          String     @id @default(cuid())
+  userId      String     @unique
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  warehouseId String?
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([warehouseId])
 }
