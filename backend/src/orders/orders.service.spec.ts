@@ -29,12 +29,11 @@ interface OrderDataArgs {
   data: {
     status?: OrderStatus;
     subtotal?: Prisma.Decimal;
-    total?: Prisma.Decimal;
+    totalAmount?: Prisma.Decimal;
     items?: {
       create: {
-        price: Prisma.Decimal;
-        total: Prisma.Decimal;
-        quantity: number;
+        unitPrice: Prisma.Decimal;
+        qty: number;
       }[];
     };
   };
@@ -94,8 +93,8 @@ function makeTx(
         id: 'order-1',
         orderNumber: 'DP-1002',
         customerId: 'cus-1',
-        status: OrderStatus.NEW,
-        total: new Prisma.Decimal(200),
+        status: OrderStatus.PENDING,
+        totalAmount: new Prisma.Decimal(200),
       }),
       update: jest.fn().mockResolvedValue({}),
       ...overrides.order,
@@ -289,11 +288,10 @@ describe('OrdersService.create', () => {
 
     const { data } = firstArg<OrderDataArgs>(tx.order.create);
     expect(data.subtotal).toEqual(new Prisma.Decimal(200));
-    expect(data.total).toEqual(new Prisma.Decimal(200));
+    expect(data.totalAmount).toEqual(new Prisma.Decimal(200));
     expect(data.items!.create[0]).toMatchObject({
-      price: new Prisma.Decimal(100),
-      total: new Prisma.Decimal(200),
-      quantity: 2,
+      unitPrice: new Prisma.Decimal(100),
+      qty: 2,
     });
   });
 
@@ -315,7 +313,7 @@ describe('OrdersService.create', () => {
     });
 
     expect(
-      firstArg<OrderDataArgs>(tx.order.create).data.items!.create[0].price,
+      firstArg<OrderDataArgs>(tx.order.create).data.items!.create[0].unitPrice,
     ).toEqual(new Prisma.Decimal(50));
   });
 
@@ -447,7 +445,7 @@ describe('OrdersService.create', () => {
     expect(tx.customer.update).not.toHaveBeenCalled();
   });
 
-  it('creates a NEW order and records a CREATE audit', async () => {
+  it('creates a PENDING order and records a CREATE audit', async () => {
     const tx = makeTx();
     const { prisma } = makePrisma({
       product: { findMany: jest.fn().mockResolvedValue([product()]) },
@@ -460,7 +458,7 @@ describe('OrdersService.create', () => {
     const result = await service.create(seller, dto);
 
     expect(firstArg<OrderDataArgs>(tx.order.create).data.status).toBe(
-      OrderStatus.NEW,
+      OrderStatus.PENDING,
     );
     expect(result).toMatchObject({ id: 'order-1' });
     expect(record).toHaveBeenCalledWith(
@@ -542,7 +540,7 @@ describe('OrdersService.update', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'order-1',
           sellerId: 'seller-1',
-          status: OrderStatus.NEW,
+          status: OrderStatus.PENDING,
           items: [],
         }),
       },
@@ -557,7 +555,7 @@ describe('OrdersService.update', () => {
     expect(error).toBeInstanceOf(ConflictException);
     expect((error as ConflictException).getResponse()).toMatchObject({
       error: 'illegal_transition',
-      from: OrderStatus.NEW,
+      from: OrderStatus.PENDING,
       to: OrderStatus.COMPLETED,
     });
   });
@@ -569,14 +567,14 @@ describe('OrdersService.update', () => {
       status: OrderStatus.CONFIRMED,
       warehouseId: 'w1',
       subtotal: new Prisma.Decimal(200),
-      total: new Prisma.Decimal(180),
+      totalAmount: new Prisma.Decimal(180),
       notes: null,
       items: [],
     });
     const findUniqueOrThrow = jest.fn().mockResolvedValue({
-      status: OrderStatus.PREPARING,
+      status: OrderStatus.COMPLETED,
       subtotal: new Prisma.Decimal(200),
-      total: new Prisma.Decimal(180),
+      totalAmount: new Prisma.Decimal(180),
       notes: null,
       items: [],
     });
@@ -585,7 +583,7 @@ describe('OrdersService.update', () => {
         create: jest.fn(),
         update: jest
           .fn()
-          .mockResolvedValue({ id: 'order-1', status: OrderStatus.PREPARING }),
+          .mockResolvedValue({ id: 'order-1', status: OrderStatus.COMPLETED }),
       },
     });
     const { prisma } = makePrisma({
@@ -596,30 +594,30 @@ describe('OrdersService.update', () => {
     const { audit, record } = makeAudit();
     const service = new OrdersService(prisma, makeInventory(), products, audit);
 
-    await service.update(seller, 'order-1', { status: OrderStatus.PREPARING });
+    await service.update(seller, 'order-1', { status: OrderStatus.COMPLETED });
 
     const rows = orderUpdateAudits(record);
     expect(rows).toHaveLength(1);
     expect(rows[0].before).toEqual({ status: OrderStatus.CONFIRMED });
-    expect(rows[0].after).toEqual({ status: OrderStatus.PREPARING });
+    expect(rows[0].after).toEqual({ status: OrderStatus.COMPLETED });
   });
 
   it('combined status + re-line: the updateStatus status row plus one content row that omits status', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       sellerId: 'seller-1',
-      status: OrderStatus.NEW,
+      status: OrderStatus.PENDING,
       warehouseId: 'w1',
       discountApprovedPercent: new Prisma.Decimal(10),
       subtotal: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(0),
+      totalAmount: new Prisma.Decimal(0),
       notes: null,
       items: [],
     });
     const findUniqueOrThrow = jest.fn().mockResolvedValue({
       status: OrderStatus.CONFIRMED,
       subtotal: new Prisma.Decimal(200),
-      total: new Prisma.Decimal(180),
+      totalAmount: new Prisma.Decimal(180),
       notes: null,
       items: [{ id: 'li-1' }],
     });
@@ -661,17 +659,17 @@ describe('OrdersService.update', () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       sellerId: 'seller-1',
-      status: OrderStatus.NEW,
+      status: OrderStatus.PENDING,
       discountApprovedPercent: new Prisma.Decimal(10),
       subtotal: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(0),
+      totalAmount: new Prisma.Decimal(0),
       notes: null,
       items: [],
     });
     const findUniqueOrThrow = jest.fn().mockResolvedValue({
-      status: OrderStatus.NEW,
+      status: OrderStatus.PENDING,
       subtotal: new Prisma.Decimal(200),
-      total: new Prisma.Decimal(180),
+      totalAmount: new Prisma.Decimal(180),
       notes: null,
       items: [{ id: 'li-1' }],
     });
@@ -694,7 +692,7 @@ describe('OrdersService.update', () => {
     });
     const { data } = firstArg<OrderDataArgs>(tx.order.update);
     expect(data.subtotal).toEqual(new Prisma.Decimal(200));
-    expect(data.total).toEqual(new Prisma.Decimal(180));
+    expect(data.totalAmount).toEqual(new Prisma.Decimal(180));
 
     const rows = orderUpdateAudits(record);
     expect(rows).toHaveLength(1);
@@ -705,7 +703,7 @@ describe('OrdersService.update', () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       sellerId: 'seller-1',
-      status: OrderStatus.NEW,
+      status: OrderStatus.PENDING,
       discountApprovedPercent: new Prisma.Decimal(0),
       items: [],
     });
@@ -750,7 +748,7 @@ describe('OrdersService.requestDiscount', () => {
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
       discountApprovedPercent: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(1000),
+      totalAmount: new Prisma.Decimal(1000),
     });
     const orderUpdate = jest.fn().mockResolvedValue({});
     const { prisma } = makePrisma({
@@ -772,7 +770,7 @@ describe('OrdersService.requestDiscount', () => {
       data: {
         discountRequestedPercent: new Prisma.Decimal(5),
         discountApprovedPercent: new Prisma.Decimal(5),
-        total: new Prisma.Decimal(950),
+        totalAmount: new Prisma.Decimal(950),
       },
     });
     expect(record).toHaveBeenCalledWith({
@@ -793,7 +791,7 @@ describe('OrdersService.requestDiscount', () => {
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
       discountApprovedPercent: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(1000),
+      totalAmount: new Prisma.Decimal(1000),
     });
     const directorFindMany = jest
       .fn()
@@ -866,7 +864,7 @@ describe('OrdersService.requestDiscount', () => {
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(15),
       discountApprovedPercent: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(1000),
+      totalAmount: new Prisma.Decimal(1000),
     });
     const { prisma, $transaction } = makePrisma({
       order: { findUnique },
@@ -897,7 +895,7 @@ describe('OrdersService.requestDiscount', () => {
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
       discountApprovedPercent: new Prisma.Decimal(0),
-      total: new Prisma.Decimal(1000),
+      totalAmount: new Prisma.Decimal(1000),
     });
     const orderUpdate = jest.fn();
     const { prisma, $transaction } = makePrisma({
@@ -931,7 +929,7 @@ describe('OrdersService.updateStatus audit', () => {
     });
     const txOrderUpdate = jest
       .fn()
-      .mockResolvedValue({ id: 'order-1', status: OrderStatus.PREPARING });
+      .mockResolvedValue({ id: 'order-1', status: OrderStatus.COMPLETED });
     const $transaction = jest.fn(
       async (cb: (tx: unknown) => Promise<unknown>) =>
         cb({ order: { update: txOrderUpdate } }),
@@ -944,7 +942,7 @@ describe('OrdersService.updateStatus audit', () => {
     const { audit, record } = makeAudit();
     const service = new OrdersService(prisma, makeInventory(), products, audit);
 
-    await service.updateStatus(seller, 'order-1', OrderStatus.PREPARING);
+    await service.updateStatus(seller, 'order-1', OrderStatus.COMPLETED);
 
     expect(record).toHaveBeenCalledWith({
       userId: 'seller-user-1',
@@ -952,7 +950,7 @@ describe('OrdersService.updateStatus audit', () => {
       entityType: 'Order',
       entityId: 'order-1',
       before: { status: OrderStatus.CONFIRMED },
-      after: { status: OrderStatus.PREPARING },
+      after: { status: OrderStatus.COMPLETED },
     });
   });
 });
