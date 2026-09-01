@@ -49,7 +49,7 @@ export class DashboardService {
           createdAt: { gte: todayStart, lte: now },
           status: { not: OrderStatus.CANCELLED },
         },
-        _sum: { total: true },
+        _sum: { totalAmount: true },
       }),
       this.prisma.order.aggregate({
         where: {
@@ -57,7 +57,7 @@ export class DashboardService {
           createdAt: { gte: priorStart, lte: priorEnd },
           status: { not: OrderStatus.CANCELLED },
         },
-        _sum: { total: true },
+        _sum: { totalAmount: true },
       }),
       this.prisma.order.count({
         where: { ...scope, createdAt: { gte: todayStart, lte: now } },
@@ -76,8 +76,8 @@ export class DashboardService {
       }),
     ]);
 
-    const todaySalesTotal = Number(todaySales._sum.total ?? 0);
-    const priorSalesTotal = Number(priorSales._sum.total ?? 0);
+    const todaySalesTotal = Number(todaySales._sum?.totalAmount ?? 0);
+    const priorSalesTotal = Number(priorSales._sum?.totalAmount ?? 0);
 
     return {
       today: {
@@ -102,9 +102,9 @@ export class DashboardService {
         createdAt: { gte: from, lte: to },
         status: { not: OrderStatus.CANCELLED },
       },
-      select: { createdAt: true, total: true },
+      select: { createdAt: true, totalAmount: true },
     });
-    return this.groupByDay(orders, (o) => Number(o.total));
+    return this.groupByDay(orders, (o) => Number(o.totalAmount));
   }
 
   async ordersChart(actor: AuthenticatedUser, range: DateRangeDto) {
@@ -118,24 +118,43 @@ export class DashboardService {
 
   async topProducts(actor: AuthenticatedUser, limit = 5) {
     const scope = this.orderScope(actor);
+    const orderFilter = Object.keys(scope).length
+      ? { order: scope }
+      : undefined;
     const grouped = await this.prisma.orderItem.groupBy({
       by: ['productId'],
-      where: Object.keys(scope).length ? { order: scope } : undefined,
-      _sum: { quantity: true, total: true },
-      orderBy: { _sum: { quantity: 'desc' } },
+      where: orderFilter,
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: 'desc' } },
       take: limit,
     });
 
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: grouped.map((g) => g.productId) } },
-      select: { id: true, sku: true, nameEn: true },
-    });
+    const productIds = grouped.map((g) => g.productId);
+    const [products, lines] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { id: { in: productIds } },
+        select: { id: true, sku: true, nameEn: true },
+      }),
+      // No per-line total column: revenue is summed as qty * unitPrice.
+      this.prisma.orderItem.findMany({
+        where: { ...orderFilter, productId: { in: productIds } },
+        select: { productId: true, qty: true, unitPrice: true },
+      }),
+    ]);
     const productById = new Map(products.map((p) => [p.id, p]));
+    const revenueByProduct = new Map<string, number>();
+    for (const line of lines) {
+      revenueByProduct.set(
+        line.productId,
+        (revenueByProduct.get(line.productId) ?? 0) +
+          Number(line.unitPrice) * line.qty,
+      );
+    }
 
     return grouped.map((g) => ({
       product: productById.get(g.productId) ?? null,
-      quantitySold: g._sum.quantity ?? 0,
-      revenue: Number(g._sum.total ?? 0),
+      quantitySold: g._sum?.qty ?? 0,
+      revenue: revenueByProduct.get(g.productId) ?? 0,
     }));
   }
 
