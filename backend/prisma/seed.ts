@@ -41,17 +41,21 @@ async function main() {
   );
 
   // --- Categories & Brands -------------------------------------------------
+  // Category/Brand/Product ids are the slug (D1): no @default on the column,
+  // and storefront URLs depend on the id being the slug.
   const categories = await Promise.all(
-    ['Fuel Injectors', 'Turbochargers', 'Filters', 'Brake Systems', 'Engine Components'].map((name) =>
-      prisma.category.create({
-        data: { slug: slugify(name), nameUz: name, nameRu: name, nameEn: name },
-      }),
-    ),
+    ['Fuel Injectors', 'Turbochargers', 'Filters', 'Brake Systems', 'Engine Components'].map((name) => {
+      const slug = slugify(name);
+      return prisma.category.create({
+        data: { id: slug, slug, nameUz: name, nameRu: name, nameEn: name },
+      });
+    }),
   );
   const brands = await Promise.all(
-    ['Bosch', 'Denso', 'Delphi', 'Mahle', 'Cummins'].map((name) =>
-      prisma.brand.create({ data: { slug: slugify(name), name } }),
-    ),
+    ['Bosch', 'Denso', 'Delphi', 'Mahle', 'Cummins'].map((name) => {
+      const slug = slugify(name);
+      return prisma.brand.create({ data: { id: slug, slug, name } });
+    }),
   );
 
   // --- Products --------------------------------------------------------------
@@ -82,6 +86,7 @@ async function main() {
     productDefs.map((p) =>
       prisma.product.create({
         data: {
+          id: slugify(p.sku),
           sku: p.sku,
           slug: slugify(p.sku),
           nameUz: p.name,
@@ -160,7 +165,7 @@ async function main() {
 
   // --- Orders --------------------------------------------------------------
   const statusCycle: OrderStatus[] = [
-    OrderStatus.NEW,
+    OrderStatus.PENDING,
     OrderStatus.CONFIRMED,
     OrderStatus.PREPARING,
     OrderStatus.COMPLETED,
@@ -179,19 +184,21 @@ async function main() {
     const itemCount = 1 + (i % 3);
     const chosenProducts = products.slice((i * 2) % products.length, (i * 2) % products.length + itemCount);
     const lines = (chosenProducts.length ? chosenProducts : [products[0]]).map((product) => {
-      const quantity = 1 + (i % 3);
-      const price = product.price!;
+      const qty = 1 + (i % 3);
+      const unitPrice = product.price!;
       return {
         productId: product.id,
         productSku: product.sku,
         productName: product.nameEn,
-        quantity,
-        price,
-        total: price.mul(quantity),
+        qty,
+        unitPrice,
       };
     });
 
-    const subtotal = lines.reduce((sum, l) => sum.add(l.total), new Prisma.Decimal(0));
+    const subtotal = lines.reduce(
+      (sum, l) => sum.add(l.unitPrice.mul(l.qty)),
+      new Prisma.Decimal(0),
+    );
     const discount = subtotal.mul(i % 4 === 0 ? 0.05 : 0);
     const deliveryFee = i % 2 === 0 ? 30000 : 0;
     const total = subtotal.sub(discount).add(deliveryFee);
@@ -213,7 +220,7 @@ async function main() {
         subtotal,
         discount,
         deliveryFee,
-        total,
+        totalAmount: total,
         paymentStatus,
         items: { create: lines },
       },
@@ -224,7 +231,7 @@ async function main() {
       for (const line of lines) {
         const key = `${line.productId}:${warehouse.id}`;
         const inv = inventoryByKey.get(key)!;
-        const reserveQty = Math.min(line.quantity, inv.quantity - inv.reservedQuantity);
+        const reserveQty = Math.min(line.qty, inv.quantity - inv.reservedQuantity);
         if (reserveQty <= 0) continue;
         await prisma.inventory.update({ where: { id: inv.id }, data: { reservedQuantity: { increment: reserveQty } } });
         await prisma.stockMovement.create({
@@ -236,7 +243,7 @@ async function main() {
       for (const line of lines) {
         const key = `${line.productId}:${warehouse.id}`;
         const inv = inventoryByKey.get(key)!;
-        const fulfillQty = Math.min(line.quantity, inv.quantity);
+        const fulfillQty = Math.min(line.qty, inv.quantity);
         if (fulfillQty <= 0) continue;
         await prisma.inventory.update({ where: { id: inv.id }, data: { quantity: { decrement: fulfillQty } } });
         await prisma.stockMovement.create({
