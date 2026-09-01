@@ -334,7 +334,7 @@ export class ProductsService {
           productId: { in: ids },
           order: { status: OrderStatus.COMPLETED },
         },
-        _sum: { quantity: true },
+        _sum: { qty: true },
       }),
     ]);
 
@@ -350,7 +350,7 @@ export class ProductsService {
     for (const row of sold) {
       stats.set(row.productId, {
         ...stats.get(row.productId)!,
-        soldCount: row._sum.quantity ?? 0,
+        soldCount: row._sum?.qty ?? 0,
       });
     }
 
