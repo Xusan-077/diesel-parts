@@ -232,23 +232,67 @@ resolve. Concentrated in `analytics.service.ts` (51), `products.service.ts`
 (21), `inventory.service.ts` (21), `payme.service.ts` (17),
 `dashboard.service.ts` (16), `auth.service.ts` (9).
 
-### NEXT — step 2
+### DONE — step 2 schema + migration authored, staged (2026-09-01)
 
-Author and apply the purely-additive migration below. Prerequisite met:
-`schema.prisma` is committed.
+Migration `20260901120000_backend_step2_additive` (commit `c6d8b96`).
+Purely additive — `grep -E "DROP |RENAME |ALTER COLUMN"` on the SQL is empty:
 
-### STEP 2 (later, separate discussion)
+- `CREATE TYPE`: OrderPaymentStatus, StockMovementType, PaymentMethod,
+  PaymentStatus, DeliveryMethod
+- `ALTER TYPE … ADD VALUE`: Role (+SUPER_ADMIN, +MANAGER, +VIEWER),
+  OrderStatus (+NEW, +PREPARING)
+- `CREATE TABLE`: Warehouse, Inventory, StockMovement, OrderSequence, Payment,
+  Invoice, Cart, CartItem, RefreshToken, Seller (+ their indexes and FKs)
+- `ADD COLUMN` (all nullable or `DEFAULT`): Customer.{debt,taxId,telegram},
+  Product.purchasePrice, Order.{warehouseId, paymentStatus, deliveryMethod,
+  deliveryCity, deliveryDistrict, deliveryStreet, deliveryNotes, discount,
+  deliveryFee}, User.updatedAt (`DEFAULT CURRENT_TIMESTAMP`).
 
-Purely-additive migration against production: `CREATE TABLE` for the 10
-missing models (Warehouse, Inventory, StockMovement, OrderSequence, Payment,
-Invoice, Cart, CartItem, RefreshToken, Seller); `ALTER TYPE … ADD VALUE` for
-`Role` (+MANAGER, +VIEWER, +SUPER_ADMIN) and `OrderStatus` (+NEW, +PREPARING);
-`CREATE TYPE` for OrderPaymentStatus / StockMovementType / PaymentMethod /
-PaymentStatus / DeliveryMethod; nullable/defaulted `ADD COLUMN` on Customer
-(debt, taxId, telegram), Product (purchasePrice), Order (warehouseId,
-paymentStatus, delivery\*, discount, deliveryFee), User (updatedAt). **No
-DROP / RENAME / column-type change on the 12 existing tables.** Apply only
-after review + explicit approval.
+Deviations from the original sketch, decided this pass:
+
+- **Order.sellerId stays FK → User** (production's shape). The re-added
+  `Seller` model is a separate optional record (`Seller.userId @unique → User`).
+  It has no `orders` back-relation — `orders.service.ts` code that assumed
+  `Order → Seller` is a step-3 fix.
+- **`Product.imageLabels` is modelled again** (`String[]`, retired, unread) so
+  the schema matches the column the 2026-08-23 hotfix left in prod. Without it
+  Prisma's diff wanted to `DROP COLUMN "imageLabels"` — out of scope here.
+  Dropping it for real is its own migration (see incident section).
+
+Applied to **staging** (`localhost:5433`, byte-for-byte prod copy) via
+`prisma db execute` + `prisma migrate resolve --applied` — **not**
+`migrate dev` (the migration-history divergence would make `migrate dev` try
+to reset staging). `prisma migrate diff` from staging now reports "empty
+migration". `backend/` tsc **234 → 91**; all **360** tests pass.
+
+**Not applied to production.** Prod application waits on explicit approval of
+the SQL, and must use the same `db execute` + `migrate resolve --applied`
+path, not `migrate deploy` — `backend/prisma/migrations/` is not a baseline of
+prod's 9 applied root migrations (it still holds the 6 abandoned consolidated
+migrations, applied nowhere). Reconciling the folder (vendor prod's 9, delete
+the 6) is a tracked follow-up, not required to apply this migration.
+
+### NEXT — step 3 (code adaptation to the new schema, no migration)
+
+Wire the service layer onto the now-present models/columns and restore the
+enum maps. tsc-erroring files after step 2:
+
+| File | Errs | What it needs |
+| --- | --- | --- |
+| `src/analytics/analytics.service.ts` | 45 | `Order.total`→`totalAmount`; `OrderItem.quantity/price`→`qty/unitPrice`; `include` for `order.customer`/`order.seller`; `_sum`/`_count` undefined guards |
+| `src/products/products.service.ts` (+ spec) | 17+1 | inventory-join result typed `never` — wire `availableQuantity`/`stockStatus` off the new `Inventory` model |
+| `src/dashboard/dashboard.service.ts` | 14 | `Order.total`→`totalAmount`; `OrderItem.quantity`→`qty`; `_sum` guards |
+| `src/reports/reports.service.ts` | 4 | `Order.total`→`totalAmount`; `_sum` guards |
+| `src/payme/payme.service.ts` | 4 | `Order.total`→`totalAmount` |
+| `prisma/seed.ts` | 2 | `User.create` needs `name`+`email`; `Product.create` shape |
+| `src/payments/payments.service.ts` | 1 | `Order.total`→`totalAmount` |
+| `src/checkout/checkout.service.ts` | 1 | `OrderItem` create uses `quantity/price/total`→`qty/unitPrice` |
+| `src/common/roles.ts` | 1 | `Record<Role,number>` needs SUPER_ADMIN/MANAGER/VIEWER weights |
+| `src/orders/order-status-transitions.ts` | 1 | `Record<OrderStatus,…>` needs NEW/PREPARING transitions (D3) |
+
+`inventory.service.ts`, `warehouses.service.ts`, `carts.service.ts`,
+`sellers.service.ts`, `invoices.service.ts`, `auth.service.ts`,
+`users.service.ts` — **now tsc-clean**, no step-3 work.
 
 ## Open items (not fixed in this pass — flagging for a decision)
 
