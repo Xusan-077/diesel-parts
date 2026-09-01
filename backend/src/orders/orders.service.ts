@@ -67,9 +67,8 @@ interface BuiltOrderLine {
   productId: string;
   productSku: string;
   productName: string;
-  quantity: number;
-  price: Prisma.Decimal;
-  total: Prisma.Decimal;
+  qty: number;
+  unitPrice: Prisma.Decimal;
 }
 
 type RequestDiscountResult =
@@ -207,11 +206,11 @@ export class OrdersService {
               customerId: customer.id,
               sellerId: actor.sellerId!,
               warehouseId,
-              status: OrderStatus.NEW,
+              status: OrderStatus.PENDING,
               subtotal,
               discount,
               deliveryFee,
-              total,
+              totalAmount: total,
               notes,
               inquiryId: dto.inquiryId ?? null,
               items: { create: lines },
@@ -238,7 +237,7 @@ export class OrdersService {
             orderNumber: created.orderNumber,
             customerId: created.customerId,
             status: created.status,
-            total: Number(created.total),
+            total: Number(created.totalAmount),
           },
         });
 
@@ -283,7 +282,7 @@ export class OrdersService {
     const editsContent = dto.items !== undefined || dto.notes !== undefined;
     const editable =
       existing.status === OrderStatus.DRAFT ||
-      existing.status === OrderStatus.NEW;
+      existing.status === OrderStatus.PENDING;
     if (editsContent && !editable) {
       throw new ConflictException({
         error: 'locked',
@@ -308,7 +307,7 @@ export class OrdersService {
     // order-status event in the activity trail.
     const before: Record<string, AuditValue> = {
       subtotal: Number(existing.subtotal),
-      total: Number(existing.total),
+      total: Number(existing.totalAmount),
       notes: existing.notes,
       itemCount: existing.items.length,
     };
@@ -324,7 +323,7 @@ export class OrdersService {
       rebuiltLines = built.lines;
       data.subtotal = built.subtotal;
       // The approved percent survives a re-line; the total it produces cannot.
-      data.total = new Prisma.Decimal(
+      data.totalAmount = new Prisma.Decimal(
         applyDiscount(
           Number(built.subtotal),
           Number(existing.discountApprovedPercent),
@@ -357,7 +356,7 @@ export class OrdersService {
 
     const after: Record<string, AuditValue> = {
       subtotal: Number(updated.subtotal),
-      total: Number(updated.total),
+      total: Number(updated.totalAmount),
       notes: updated.notes,
       itemCount: updated.items.length,
     };
@@ -435,9 +434,8 @@ export class OrdersService {
         productId: product.id,
         productSku: product.sku,
         productName: product.nameEn,
-        quantity: item.quantity,
-        price,
-        total: price.mul(item.quantity),
+        qty: item.quantity,
+        unitPrice: price,
       });
     }
 
@@ -446,7 +444,7 @@ export class OrdersService {
     for (const line of lines) {
       requestedByProduct.set(
         line.productId,
-        (requestedByProduct.get(line.productId) ?? 0) + line.quantity,
+        (requestedByProduct.get(line.productId) ?? 0) + line.qty,
       );
     }
 
@@ -467,7 +465,7 @@ export class OrdersService {
     }
 
     const subtotal = lines.reduce(
-      (sum, line) => sum.add(line.total),
+      (sum, line) => sum.add(line.unitPrice.mul(line.qty)),
       new Prisma.Decimal(0),
     );
 
@@ -501,7 +499,7 @@ export class OrdersService {
           this.requireWarehouseId(order),
           order.items.map((i) => ({
             productId: i.productId,
-            quantity: i.quantity,
+            quantity: i.qty,
           })),
           actor.id,
         );
@@ -511,7 +509,7 @@ export class OrdersService {
           this.requireWarehouseId(order),
           order.items.map((i) => ({
             productId: i.productId,
-            quantity: i.quantity,
+            quantity: i.qty,
           })),
           actor.id,
         );
@@ -524,7 +522,7 @@ export class OrdersService {
           this.requireWarehouseId(order),
           order.items.map((i) => ({
             productId: i.productId,
-            quantity: i.quantity,
+            quantity: i.qty,
           })),
           actor.id,
           'Order cancelled',
@@ -612,7 +610,7 @@ export class OrdersService {
       const total = applyDiscount(subtotal, percent);
       const before = {
         discountApprovedPercent: Number(order.discountApprovedPercent),
-        total: Number(order.total),
+        total: Number(order.totalAmount),
       };
 
       await this.prisma.order.update({
@@ -620,7 +618,7 @@ export class OrdersService {
         data: {
           discountRequestedPercent: new Prisma.Decimal(percent),
           discountApprovedPercent: new Prisma.Decimal(percent),
-          total: new Prisma.Decimal(total),
+          totalAmount: new Prisma.Decimal(total),
         },
       });
 
@@ -717,7 +715,8 @@ export class OrdersService {
   }
 
   private wasReserved(status: OrderStatus) {
-    return status === OrderStatus.CONFIRMED || status === OrderStatus.PREPARING;
+    // PREPARING (a step-2 enum value) will re-join this check when it returns.
+    return status === OrderStatus.CONFIRMED;
   }
 
   /**
