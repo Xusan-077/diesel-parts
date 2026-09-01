@@ -122,7 +122,7 @@ export class DiscountRequestsService {
           where: { id: request.orderId },
           data: {
             discountApprovedPercent: new Prisma.Decimal(percent),
-            total: new Prisma.Decimal(applyDiscount(subtotal, percent)),
+            totalAmount: new Prisma.Decimal(applyDiscount(subtotal, percent)),
           },
         });
       }

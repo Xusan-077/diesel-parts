@@ -189,14 +189,14 @@ describe('DiscountRequestsService', () => {
           decisionNote: null,
         },
       });
-      // `discountApprovedPercent`/`total` are written as `Prisma.Decimal`
+      // `discountApprovedPercent`/`totalAmount` are written as `Prisma.Decimal`
       // instances; comparing against freshly-built ones checks the value
       // without reaching into the mock's captured call arguments.
       expect(tx.order.update).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         data: {
           discountApprovedPercent: new Prisma.Decimal(20),
-          total: new Prisma.Decimal(800),
+          totalAmount: new Prisma.Decimal(800),
         },
       });
 
