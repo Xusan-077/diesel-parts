@@ -48,6 +48,10 @@ const ADMIN_INCLUDE = {
   },
 } as const;
 
+type ProductWithInventories = Prisma.ProductGetPayload<{
+  include: typeof ADMIN_INCLUDE;
+}>;
+
 function nameColumn(lang: NameLocale): 'nameUz' | 'nameRu' | 'nameEn' {
   return lang === 'uz' ? 'nameUz' : lang === 'ru' ? 'nameRu' : 'nameEn';
 }
@@ -131,12 +135,7 @@ export class ProductsService {
     private readonly audit: AuditService,
   ) {}
 
-  private withStock<
-    T extends {
-      inventories: { quantity: number; reservedQuantity: number }[];
-      minStock: number;
-    },
-  >(product: T) {
+  private withStock(product: ProductWithInventories) {
     const quantity = product.inventories.reduce(
       (sum, inv) => sum + inv.quantity,
       0,
@@ -147,7 +146,9 @@ export class ProductsService {
     );
     const availableQuantity = quantity - reservedQuantity;
     const stockStatus = deriveStockStatus(availableQuantity, product.minStock);
-    const rest: Partial<T> = { ...product };
+    // The stored `stockStatus` column is left in `rest` but overridden below by
+    // the Inventory-derived value; `inventories` is dropped from the response.
+    const rest: Partial<ProductWithInventories> = { ...product };
     delete rest.inventories;
     return {
       ...rest,
