@@ -58,7 +58,7 @@ export class PaymeService {
         },
       };
     }
-    if (this.amountMismatch(order.total, params.amount)) {
+    if (this.amountMismatch(order.totalAmount, params.amount)) {
       return {
         error: { code: PAYME_ERROR.INVALID_AMOUNT, message: 'Неверная сумма' },
       };
@@ -80,7 +80,7 @@ export class PaymeService {
         },
       };
     }
-    if (this.amountMismatch(order.total, params.amount)) {
+    if (this.amountMismatch(order.totalAmount, params.amount)) {
       return {
         error: { code: PAYME_ERROR.INVALID_AMOUNT, message: 'Неверная сумма' },
       };
@@ -114,7 +114,7 @@ export class PaymeService {
     const created = await this.prisma.payment.create({
       data: {
         orderId: order.id,
-        amount: order.total,
+        amount: order.totalAmount,
         method: PaymentMethod.ONLINE,
         status: PaymentStatus.PENDING,
         provider: 'payme',
@@ -141,7 +141,7 @@ export class PaymeService {
   /**
    * Same aggregate-then-update shape as PaymentsService.create (the
    * staff-driven payment path) — one COMPLETED-sum aggregate, compared
-   * against Order.total with Prisma.Decimal's own comparison methods, not a
+   * against Order.totalAmount with Prisma.Decimal's own comparison methods, not a
    * second copy of that logic with different arithmetic.
    */
   private async recomputeOrderPaymentStatus(
@@ -157,7 +157,7 @@ export class PaymeService {
     });
     const totalPaid = paidSoFar._sum.amount ?? new Prisma.Decimal(0);
 
-    const paymentStatus = totalPaid.gte(order.total)
+    const paymentStatus = totalPaid.gte(order.totalAmount)
       ? OrderPaymentStatus.PAID
       : totalPaid.gt(0)
         ? OrderPaymentStatus.PARTIAL

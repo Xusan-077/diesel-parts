@@ -44,7 +44,7 @@ function makePrisma() {
   };
 }
 
-const order = { id: 'ord-1', total: new Prisma.Decimal(500) };
+const order = { id: 'ord-1', totalAmount: new Prisma.Decimal(500) };
 
 // expect.any(String) itself types as `any`; cast once here so every
 // `message: anyString` below satisfies @typescript-eslint/no-unsafe-assignment.
