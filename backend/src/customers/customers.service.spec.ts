@@ -312,7 +312,7 @@ describe('CustomersService.findAll', () => {
     const count = jest.fn().mockResolvedValue(2);
     const groupBy = jest
       .fn()
-      .mockResolvedValue([{ customerId: 'cus-1', _sum: { total: 1500 } }]);
+      .mockResolvedValue([{ customerId: 'cus-1', _sum: { totalAmount: 1500 } }]);
     const prisma = makePrisma({
       customer: { findMany, count },
       order: { groupBy },
@@ -552,7 +552,7 @@ describe('CustomersService.findOne', () => {
       .mockResolvedValue({ id: 'cus-1', name: 'Aziz', _count: { orders: 2 } });
     const groupBy = jest
       .fn()
-      .mockResolvedValue([{ customerId: 'cus-1', _sum: { total: 500 } }]);
+      .mockResolvedValue([{ customerId: 'cus-1', _sum: { totalAmount: 500 } }]);
     const prisma = makePrisma({
       customer: { findUnique },
       order: { groupBy },
