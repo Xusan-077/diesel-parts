@@ -62,9 +62,15 @@ describe('AnalyticsService.salesSummary', () => {
   it("splits revenue (COMPLETED) from pipeline (CONFIRMED + NEW, root's PENDING)", async () => {
     const aggregate = jest
       .fn()
-      .mockResolvedValueOnce({ _sum: { total: 1000 }, _count: { _all: 4 } }) // current
-      .mockResolvedValueOnce({ _sum: { total: 500 }, _count: { _all: 2 } }) // previous
-      .mockResolvedValueOnce({ _sum: { total: 300 } }); // pipeline
+      .mockResolvedValueOnce({
+        _sum: { totalAmount: 1000 },
+        _count: { _all: 4 },
+      }) // current
+      .mockResolvedValueOnce({
+        _sum: { totalAmount: 500 },
+        _count: { _all: 2 },
+      }) // previous
+      .mockResolvedValueOnce({ _sum: { totalAmount: 300 } }); // pipeline
     const prisma = makePrisma({ order: { aggregate } });
     const service = new AnalyticsService(prisma);
 
@@ -72,7 +78,7 @@ describe('AnalyticsService.salesSummary', () => {
 
     expect(aggregate).toHaveBeenNthCalledWith(3, {
       where: { status: { in: [OrderStatus.CONFIRMED, OrderStatus.NEW] } },
-      _sum: { total: true },
+      _sum: { totalAmount: true },
     });
     expect(result).toEqual({
       current: { revenue: 1000, orders: 4 },
@@ -87,8 +93,11 @@ describe('AnalyticsService.salesSummary', () => {
   it('reports revenueChange as null when the previous window earned nothing', async () => {
     const aggregate = jest
       .fn()
-      .mockResolvedValueOnce({ _sum: { total: 500 }, _count: { _all: 1 } })
-      .mockResolvedValueOnce({ _sum: { total: 0 }, _count: { _all: 0 } })
+      .mockResolvedValueOnce({
+        _sum: { totalAmount: 500 },
+        _count: { _all: 1 },
+      })
+      .mockResolvedValueOnce({ _sum: { totalAmount: 0 }, _count: { _all: 0 } })
       .mockResolvedValueOnce({ _sum: {} });
     const prisma = makePrisma({ order: { aggregate } });
     const service = new AnalyticsService(prisma);
@@ -119,16 +128,16 @@ describe('AnalyticsService.orderStatusBreakdown', () => {
 });
 
 describe('AnalyticsService.recentOrders', () => {
-  it("joins the seller's name through Seller.user, not the seller row itself", async () => {
+  it("joins the seller's name directly off Order.seller (a User)", async () => {
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'o1',
         orderNumber: 'ORD-1',
         status: OrderStatus.COMPLETED,
-        total: 1500,
+        totalAmount: 1500,
         createdAt: new Date('2026-08-01'),
         customer: { name: 'Aziz' },
-        seller: { user: { name: 'Vali' } },
+        seller: { name: 'Vali' },
       },
     ]);
     const prisma = makePrisma({ order: { findMany } });
@@ -151,21 +160,19 @@ describe('AnalyticsService.recentOrders', () => {
 });
 
 describe('AnalyticsService.sellerPerformance', () => {
-  it('re-keys the grouped sellerId (Seller.id) through Seller.userId before joining a name', async () => {
-    const groupBy = jest
-      .fn()
-      .mockResolvedValue([
-        { sellerId: 'seller-1', _sum: { total: 900 }, _count: { _all: 3 } },
-      ]);
-    const sellerFindMany = jest
-      .fn()
-      .mockResolvedValue([{ id: 'seller-1', userId: 'user-1' }]);
+  it('joins the grouped sellerId (a User id) straight to a seller name', async () => {
+    const groupBy = jest.fn().mockResolvedValue([
+      {
+        sellerId: 'user-1',
+        _sum: { totalAmount: 900 },
+        _count: { _all: 3 },
+      },
+    ]);
     const userFindMany = jest
       .fn()
       .mockResolvedValue([{ id: 'user-1', name: 'Vali' }]);
     const prisma = makePrisma({
       order: { groupBy },
-      seller: { findMany: sellerFindMany },
       user: { findMany: userFindMany },
     });
     const service = new AnalyticsService(prisma);
@@ -211,7 +218,7 @@ describe('AnalyticsService.productMovement', () => {
   it('sums Inventory quantity minus reserved for current stock, and ranks fast movers by units sold', async () => {
     const groupBy = jest
       .fn()
-      .mockResolvedValue([{ productId: 'p1', _sum: { quantity: 12 } }]);
+      .mockResolvedValue([{ productId: 'p1', _sum: { qty: 12 } }]);
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'p1',
@@ -230,7 +237,7 @@ describe('AnalyticsService.productMovement', () => {
     ]);
     const lineFindMany = jest
       .fn()
-      .mockResolvedValue([{ productId: 'p1', quantity: 12, price: 100 }]);
+      .mockResolvedValue([{ productId: 'p1', qty: 12, unitPrice: 100 }]);
     const prisma = makePrisma({
       orderItem: { groupBy, findMany: lineFindMany },
       product: { findMany },
@@ -284,15 +291,12 @@ describe('AnalyticsService.sellerScorecards', () => {
   it('counts an inquiry as converted only once even if it produced several orders', async () => {
     const orderGroupBy = jest.fn().mockResolvedValue([
       {
-        sellerId: 'seller-1',
+        sellerId: 'user-1',
         status: OrderStatus.COMPLETED,
-        _sum: { total: 500 },
+        _sum: { totalAmount: 500 },
         _count: { _all: 2 },
       },
     ]);
-    const sellerFindMany = jest
-      .fn()
-      .mockResolvedValue([{ id: 'seller-1', userId: 'user-1' }]);
     const userFindMany = jest
       .fn()
       .mockResolvedValue([{ id: 'user-1', name: 'Vali' }]);
@@ -300,12 +304,11 @@ describe('AnalyticsService.sellerScorecards', () => {
       .fn()
       .mockResolvedValue([{ assignedSellerId: 'user-1', _count: { _all: 1 } }]);
     const orderFindMany = jest.fn().mockResolvedValue([
-      { sellerId: 'seller-1', inquiryId: 'inq-1' },
-      { sellerId: 'seller-1', inquiryId: 'inq-1' },
+      { sellerId: 'user-1', inquiryId: 'inq-1' },
+      { sellerId: 'user-1', inquiryId: 'inq-1' },
     ]);
     const prisma = makePrisma({
       order: { groupBy: orderGroupBy, findMany: orderFindMany },
-      seller: { findMany: sellerFindMany },
       user: { findMany: userFindMany },
       inquiry: { groupBy: inquiryGroupBy },
     });
@@ -323,12 +326,12 @@ describe('AnalyticsService.customerAnalytics', () => {
     const findMany = jest.fn().mockResolvedValue([
       {
         customerId: 'c1',
-        total: 200,
+        totalAmount: 200,
         customer: { id: 'c1', name: 'Aziz', company: null },
       },
       {
         customerId: 'c2',
-        total: 300,
+        totalAmount: 300,
         customer: { id: 'c2', name: 'Bek', company: 'OOO Bek' },
       },
     ]);

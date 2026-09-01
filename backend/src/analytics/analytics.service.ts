@@ -18,12 +18,10 @@ import { PeriodQueryDto } from './dto/period-query.dto';
  * schema also has `PREPARING`, which root has no concept of and which
  * counts as "still moving" everywhere root's DRAFT/PENDING/CONFIRMED did.
  *
- * `Order.sellerId` points at `Seller.id`, not `User.id` (unlike root's own
- * schema, where it pointed straight at the staff account) — every seller-
- * grouped query re-keys through `Seller.userId` before it can join a name,
- * matching the pattern `UsersService.findAll()` already established.
- * `Inquiry.assignedSellerId` has no such indirection: it points at `User.id`
- * directly.
+ * `Order.sellerId` is a FK straight to `User.id` (production's shape — the
+ * re-added `Seller` model is a separate optional profile with no `orders`
+ * back-relation), so seller-grouped queries join a name directly off the
+ * grouped `sellerId`. `Inquiry.assignedSellerId` likewise points at `User.id`.
  */
 const REVENUE_STATUSES: OrderStatus[] = [OrderStatus.COMPLETED];
 const PIPELINE_STATUSES: OrderStatus[] = [
@@ -79,30 +77,18 @@ export class AnalyticsService {
     return new Map(sellers.map((s) => [s.id, s.name]));
   }
 
-  /** Every `Seller.id` present in `sellerIds`, mapped to the `User.id` it belongs to. */
-  private async sellerIdToUserId(
-    sellerIds: readonly string[],
-  ): Promise<Map<string, string>> {
-    if (sellerIds.length === 0) return new Map();
-    const sellers = await this.prisma.seller.findMany({
-      where: { id: { in: [...sellerIds] } },
-      select: { id: true, userId: true },
-    });
-    return new Map(sellers.map((s) => [s.id, s.userId]));
-  }
-
   private async totalsBetween(from: Date, to: Date) {
     const result = await this.prisma.order.aggregate({
       where: {
         status: { in: REVENUE_STATUSES },
         createdAt: { gte: from, lt: to },
       },
-      _sum: { total: true },
+      _sum: { totalAmount: true },
       _count: { _all: true },
     });
     return {
-      revenue: Number(result._sum.total ?? 0),
-      orders: result._count._all,
+      revenue: Number(result._sum?.totalAmount ?? 0),
+      orders: result._count?._all ?? 0,
     };
   }
 
@@ -117,7 +103,7 @@ export class AnalyticsService {
       this.totalsBetween(previousFrom, previousTo),
       this.prisma.order.aggregate({
         where: { status: { in: PIPELINE_STATUSES } },
-        _sum: { total: true },
+        _sum: { totalAmount: true },
       }),
     ]);
 
@@ -128,7 +114,7 @@ export class AnalyticsService {
       ordersChange: percentChange(current.orders, previous.orders),
       averageOrderValue:
         current.orders === 0 ? 0 : current.revenue / current.orders,
-      pipelineValue: Number(pipeline._sum.total ?? 0),
+      pipelineValue: Number(pipeline._sum?.totalAmount ?? 0),
     };
   }
 
@@ -144,22 +130,22 @@ export class AnalyticsService {
           status: { in: REVENUE_STATUSES },
           createdAt: { gte: from, lt: to },
         },
-        select: { createdAt: true, total: true },
+        select: { createdAt: true, totalAmount: true },
       }),
       this.prisma.order.findMany({
         where: {
           status: { in: REVENUE_STATUSES },
           createdAt: { gte: previousFrom, lt: from },
         },
-        select: { createdAt: true, total: true },
+        select: { createdAt: true, totalAmount: true },
       }),
     ]);
 
-    const bucket = (rows: { createdAt: Date; total: unknown }[]) => {
+    const bucket = (rows: { createdAt: Date; totalAmount: unknown }[]) => {
       const totals = new Map<string, number>();
       for (const row of rows) {
         const key = dayKey(row.createdAt);
-        totals.set(key, (totals.get(key) ?? 0) + Number(row.total));
+        totals.set(key, (totals.get(key) ?? 0) + Number(row.totalAmount));
       }
       return totals;
     };
@@ -186,25 +172,19 @@ export class AnalyticsService {
         status: { in: REVENUE_STATUSES },
         createdAt: { gte: from, lt: to },
       },
-      _sum: { total: true },
+      _sum: { totalAmount: true },
       _count: { _all: true },
     });
 
-    const userIdBySellerId = await this.sellerIdToUserId(
-      grouped.map((row) => row.sellerId),
-    );
     const names = await this.sellerNamesByUserId();
 
     return grouped
-      .map((row) => {
-        const userId = userIdBySellerId.get(row.sellerId) ?? row.sellerId;
-        return {
-          sellerId: userId,
-          name: names.get(userId) ?? '—',
-          revenue: Number(row._sum.total ?? 0),
-          orders: row._count._all,
-        };
-      })
+      .map((row) => ({
+        sellerId: row.sellerId,
+        name: names.get(row.sellerId) ?? '—',
+        revenue: Number(row._sum?.totalAmount ?? 0),
+        orders: row._count?._all ?? 0,
+      }))
       .sort((a, b) => b.revenue - a.revenue);
   }
 
@@ -219,7 +199,7 @@ export class AnalyticsService {
     });
 
     const countOf = (status: OrderStatus) =>
-      grouped.find((row) => row.status === status)?._count._all ?? 0;
+      grouped.find((row) => row.status === status)?._count?._all ?? 0;
 
     return {
       completed: countOf(OrderStatus.COMPLETED),
@@ -236,10 +216,10 @@ export class AnalyticsService {
         id: true,
         orderNumber: true,
         status: true,
-        total: true,
+        totalAmount: true,
         createdAt: true,
         customer: { select: { name: true } },
-        seller: { select: { user: { select: { name: true } } } },
+        seller: { select: { name: true } },
       },
     });
 
@@ -247,9 +227,9 @@ export class AnalyticsService {
       id: row.id,
       orderNumber: row.orderNumber,
       customerName: row.customer.name,
-      sellerName: row.seller.user.name,
+      sellerName: row.seller.name,
       status: row.status,
-      total: Number(row.total),
+      total: Number(row.totalAmount),
       createdAt: row.createdAt,
     }));
   }
@@ -276,23 +256,23 @@ export class AnalyticsService {
           status: { in: REVENUE_STATUSES },
           createdAt: { gte: from, lt: to },
         },
-        select: { createdAt: true, total: true },
+        select: { createdAt: true, totalAmount: true },
       }),
       this.prisma.order.findMany({
         where: {
           status: { in: REVENUE_STATUSES },
           createdAt: { gte: previousFrom, lt: from },
         },
-        select: { createdAt: true, total: true },
+        select: { createdAt: true, totalAmount: true },
       }),
     ]);
 
-    const perDay = (rows: { createdAt: Date; total: unknown }[]) => {
+    const perDay = (rows: { createdAt: Date; totalAmount: unknown }[]) => {
       const revenue = new Map<string, number>();
       const orders = new Map<string, number>();
       for (const row of rows) {
         const key = dayKey(row.createdAt);
-        revenue.set(key, (revenue.get(key) ?? 0) + Number(row.total));
+        revenue.set(key, (revenue.get(key) ?? 0) + Number(row.totalAmount));
         orders.set(key, (orders.get(key) ?? 0) + 1);
       }
       return { revenue, orders };
@@ -317,11 +297,11 @@ export class AnalyticsService {
     );
 
     const currentTotalRevenue = currentRows.reduce(
-      (sum, r) => sum + Number(r.total),
+      (sum, r) => sum + Number(r.totalAmount),
       0,
     );
     const previousTotalRevenue = previousRows.reduce(
-      (sum, r) => sum + Number(r.total),
+      (sum, r) => sum + Number(r.totalAmount),
       0,
     );
     const currentTotalOrders = currentRows.length;
@@ -383,7 +363,7 @@ export class AnalyticsService {
       this.prisma.orderItem.groupBy({
         by: ['productId'],
         where: { order: window },
-        _sum: { quantity: true },
+        _sum: { qty: true },
       }),
       this.prisma.product.findMany({
         where: { isActive: true },
@@ -397,7 +377,7 @@ export class AnalyticsService {
       }),
       this.prisma.orderItem.findMany({
         where: { order: window },
-        select: { productId: true, quantity: true, price: true },
+        select: { productId: true, qty: true, unitPrice: true },
       }),
     ]);
 
@@ -406,12 +386,12 @@ export class AnalyticsService {
       const current = revenueByProduct.get(line.productId) ?? 0;
       revenueByProduct.set(
         line.productId,
-        current + Number(line.price) * line.quantity,
+        current + Number(line.unitPrice) * line.qty,
       );
     }
 
     const unitsByProduct = new Map(
-      sold.map((row) => [row.productId, row._sum.quantity ?? 0] as const),
+      sold.map((row) => [row.productId, row._sum?.qty ?? 0] as const),
     );
 
     const rows = products.map((product) => {
@@ -452,7 +432,7 @@ export class AnalyticsService {
       this.prisma.order.groupBy({
         by: ['sellerId', 'status'],
         where: { createdAt: window },
-        _sum: { total: true },
+        _sum: { totalAmount: true },
         _count: { _all: true },
       }),
       this.prisma.user.findMany({
@@ -470,12 +450,9 @@ export class AnalyticsService {
       }),
     ]);
 
-    const allSellerIds = [...new Set(orders.map((row) => row.sellerId))];
-    const userIdBySellerId = await this.sellerIdToUserId(allSellerIds);
-
     const inquiryCount = new Map(
       inquiries.map(
-        (row) => [row.assignedSellerId ?? '', row._count._all] as const,
+        (row) => [row.assignedSellerId ?? '', row._count?._all ?? 0] as const,
       ),
     );
 
@@ -483,32 +460,31 @@ export class AnalyticsService {
     const convertedByUserId = new Map<string, Set<string>>();
     for (const order of converted) {
       if (order.inquiryId === null) continue;
-      const userId = userIdBySellerId.get(order.sellerId);
-      if (!userId) continue;
-      const set = convertedByUserId.get(userId) ?? new Set<string>();
+      const set = convertedByUserId.get(order.sellerId) ?? new Set<string>();
       set.add(order.inquiryId);
-      convertedByUserId.set(userId, set);
+      convertedByUserId.set(order.sellerId, set);
     }
 
     return sellers
       .map((seller) => {
-        const rows = orders.filter(
-          (row) => userIdBySellerId.get(row.sellerId) === seller.id,
-        );
+        const rows = orders.filter((row) => row.sellerId === seller.id);
 
         const countOf = (status: string) =>
-          rows.find((row) => row.status === status)?._count._all ?? 0;
+          rows.find((row) => row.status === status)?._count?._all ?? 0;
 
         const revenue = rows
           .filter((row) =>
             (REVENUE_STATUSES as readonly string[]).includes(row.status),
           )
-          .reduce((total, row) => total + Number(row._sum.total ?? 0), 0);
+          .reduce(
+            (total, row) => total + Number(row._sum?.totalAmount ?? 0),
+            0,
+          );
 
         const completedOrders = countOf(OrderStatus.COMPLETED);
         const cancelledOrders = countOf(OrderStatus.CANCELLED);
         const totalOrders = rows.reduce(
-          (total, row) => total + row._count._all,
+          (total, row) => total + (row._count?._all ?? 0),
           0,
         );
         const assigned = inquiryCount.get(seller.id) ?? 0;
@@ -544,7 +520,7 @@ export class AnalyticsService {
       },
       select: {
         customerId: true,
-        total: true,
+        totalAmount: true,
         customer: { select: { id: true, name: true, company: true } },
       },
     });
@@ -582,7 +558,7 @@ export class AnalyticsService {
         revenue: 0,
       };
       existing.orders += 1;
-      existing.revenue += Number(order.total);
+      existing.revenue += Number(order.totalAmount);
       totals.set(order.customerId, existing);
     }
 
