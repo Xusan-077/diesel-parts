@@ -130,11 +130,11 @@ export class CustomersService {
         customerId: { in: [...customerIds] },
         status: OrderStatus.COMPLETED,
       },
-      _sum: { total: true },
+      _sum: { totalAmount: true },
     });
 
     return new Map(
-      rows.map((row) => [row.customerId, Number(row._sum.total ?? 0)]),
+      rows.map((row) => [row.customerId, Number(row._sum?.totalAmount ?? 0)]),
     );
   }
 
