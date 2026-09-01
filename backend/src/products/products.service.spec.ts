@@ -720,7 +720,7 @@ describe('ProductsService.productStats', () => {
       ]);
     const groupByOrderItem = jest
       .fn()
-      .mockResolvedValue([{ productId: 'p1', _sum: { quantity: 12 } }]);
+      .mockResolvedValue([{ productId: 'p1', _sum: { qty: 12 } }]);
     const service = new ProductsService(
       makePrisma({
         review: { groupBy: groupByReview },
