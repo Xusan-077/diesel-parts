@@ -9,32 +9,8 @@ datasource db {
 }
 
 enum Role {
-  SUPER_ADMIN
   DIRECTOR
-  MANAGER
   SELLER
-  VIEWER
-}
-
-enum OrderStatus {
-  DRAFT
-  NEW
-  CONFIRMED
-  PREPARING
-  COMPLETED
-  CANCELLED
-}
-
-enum OrderPaymentStatus {
-  UNPAID
-  PARTIAL
-  PAID
-}
-
-enum DiscountStatus {
-  PENDING
-  APPROVED
-  REJECTED
 }
 
 enum InquiryStatus {
@@ -50,521 +26,199 @@ enum InquirySource {
   CONTACT_FORM
 }
 
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  APPROVE
-  REJECT
-  IMPORT
-  LOGIN
-}
-
-enum StockMovementType {
-  IN
-  OUT
-  RESERVE
-  RELEASE
-}
-
-enum PaymentMethod {
-  CASH
-  CARD
-  TRANSFER
-  ONLINE
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
-enum DeliveryMethod {
-  PICKUP
-  DELIVERY
-}
-
-model User {
-  id            String   @id @default(cuid())
-  /// Nullable: some accounts (director/staff created via the old email-based
-  /// admin login) may have no phone on file. At least one of phone/email must
-  /// be set — enforced in CreateUserDto/UserWriteInput, not at the DB level.
-  phone         String?  @unique
-  /// Nullable for the same reason: the warehouse/POS side never required one.
-  email         String?  @unique
-  name          String   @default("")
-  passwordHash  String   @map("password_hash")
-  role          Role     @default(SELLER)
-  isActive      Boolean  @default(true) @map("is_active")
-  /// Percent this account may discount an order without director approval.
-  discountLimit Int      @default(5) @map("discount_limit")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  seller             Seller?
-  refreshTokens      RefreshToken[]
-  notifications      Notification[]
-  stockMovementsMade StockMovement[]
-  assignedInquiries  Inquiry[]         @relation("AssignedInquiries")
-  assignedCustomers  Customer[]        @relation("AssignedCustomers")
-  requestedDiscounts DiscountRequest[] @relation("RequestedDiscounts")
-  reviewedDiscounts  DiscountRequest[] @relation("ReviewedDiscounts")
-  auditLogs          AuditLog[]
-
-  @@map("users")
-}
-
-/// Refresh tokens are stored hashed (bcrypt) and rotated on every /auth/refresh call.
-model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String    @map("user_id")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String    @map("token_hash")
-  expiresAt DateTime  @map("expires_at")
-  revokedAt DateTime? @map("revoked_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@map("refresh_tokens")
-}
-
-model Seller {
-  id          String     @id @default(cuid())
-  userId      String     @unique @map("user_id")
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  warehouseId String?    @map("warehouse_id")
-  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-
-  orders Order[]
-
-  @@index([warehouseId])
-  @@map("sellers")
-}
-
-/// A buyer a seller works with repeatedly. `debt` is the warehouse/POS side's
-/// running balance; `assignedSellerId`/pool-claim is the CRM side's ownership
-/// model. Both are kept — they answer different questions and neither implies
-/// the other.
-model Customer {
-  id               String   @id @default(cuid())
-  name             String
-  /// Not unique: a company switchboard is shared by several contacts. (The
-  /// old backend schema had this unique; that constraint is dropped here
-  /// because root's model — and its seller-claim workflow — depends on
-  /// non-unique phone. See Task 1's migration notes.)
-  phone            String
-  email            String?
-  company          String?
-  /// INN — the Uzbek taxpayer id, for a B2B checkout's invoice. Free text,
-  /// not format-checked: it varies by entity type and this project has no
-  /// authoritative check-digit table today.
-  taxId            String?  @map("tax_id")
-  telegram         String?
-  notes            String?
-  debt             Decimal  @default(0) @db.Decimal(14, 2)
-  /// Null = unassigned — visible to directors, claimable by any seller.
-  assignedSellerId String?  @map("assigned_seller_id")
-  assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  orders Order[]
-
-  @@index([assignedSellerId])
-  @@index([phone])
-  @@map("customers")
-}
-
-/// A node in the catalog tree. Roots are the mega-menu's columns; children
-/// hang off them; a product hangs off a leaf.
-model Category {
-  id        String     @id @default(cuid())
-  slug      String     @unique
-  nameUz    String     @map("name_uz")
-  nameRu    String     @map("name_ru")
-  nameEn    String     @map("name_en")
-  /// Part family this branch belongs to — "engine", "brakes", "filters".
-  type      String     @default("general")
-  parentId  String?    @map("parent_id")
-  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children  Category[] @relation("CategoryTree")
-  order     Int        @default(0)
-  icon      String?
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-
-  products Product[]
-
-  @@index([parentId, order])
-  @@map("categories")
+/// Values match the StockStatus union in lib/types.ts exactly, so the column
+/// maps to the domain type with no translation table.
+enum StockStatus {
+  available
+  limited
+  out_of_stock
 }
 
 model Brand {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  name      String   @unique
-  logoUrl   String?  @map("logo_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  id       String    @id
+  slug     String    @unique
+  name     String
+  logoUrl  String?
   products Product[]
+}
 
-  @@map("brands")
+/// A node in the catalog tree. Roots are the mega-menu's columns; their
+/// children are the entries under each column, and a product hangs off a leaf.
+model Category {
+  id     String @id
+  slug   String @unique
+  nameUz String
+  nameRu String
+  nameEn String
+  /// The part family this branch belongs to — "engine", "brakes", "filters".
+  ///
+  /// A root and every category under it carry the same value, so the family is
+  /// answerable without walking the tree. Defaulted rather than required so the
+  /// column could be added to a populated table; the seed sets a real value on
+  /// every row it writes.
+  type      String     @default("general")
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  /// Position among siblings. Ties break on name, so an unset order is stable
+  /// rather than arbitrary.
+  order     Int        @default(0)
+  /// Key of the pictogram the menu draws beside this entry, resolved to a
+  /// component by components/catalog/catalog-icon.tsx. Null on a row nobody has
+  /// chosen one for; the menu simply draws no mark rather than a placeholder.
+  icon      String?
+  createdAt DateTime   @default(now())
+  products  Product[]
+
+  @@index([parentId, order])
 }
 
 model Product {
-  id               String   @id @default(cuid())
-  slug             String   @unique
-  sku              String   @unique
-  oemNumbers       String[] @default([]) @map("oem_numbers")
-  nameUz           String   @map("name_uz")
-  nameRu           String   @map("name_ru")
-  nameEn           String   @map("name_en")
-  descriptionUz    String   @default("") @map("description_uz")
-  descriptionRu    String   @default("") @map("description_ru")
-  descriptionEn    String   @default("") @map("description_en")
-  categoryId       String   @map("category_id")
-  category         Category @relation(fields: [categoryId], references: [id])
-  brandId          String   @map("brand_id")
-  brand            Brand    @relation(fields: [brandId], references: [id])
-  compatibleModels String[] @default([]) @map("compatible_models")
-  specs            Json     @default("{}")
-  /// Nullable: a "price on request" product has no catalog figure. Storefront
-  /// order lines snapshot this at order time; when null, the caller (order
-  /// creation) must supply a price explicitly. Renamed from the old
-  /// `sellingPrice` — same meaning, root's name kept since it's the one
-  /// customer-facing and CSV-import code already uses.
-  price            Decimal? @db.Decimal(14, 2)
-  currency         String   @default("UZS")
-  /// SELLER role never sees this (see ProductsService.SELLER_HIDDEN_FIELDS).
-  purchasePrice    Decimal? @map("purchase_price") @db.Decimal(14, 2)
-  /// Renamed from `image` to `imageUrl` to match the in-flight product-image
-  /// feature (migration 20260823062921_add_product_image_url) and the
-  /// customer-facing naming everywhere else.
-  imageUrl         String?  @map("image_url")
-  minStock         Int      @default(0) @map("min_stock")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  inventories Inventory[]
-  orderItems  OrderItem[]
-  inquiries   Inquiry[]
-  reviews     Review[]
-  cartItems   CartItem[]
+  id               String      @id
+  slug             String      @unique
+  sku              String      @unique
+  oemNumbers       String[]
+  nameUz           String
+  nameRu           String
+  nameEn           String
+  descriptionUz    String
+  descriptionRu    String
+  descriptionEn    String
+  price            Decimal?    @db.Decimal(14, 2)
+  currency         String      @default("UZS")
+  stock            Int         @default(0)
+  minStock         Int         @default(0)
+  /// Derived from stock/minStock by deriveStockStatus() on every write. Never
+  /// accepted from a caller — the repository recomputes it.
+  stockStatus      StockStatus
+  categoryId       String
+  brandId          String
+  category         Category    @relation(fields: [categoryId], references: [id])
+  brand            Brand       @relation(fields: [brandId], references: [id])
+  compatibleModels String[]
+  specs            Json
+  /// A photograph's URL, set only through the admin image-upload endpoints
+  /// (never through the general write form) — the same "server derives it"
+  /// treatment as stockStatus. Null on every row nobody has photographed yet;
+  /// the storefront falls back to a placeholder icon for those. One photo per
+  /// product today — a `ProductImage` table for a real multi-photo gallery is
+  /// a later feature this column does not imply.
+  imageUrl         String?
+  isActive         Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  inquiries        Inquiry[]
+  orderItems       OrderItem[]
+  reviews          Review[]
 
   @@index([categoryId])
   @@index([brandId])
-  @@index([isActive])
-  @@map("products")
+  @@index([stockStatus])
+  @@index([stock])
+  @@index([isActive, createdAt])
 }
 
-/// A buyer's rating of a part they bought. See root schema's original
-/// doc-comments (preserved verbatim below) for why this is rows, not an
-/// average column, and why authorPhone must never reach a public payload.
+/// A buyer's rating of a part they bought.
+///
+/// Kept as rows rather than as an average on Product: a stored average cannot
+/// be recomputed when a review is hidden or deleted, and the catalog needs the
+/// count beside it anyway. Aggregated per page, not per row.
 model Review {
   id          String   @id @default(cuid())
-  productId   String   @map("product_id")
+  productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   /// Whole stars, 1 to 5. A CHECK constraint in the migration enforces the
   /// range in the database, which Prisma's schema language cannot express.
   rating      Int
+  /// The reviewer's own words. Nullable so a rating can stand on its own, but
+  /// the public endpoint requires text today: a parts review with no words
+  /// tells the next buyer nothing.
   body        String?
-  authorName  String   @map("author_name")
-  /// MUST NEVER reach a public payload. Every read path selects columns
-  /// explicitly for that reason — see ReviewsService.
-  authorPhone String   @map("author_phone")
-  isApproved  Boolean  @default(true) @map("is_approved")
-  createdAt   DateTime @default(now()) @map("created_at")
+  /// What the reviewer asked to be called. Not an identity — see authorPhone.
+  authorName  String
+  /// The verified phone from the session, and the identity behind
+  /// `@@unique([productId, authorPhone])`.
+  ///
+  /// MUST NEVER reach a public payload. The site has no user table for
+  /// customers — a session carries a phone number and nothing else — so this
+  /// is the only thing that can hold one person to one review per part, and it
+  /// is also a personal detail sitting next to a public opinion. Every read
+  /// path selects columns explicitly for that reason.
+  authorPhone String
+  /// Visible on the site. Reviews publish on submission — the phone was
+  /// already verified by SMS, which is the spam gate — and a director clears
+  /// this to take one down. The catalog aggregates visible rows only, so a
+  /// hidden review moves no average.
+  isApproved  Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
+  /// One review per person per part. A second submission updates the first
+  /// rather than being refused, so changing your mind is editing, not a dead
+  /// end.
   @@unique([productId, authorPhone])
   @@index([productId, isApproved, createdAt])
   @@index([isApproved, createdAt])
-  @@map("reviews")
+}
+
+model User {
+  id                 String            @id @default(cuid())
+  name               String
+  email              String            @unique
+  phone              String?           @unique
+  passwordHash       String
+  role               Role
+  isActive           Boolean           @default(true)
+  /// Percent a SELLER may discount without director approval.
+  discountLimit      Int               @default(5)
+  createdAt          DateTime          @default(now())
+  inquiries          Inquiry[]         @relation("AssignedInquiries")
+  assignedCustomers  Customer[]        @relation("AssignedCustomers")
+  orders             Order[]           @relation("SellerOrders")
+  requestedDiscounts DiscountRequest[] @relation("RequestedDiscounts")
+  reviewedDiscounts  DiscountRequest[] @relation("ReviewedDiscounts")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
 }
 
 model Inquiry {
   id               String        @id @default(cuid())
-  customerName     String        @map("customer_name")
+  customerName     String
   phone            String
   email            String?
   message          String
-  productId        String?       @map("product_id")
+  productId        String?
   product          Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productSku       String?       @map("product_sku")
+  /// Snapshot so the record stays meaningful if the product is deleted.
+  productSku       String?
   quantity         Int?
   status           InquiryStatus @default(NEW)
   source           InquirySource
-  assignedSellerId String?       @map("assigned_seller_id")
+  assignedSellerId String?
   assignedSeller   User?         @relation("AssignedInquiries", fields: [assignedSellerId], references: [id], onDelete: SetNull)
+  /// The seller's own running note on the lead. Free text, not shown publicly.
   notes            String?
-  followUpAt       DateTime?     @map("follow_up_at")
-  createdAt        DateTime      @default(now()) @map("created_at")
-
-  orders Order[]
+  /// When the seller means to call back. Null means nothing is scheduled.
+  followUpAt       DateTime?
+  orders           Order[]
+  createdAt        DateTime      @default(now())
 
   @@index([status, createdAt])
   @@index([assignedSellerId])
   @@index([followUpAt])
-  @@map("inquiries")
 }
 
-model Warehouse {
-  id        String   @id @default(cuid())
-  name      String
-  location  String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  sellers     Seller[]
-  inventories Inventory[]
-  orders      Order[]
-
-  @@map("warehouses")
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
 }
 
-/// available_quantity is deliberately NOT a column here — it is always
-/// derived as (quantity - reservedQuantity) in application code, so it can
-/// never drift from the two numbers it depends on. See InventoryService.
-model Inventory {
-  id               String    @id @default(cuid())
-  productId        String    @map("product_id")
-  product          Product   @relation(fields: [productId], references: [id])
-  warehouseId      String    @map("warehouse_id")
-  warehouse        Warehouse @relation(fields: [warehouseId], references: [id])
-  quantity         Int       @default(0)
-  reservedQuantity Int       @default(0) @map("reserved_quantity")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  stockMovements StockMovement[]
-
-  @@unique([productId, warehouseId])
-  @@index([warehouseId])
-  @@map("inventories")
-}
-
-model StockMovement {
-  id          String            @id @default(cuid())
-  inventoryId String            @map("inventory_id")
-  inventory   Inventory         @relation(fields: [inventoryId], references: [id])
-  type        StockMovementType
-  quantity    Int
-  reason      String?
-  createdById String?           @map("created_by")
-  createdBy   User?             @relation(fields: [createdById], references: [id])
-  createdAt   DateTime          @default(now()) @map("created_at")
-
-  @@index([inventoryId])
-  @@index([createdAt])
-  @@map("stock_movements")
-}
-
-/// Single-row counter used inside a transaction (SELECT ... FOR UPDATE) to
-/// hand out sequential, gapless-per-attempt order numbers like DP-1024
-/// without racing two concurrent order creations onto the same number.
-model OrderSequence {
-  id         Int @id @default(1)
-  lastNumber Int @default(1000) @map("last_number")
-
-  @@map("order_sequences")
-}
-
-model Order {
-  id                       String             @id @default(cuid())
-  orderNumber              String             @unique @map("order_number")
-  customerId               String             @map("customer_id")
-  customer                 Customer           @relation(fields: [customerId], references: [id])
-  sellerId                 String             @map("seller_id")
-  seller                   Seller             @relation(fields: [sellerId], references: [id])
-  /// Nullable: a CRM order raised through the seller board has no warehouse
-  /// until it is confirmed and inventory actually needs reserving (see
-  /// OrdersService.updateStatus, which resolves a warehouse at CONFIRMED
-  /// time — Task 10). A POS order created with a warehouseId up front (the
-  /// existing backend flow) still sets this immediately, unchanged.
-  warehouseId              String?            @map("warehouse_id")
-  warehouse                Warehouse?         @relation(fields: [warehouseId], references: [id])
-  status                   OrderStatus        @default(DRAFT)
-  currency                 String             @default("UZS")
-  subtotal                 Decimal            @db.Decimal(14, 2)
-  /// Flat-amount discount — the original POS quick-sale mechanism. Kept
-  /// alongside the percent workflow below rather than merged into it: the two
-  /// serve different flows (walk-in POS sale vs. seller-negotiated CRM order)
-  /// and merging them would change either flow's existing behavior.
-  discount                 Decimal            @default(0) @db.Decimal(14, 2)
-  deliveryFee              Decimal            @default(0) @map("delivery_fee") @db.Decimal(14, 2)
-  /// Self-checkout only: PICKUP needs no address; DELIVERY requires
-  /// city/district/street, enforced in CreateCheckoutDto (not at the DB
-  /// level, so a CRM-raised order — created through OrdersService.create,
-  /// not CheckoutService — is unaffected and simply keeps the PICKUP
-  /// default with every address column null).
-  deliveryMethod           DeliveryMethod     @default(PICKUP) @map("delivery_method")
-  deliveryCity             String?            @map("delivery_city")
-  deliveryDistrict         String?            @map("delivery_district")
-  deliveryStreet           String?            @map("delivery_street")
-  /// Free-text delivery guidance (entrance, floor, landmark) — distinct
-  /// from `notes`, which is the order's general comment.
-  deliveryNotes            String?            @map("delivery_notes")
-  /// Percent the seller asked for (CRM flow). Within their User.discountLimit
-  /// it applies immediately; above it, a DiscountRequest gates approval.
-  discountRequestedPercent Decimal            @default(0) @map("discount_requested_percent") @db.Decimal(5, 2)
-  discountApprovedPercent  Decimal            @default(0) @map("discount_approved_percent") @db.Decimal(5, 2)
-  total                    Decimal            @db.Decimal(14, 2)
-  paymentStatus            OrderPaymentStatus @default(UNPAID) @map("payment_status")
-  notes                    String?
-  /// Set when the order was raised from a CRM board card.
-  inquiryId                String?            @map("inquiry_id")
-  inquiry                  Inquiry?           @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
-  createdAt                DateTime           @default(now()) @map("created_at")
-  updatedAt                DateTime           @updatedAt @map("updated_at")
-
-  items            OrderItem[]
-  payments         Payment[]
-  invoice          Invoice?
-  discountRequests DiscountRequest[]
-
-  @@index([status])
-  @@index([customerId])
-  @@index([sellerId])
-  @@index([createdAt])
-  @@index([inquiryId])
-  @@map("orders")
-}
-
-model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String  @map("order_id")
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String  @map("product_id")
-  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-  /// Snapshots so a line still reads correctly after the product is renamed,
-  /// repriced, or retired.
-  productSku  String  @map("product_sku")
-  productName String  @map("product_name")
-  quantity    Int
-  price       Decimal @db.Decimal(14, 2)
-  total       Decimal @db.Decimal(14, 2)
-
-  @@index([orderId])
-  @@index([productId])
-  @@map("order_items")
-}
-
-model DiscountRequest {
-  id               String         @id @default(cuid())
-  orderId          String         @map("order_id")
-  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sellerId         String         @map("seller_id")
-  seller           User           @relation("RequestedDiscounts", fields: [sellerId], references: [id], onDelete: Restrict)
-  requestedPercent Decimal        @map("requested_percent") @db.Decimal(5, 2)
-  reason           String?
-  status           DiscountStatus @default(PENDING)
-  reviewedByUserId String?        @map("reviewed_by_user_id")
-  reviewedBy       User?          @relation("ReviewedDiscounts", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  reviewedAt       DateTime?      @map("reviewed_at")
-  decisionNote     String?        @map("decision_note")
-  createdAt        DateTime       @default(now()) @map("created_at")
-
-  @@index([status, createdAt])
-  @@index([sellerId])
-  @@index([orderId])
-  @@map("discount_requests")
-}
-
-model Payment {
-  id                 String        @id @default(cuid())
-  orderId            String        @map("order_id")
-  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount             Decimal       @db.Decimal(14, 2)
-  method             PaymentMethod
-  status             PaymentStatus @default(PENDING)
-  /// "payme" once Click is wired in later this becomes "payme" | "click".
-  /// Null for the existing staff-recorded (cash/card/transfer) payments.
-  provider           String?
-  /// The provider's own id for this attempt. Only PaymeService (driven by
-  /// Payme's own webhook, never the frontend) may move a payment to
-  /// COMPLETED — see PaymeService.performTransaction.
-  transactionId      String?
-  /// Payme's `time` (epoch ms) from CreateTransaction, echoed back verbatim
-  /// on every retry — Payme's protocol requires CreateTransaction to be
-  /// idempotent, and this is the value that makes a repeat call return the
-  /// exact same create_time instead of a fresh one.
-  providerCreateTime BigInt?
-  cancelledAt        DateTime?
-  /// Payme's CancelTransaction `reason` code, kept for support/audit only —
-  /// no code branches on its value.
-  cancelReason       Int?
-  paidAt             DateTime?     @map("paid_at")
-  createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @updatedAt @map("updated_at")
-
-  /// Guards webhook idempotency: a provider retrying the same callback must
-  /// not be able to create a second row for one transaction and re-fire a
-  /// COMPLETED transition. Postgres treats each NULL as distinct here, so
-  /// the existing staff-recorded rows (provider/transactionId both null)
-  /// are unaffected.
-  @@unique([provider, transactionId])
-  @@index([orderId])
-  @@map("payments")
-}
-
-model Invoice {
-  id            String   @id @default(cuid())
-  orderId       String   @unique @map("order_id")
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  invoiceNumber String   @unique @map("invoice_number")
-  issuedAt      DateTime @default(now()) @map("issued_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  @@map("invoices")
-}
-
-/// A phone-verified storefront visitor's cart. Keyed by phone rather than a
-/// customer/user id — backend/ has no concept of a storefront visitor's
-/// identity beyond what Next.js's OTP session asserts over the
-/// InternalServiceGuard bridge (see CartsController), and a Customer row is
-/// only created at checkout, not at cart time.
-model Cart {
-  id        String     @id @default(cuid())
-  phone     String     @unique
-  items     CartItem[]
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-
-  @@map("carts")
-}
-
-model CartItem {
-  id        String  @id @default(cuid())
-  cartId    String  @map("cart_id")
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String  @map("product_id")
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int
-
-  @@unique([cartId, productId])
-  @@map("cart_items")
-}
-
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String           @map("user_id")
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Root's typed enum, richer than backend's free-text title/body. Kept as
-  /// the source of truth; `title`/`body` collapse into one `message`.
-  type      NotificationType
-  message   String
-  entityId  String?          @map("entity_id")
-  isRead    Boolean          @default(false) @map("is_read")
-  createdAt DateTime         @default(now()) @map("created_at")
-
-  @@index([userId, isRead, createdAt])
-  @@map("notifications")
+enum DiscountStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum NotificationType {
@@ -575,19 +229,138 @@ enum NotificationType {
   ORDER_STATUS
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  IMPORT
+  LOGIN
+}
+
+/// A buyer a seller works with repeatedly. Distinct from Inquiry, which records
+/// one anonymous approach from the public site and may never become a Customer.
+model Customer {
+  id               String   @id @default(cuid())
+  name             String
+  /// Not unique: a company's switchboard number is shared by several contacts.
+  phone            String
+  email            String?
+  company          String?
+  notes            String?
+  /// Null means unassigned — visible to directors, claimable by any seller.
+  assignedSellerId String?
+  assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
+  orders           Order[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([assignedSellerId])
+  @@index([phone])
+}
+
+model Order {
+  id                       String            @id @default(cuid())
+  /// Human-readable reference quoted to the customer, e.g. "DP-2026-0042".
+  orderNumber              String            @unique
+  customerId               String
+  customer                 Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  sellerId                 String
+  seller                   User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Restrict)
+  status                   OrderStatus       @default(DRAFT)
+  currency                 String            @default("UZS")
+  /// Sum of the line items before any discount. Stored rather than derived so a
+  /// later price change on the product cannot rewrite a historical order.
+  subtotal                 Decimal           @db.Decimal(14, 2)
+  /// Percent the seller asked for. Within their User.discountLimit it applies
+  /// immediately; above it, a DiscountRequest gates approval.
+  discountRequestedPercent Decimal           @default(0) @db.Decimal(5, 2)
+  /// Percent actually in force. Equals the requested percent once approved.
+  discountApprovedPercent  Decimal           @default(0) @db.Decimal(5, 2)
+  /// subtotal minus discountApprovedPercent, recomputed on every write.
+  totalAmount              Decimal           @db.Decimal(14, 2)
+  notes                    String?
+  /// Set when the order was raised from a board card, so the conversion figure
+  /// is counted rather than estimated and one inquiry cannot be billed twice.
+  inquiryId                String?
+  inquiry                  Inquiry?          @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  items                    OrderItem[]
+  discountRequests         DiscountRequest[]
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  @@index([sellerId, status])
+  @@index([customerId])
+  @@index([status, createdAt])
+  @@index([inquiryId])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  /// Snapshots, so the line still reads correctly after the product is renamed
+  /// or repriced. Same pattern as Inquiry.productSku.
+  productSku  String
+  productName String
+  qty         Int
+  unitPrice   Decimal @db.Decimal(14, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model DiscountRequest {
+  id               String         @id @default(cuid())
+  orderId          String
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sellerId         String
+  seller           User           @relation("RequestedDiscounts", fields: [sellerId], references: [id], onDelete: Restrict)
+  requestedPercent Decimal        @db.Decimal(5, 2)
+  reason           String?
+  status           DiscountStatus @default(PENDING)
+  reviewedByUserId String?
+  reviewedBy       User?          @relation("ReviewedDiscounts", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt       DateTime?
+  decisionNote     String?
+  createdAt        DateTime       @default(now())
+
+  @@index([status, createdAt])
+  @@index([sellerId])
+  @@index([orderId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  message   String
+  /// Id of the row the notification points at — order, inquiry or product.
+  /// Untyped on purpose: the type field says which table to read it against.
+  entityId  String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
 model AuditLog {
   id         String      @id @default(cuid())
-  userId     String?     @map("user_id")
+  /// Null once the acting user is deleted; the trail itself must survive.
+  userId     String?
   user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   action     AuditAction
-  entityType String      @map("entity_type")
-  entityId   String      @map("entity_id")
+  entityType String
+  entityId   String
   before     Json?
   after      Json?
-  createdAt  DateTime    @default(now()) @map("created_at")
+  createdAt  DateTime    @default(now())
 
   @@index([entityType, entityId])
   @@index([userId, createdAt])
   @@index([createdAt])
-  @@map("audit_logs")
 }
