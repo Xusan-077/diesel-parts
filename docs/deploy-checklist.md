@@ -23,7 +23,7 @@ Written after the 2026-08-23 incident: `/api/products/home` (and every other
 root-app route touching `Product`) returned 503 because the Railway Postgres
 DB was missing the `imageUrl` column and still had the retired `imageLabels`
 column, even though `_prisma_migrations` recorded both migrations as
-successfully applied. The migration *history* and the *actual database* had
+successfully applied. The migration _history_ and the _actual database_ had
 drifted apart silently. This checklist exists to catch that class of problem
 before it reaches users again.
 
@@ -42,7 +42,7 @@ Root cause, confirmed via Railway CLI + production logs:
    (catalog cards, product gallery, CSV export, cart, wishlist) — every
    `prisma.product.findMany()` call started throwing
    `PrismaClientKnownRequestError P2022: The column Product.imageLabels does
-   not exist`, surfacing as 503s on `/api/products/home`, `/api/products`,
+not exist`, surfacing as 503s on `/api/products/home`, `/api/products`,
    and the storefront pages that call them.
 
 Fix applied (production database, via `prisma db execute` with a raw SQL
@@ -65,7 +65,7 @@ after the fix (confirmed against fresh requests, not a cached response).
 next runs `prisma migrate dev`/`deploy` for the root schema against
 production (once dev/prod are properly separated and a real deploy pipeline
 exists) needs to either re-add `imageLabels` to `schema.prisma` for real, or
-formally author a migration that drops it again *after* confirming the
+formally author a migration that drops it again _after_ confirming the
 deployed build no longer reads it. Don't let this drift silently a second
 time — this is exactly the failure mode this checklist exists to prevent.
 
@@ -81,10 +81,10 @@ Both apps in this repo use the **same local Postgres server**
 (`postgres:postgres@localhost:5432`) but **separate databases**, so their
 independent Prisma schemas never collide:
 
-| App | `DATABASE_URL` (local) | Database |
-|---|---|---|
-| Root (Next.js, `.env.local`) | `postgresql://postgres:postgres@localhost:5432/diesel_parts_web_dev?schema=public` | `diesel_parts_web_dev` |
-| `backend/` (NestJS, `backend/.env`) | `postgresql://postgres:postgres@localhost:5432/diesel_parts_erp?schema=public` | `diesel_parts_erp` |
+| App                                 | `DATABASE_URL` (local)                                                             | Database               |
+| ----------------------------------- | ---------------------------------------------------------------------------------- | ---------------------- |
+| Root (Next.js, `.env.local`)        | `postgresql://postgres:postgres@localhost:5432/diesel_parts_web_dev?schema=public` | `diesel_parts_web_dev` |
+| `backend/` (NestJS, `backend/.env`) | `postgresql://postgres:postgres@localhost:5432/diesel_parts_erp?schema=public`     | `diesel_parts_erp`     |
 
 To stand either one up from scratch:
 
@@ -156,12 +156,104 @@ point at `https://api.diesel-parts.uz` unless a staging backend exists).
 
 ## CORS
 
-- Fixed in this pass: `main.ts` used `app.enableCors({ origin: true, credentials: true })`, which reflects *any* request's `Origin` header back as allowed — with `credentials: true` that's a real CORS misconfiguration (any site can make credentialed requests). Replaced with an explicit allowlist read from `CORS_ORIGINS` (see table above), defaulting to `localhost:3000` only when unset.
+- Fixed in this pass: `main.ts` used `app.enableCors({ origin: true, credentials: true })`, which reflects _any_ request's `Origin` header back as allowed — with `credentials: true` that's a real CORS misconfiguration (any site can make credentialed requests). Replaced with an explicit allowlist read from `CORS_ORIGINS` (see table above), defaulting to `localhost:3000` only when unset.
+
+## STATUS — backend schema alignment (2026-09-01, in progress)
+
+Approach chosen: **adapt `backend/` to production's _current_ (root) Postgres
+schema**, not migrate production forward to `backend/`'s consolidated schema.
+Hybrid — common models adapt in code now (step 1); genuinely-missing
+models/enums get a purely-additive migration later (step 2). This supersedes
+"execute the consolidation plan" for now; see Open item 3.
+
+### DONE — prep & step 1
+
+- Production Postgres backed up and verified — `_db-backups/` (see its
+  `README.md`): custom + plain `pg_dump` of `monorail.proxy.rlwy.net:54377/railway`,
+  taken 2026-08-31T14:00Z, sha256s recorded.
+- Staging DB `postgresql://postgres:postgres@localhost:5433/diesel_parts_staging`
+  (local PG 18.6) is a verified byte-for-byte copy of production — table
+  counts, row counts, columns, constraints, indexes, and `pg_dump --data-only`
+  all match (only cosmetic dump-token / timezone-display differences).
+- Broken migration row `20260823092527_init` marked `--rolled-back` on **both**
+  production and staging (`prisma migrate resolve`) — metadata only, applied
+  nothing, no data touched. `prisma migrate status` against prod no longer
+  reports an error state (exit 0); it now shows the expected history
+  divergence (prod has root's 9 migrations; `backend/`'s 6 are unapplied).
+- `backend/prisma/schema.prisma` rewritten to match production's CURRENT
+  shape, based on the deleted root schema (`git show d5cc994~1:prisma/schema.prisma`,
+  which is the exact schema prod's data was migrated by) with `backend/`'s
+  `generator` block. 12 models, 8 enums — schema body is byte-for-byte
+  identical to `d5cc994~1:prisma/schema.prisma` apart from the extra
+  `moduleFormat = "cjs"` generator line. `Role = {DIRECTOR, SELLER}`;
+  `OrderStatus = {DRAFT, PENDING, CONFIRMED, COMPLETED, CANCELLED}`;
+  `Order.totalAmount` (not `total`); `OrderItem.qty` + `unitPrice` (no `total`);
+  `Brand.name` not unique; `Product/Category/Brand.id` has no `@default`
+  (id = slug). `tsc` in `backend/` drops from 353 → 299 errors on this schema
+  change alone. **Committed** (`backend/prisma/schema.prisma` was uncommitted
+  through step 1b; the 1b code commits sit on top of it in history).
+
+### DECIDED (D1–D3)
+
+- **D1** — `Product`/`Category`/`Brand.id`: no `@default`; create/upsert paths
+  pass the slug as `id` explicitly. (Not `@default(cuid())` — prod ids are
+  slugs and frontend URLs depend on that.)
+- **D2** — `User.updatedAt`: absent in prod; will be added via `ADD COLUMN` in
+  step 2. `auth.service.ts` left untouched for now — it also reaches for the
+  `Seller` relation and `RefreshToken` model (both step 2), so its 9 `tsc`
+  errors all clear together in step 2, not before.
+- **D3** — `OrderStatus.NEW` → `PENDING` mapping; `PREPARING` transitions
+  removed in step 1, restored in step 2 via `ALTER TYPE ADD VALUE`. Prod has
+  0 orders, so no data risk.
+
+### DONE — step 1b (2026-09-01)
+
+Code-only fixes (no migration): permanent renames + enum reductions +
+explicit-id-on-create, one commit per file/spec (14 commits,
+`392461f`..`da587a1`). Touched: `src/common/roles.ts` (+ `roles.guard.spec`),
+`src/orders/order-status-transitions.ts` (+ spec), `src/orders/orders.service.ts`
+(+ spec), `src/customers/customers.service.ts` (+ spec — `spendByCustomer` sums
+`Order.totalAmount`), `src/brands/brands.service.ts` (slug-as-id, non-unique
+name), `src/categories/categories.service.ts` (slug-as-id),
+`src/discount-requests/discount-requests.service.ts` (approval writes
+`Order.totalAmount`), `src/products/products.service.ts` (+ spec — sold-count
+sums `OrderItem.qty`), `prisma/seed.ts` (slug-as-id, `PENDING`, `qty`).
+
+Result: `tsc` 299 → **234** (close to the ~229 predicted). Every file that is
+now `tsc`-clean is also `eslint`-clean; the 143 tests across the 9 touched
+specs pass. Remaining 234 errors are all step 2 — verified: they are missing
+models (`seller`, `refreshToken`, `inventory`, `warehouse`, `orderSequence`,
+`stockMovement`, `payment`, `invoice`), missing columns (`Customer.taxId`
+/`telegram`/`debt`, `Order.warehouseId`, `Product.purchasePrice`,
+`User.updatedAt`), missing enum values (`PREPARING`, `SUPER_ADMIN`, `MANAGER`,
+`VIEWER`) and missing types (`OrderPaymentStatus`, `PaymentMethod`,
+`PaymentStatus`, `StockMovementType`) — nothing that a code-only fix could
+resolve. Concentrated in `analytics.service.ts` (51), `products.service.ts`
+(21), `inventory.service.ts` (21), `payme.service.ts` (17),
+`dashboard.service.ts` (16), `auth.service.ts` (9).
+
+### NEXT — step 2
+
+Author and apply the purely-additive migration below. Prerequisite met:
+`schema.prisma` is committed.
+
+### STEP 2 (later, separate discussion)
+
+Purely-additive migration against production: `CREATE TABLE` for the 10
+missing models (Warehouse, Inventory, StockMovement, OrderSequence, Payment,
+Invoice, Cart, CartItem, RefreshToken, Seller); `ALTER TYPE … ADD VALUE` for
+`Role` (+MANAGER, +VIEWER, +SUPER_ADMIN) and `OrderStatus` (+NEW, +PREPARING);
+`CREATE TYPE` for OrderPaymentStatus / StockMovementType / PaymentMethod /
+PaymentStatus / DeliveryMethod; nullable/defaulted `ADD COLUMN` on Customer
+(debt, taxId, telegram), Product (purchasePrice), Order (warehouseId,
+paymentStatus, delivery\*, discount, deliveryFee), User (updatedAt). **No
+DROP / RENAME / column-type change on the 12 existing tables.** Apply only
+after review + explicit approval.
 
 ## Open items (not fixed in this pass — flagging for a decision)
 
 1. ~~**Dev and production may be sharing one Postgres.**~~ **RESOLVED
-   2026-08-23** — confirmed `.env.local`'s `DATABASE_URL` *was* byte-for-byte
+   2026-08-23** — confirmed `.env.local`'s `DATABASE_URL` _was_ byte-for-byte
    the same as production's `DATABASE_PUBLIC_URL` (this was the direct cause
    of today's 503 — see incident section above); `.env.local` now points at
    a local `diesel_parts_web_dev` database instead, and the real credential
@@ -190,9 +282,15 @@ point at `https://api.diesel-parts.uz` unless a staging backend exists).
    production yet. Running both schemas' migrations against the same
    production database without a coordinated cutover risks a second,
    larger-scale version of today's incident (column/table mismatches across
-   *both* apps at once, not just one).
+   _both_ apps at once, not just one).
    A full plan for merging these already exists:
    `docs/superpowers/plans/2026-08-23-backend-consolidation.md`. This is a
    big, separate piece of work — plan and execute it on its own, not as a
    follow-on to this incident response. Until it lands, don't over-invest in
    root-app migration tooling (item 2 above) for the root schema specifically.
+
+   **Update 2026-09-01:** direction reversed — see "STATUS — backend schema
+   alignment" above. Instead of migrating production forward to the
+   consolidated schema, `backend/` is being adapted down to production's
+   current shape, with a later purely-additive migration for what's genuinely
+   missing. The consolidation plan is on hold, not being executed as written.
