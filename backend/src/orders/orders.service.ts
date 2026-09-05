@@ -715,8 +715,10 @@ export class OrdersService {
   }
 
   private wasReserved(status: OrderStatus) {
-    // PREPARING (a step-2 enum value) will re-join this check when it returns.
-    return status === OrderStatus.CONFIRMED;
+    // Stock is reserved on entry to CONFIRMED and stays reserved through
+    // PREPARING (step-2 enum value, restored in the transition table), so
+    // cancelling from either state must release it.
+    return status === OrderStatus.CONFIRMED || status === OrderStatus.PREPARING;
   }
 
   /**
