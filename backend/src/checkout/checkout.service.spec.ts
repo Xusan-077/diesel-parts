@@ -60,9 +60,9 @@ function makeDeps() {
     product: { findMany: productFindMany },
     order: { create: orderCreate, findUnique: orderFindUnique },
     user: {
-      findUnique: jest
-        .fn()
-        .mockResolvedValue({ id: 'u1', seller: { id: 'house-1' } }),
+      // getOrCreateHouseSeller now resolves to a plain User id — Order.sellerId
+      // is a FK to User, so there is no Seller profile in the middle.
+      findUnique: jest.fn().mockResolvedValue({ id: 'house-user-1' }),
     },
     payment: { create: paymentCreate },
     $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prisma)),
@@ -154,7 +154,7 @@ describe('CheckoutService.createOrder', () => {
     const callArgs = orderCreate.mock.calls[0][0];
     expect(callArgs.data.orderNumber).toBe('DP-1001');
     expect(callArgs.data.customerId).toBe('cus-1');
-    expect(callArgs.data.sellerId).toBe('house-1');
+    expect(callArgs.data.sellerId).toBe('house-user-1');
     expect(callArgs.data.warehouseId).toBeNull();
     expect(callArgs.data.deliveryMethod).toBe('PICKUP');
     expect(callArgs.data.deliveryCity).toBeNull();

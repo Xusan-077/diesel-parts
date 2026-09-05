@@ -1,9 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { OrdersService } from './orders.service';
+import { OrdersService, ORDER_INCLUDE } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { ProductsService } from '../products/products.service';
@@ -21,13 +22,15 @@ import type { AuthenticatedUser } from '../auth/auth.types';
 interface IncludeArgs {
   include: {
     discountRequests?: unknown;
-    seller: { select: { user: { select: { name?: boolean } } } };
+    seller: { select: Record<string, boolean> };
   };
 }
 
 interface OrderDataArgs {
   data: {
     status?: OrderStatus;
+    sellerId?: string;
+    warehouseId?: string | null;
     subtotal?: Prisma.Decimal;
     totalAmount?: Prisma.Decimal;
     items?: {
@@ -60,6 +63,9 @@ function orderUpdateAudits(record: jest.Mock): AuditRow[] {
     );
 }
 
+// `id` is the user id — what `Order.sellerId` (a FK to `User`) is matched
+// against. `sellerId` is the separate `Seller` profile id, deliberately a
+// different value so a test that passed if the two were conflated fails.
 const seller: AuthenticatedUser = {
   id: 'seller-user-1',
   phone: '+998901234567',
@@ -235,10 +241,10 @@ async function catchError(promise: Promise<unknown>): Promise<unknown> {
 }
 
 describe('OrdersService includes', () => {
-  it('findOne requests discountRequests and the seller user name', async () => {
+  it('findOne requests discountRequests and the seller name off User directly', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
     });
     const { prisma } = makePrisma({ order: { findUnique } });
     const { products } = makeProducts();
@@ -249,7 +255,7 @@ describe('OrdersService includes', () => {
 
     const { include } = firstArg<IncludeArgs>(findUnique);
     expect(include.discountRequests).toBeDefined();
-    expect(include.seller.select.user.select.name).toBe(true);
+    expect(include.seller.select.name).toBe(true);
   });
 
   it('findAll does not request discountRequests', async () => {
@@ -264,7 +270,94 @@ describe('OrdersService includes', () => {
 
     const { include } = firstArg<IncludeArgs>(findMany);
     expect(include.discountRequests).toBeUndefined();
-    expect(include.seller.select.user.select.name).toBe(true);
+    expect(include.seller.select.name).toBe(true);
+  });
+
+  // `Order.seller` is a FK to `User`. `ORDER_INCLUDE` is an `as const` object,
+  // so TS excess-property checks don't fire on it — a stale nested key (the
+  // old `seller: { select: { user: {...} } }`) compiled fine and only threw at
+  // query time. This validates every selected column against the real `User`
+  // columns from the generated client, catching that class of drift in `jest`.
+  it('ORDER_INCLUDE.seller selects only real User columns', () => {
+    const userColumns = new Set<string>(
+      Object.values(Prisma.UserScalarFieldEnum),
+    );
+    const selected = Object.keys(ORDER_INCLUDE.seller.select);
+
+    expect(selected.length).toBeGreaterThan(0);
+    for (const column of selected) {
+      expect(userColumns).toContain(column);
+    }
+  });
+});
+
+describe('OrdersService ownership scoping (Order.sellerId is a User FK)', () => {
+  it('findAll scopes a SELLER to orders under their user id, not their Seller profile id', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const { prisma } = makePrisma({ order: { findMany, count } });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.findAll(seller, {});
+
+    const { where } = firstArg<{ where: { sellerId?: string } }>(findMany);
+    expect(where.sellerId).toBe(seller.id);
+    expect(where.sellerId).not.toBe(seller.sellerId);
+  });
+
+  it('findAll does not scope a director', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const { prisma } = makePrisma({ order: { findMany, count } });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.findAll(director, {});
+
+    expect(
+      firstArg<{ where: { sellerId?: string } }>(findMany).where.sellerId,
+    ).toBeUndefined();
+  });
+
+  it('findOne lets a SELLER read their own order and 403s another seller’s', async () => {
+    const own = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      sellerId: seller.id,
+    });
+    const { prisma: ownPrisma } = makePrisma({ order: { findUnique: own } });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(
+      ownPrisma,
+      makeInventory(),
+      products,
+      audit,
+    );
+
+    await expect(service.findOne(seller, 'order-1')).resolves.toMatchObject({
+      id: 'order-1',
+    });
+
+    const foreign = jest.fn().mockResolvedValue({
+      id: 'order-2',
+      sellerId: 'another-user',
+    });
+    const { prisma: foreignPrisma } = makePrisma({
+      order: { findUnique: foreign },
+    });
+    const foreignService = new OrdersService(
+      foreignPrisma,
+      makeInventory(),
+      products,
+      audit,
+    );
+
+    await expect(
+      foreignService.findOne(seller, 'order-2'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
 
@@ -457,9 +550,13 @@ describe('OrdersService.create', () => {
 
     const result = await service.create(seller, dto);
 
-    expect(firstArg<OrderDataArgs>(tx.order.create).data.status).toBe(
-      OrderStatus.PENDING,
-    );
+    const { data } = firstArg<OrderDataArgs>(tx.order.create);
+    expect(data.status).toBe(OrderStatus.PENDING);
+    // `Order.sellerId` is a FK to `User` — the order is written under the
+    // actor's user id, NOT their `Seller` profile id (`seller.sellerId`,
+    // 'seller-1'), which would be a dangling FK.
+    expect(data.sellerId).toBe(seller.id);
+    expect(data.sellerId).not.toBe(seller.sellerId);
     expect(result).toMatchObject({ id: 'order-1' });
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -467,6 +564,30 @@ describe('OrdersService.create', () => {
         entityType: 'Order',
         entityId: 'order-1',
       }),
+    );
+  });
+
+  it('looks the Seller profile up by userId (for its default warehouse), not by actor.sellerId', async () => {
+    const tx = makeTx();
+    const sellerFindUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'seller-1', warehouseId: 'w1' });
+    const { prisma } = makePrisma({
+      seller: { findUniqueOrThrow: sellerFindUniqueOrThrow },
+      product: { findMany: jest.fn().mockResolvedValue([product()]) },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.create(seller, dto);
+
+    expect(sellerFindUniqueOrThrow).toHaveBeenCalledWith({
+      where: { userId: seller.id },
+    });
+    expect(firstArg<OrderDataArgs>(tx.order.create).data.warehouseId).toBe(
+      'w1',
     );
   });
 
@@ -513,7 +634,7 @@ describe('OrdersService.update', () => {
       order: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'order-1',
-          sellerId: 'seller-1',
+          sellerId: 'seller-user-1',
           status: OrderStatus.CONFIRMED,
           items: [],
         }),
@@ -539,7 +660,7 @@ describe('OrdersService.update', () => {
       order: {
         findUnique: jest.fn().mockResolvedValue({
           id: 'order-1',
-          sellerId: 'seller-1',
+          sellerId: 'seller-user-1',
           status: OrderStatus.PENDING,
           items: [],
         }),
@@ -563,7 +684,7 @@ describe('OrdersService.update', () => {
   it('records exactly one audit row for a pure status change (the updateStatus one)', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       status: OrderStatus.CONFIRMED,
       warehouseId: 'w1',
       subtotal: new Prisma.Decimal(200),
@@ -605,7 +726,7 @@ describe('OrdersService.update', () => {
   it('combined status + re-line: the updateStatus status row plus one content row that omits status', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       status: OrderStatus.PENDING,
       warehouseId: 'w1',
       discountApprovedPercent: new Prisma.Decimal(10),
@@ -658,7 +779,7 @@ describe('OrdersService.update', () => {
   it('re-lines and recomputes subtotal/total against the approved percent, recording one content audit row', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       status: OrderStatus.PENDING,
       discountApprovedPercent: new Prisma.Decimal(10),
       subtotal: new Prisma.Decimal(0),
@@ -702,7 +823,7 @@ describe('OrdersService.update', () => {
   it('surfaces insufficient_stock when a re-line exceeds availability', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       status: OrderStatus.PENDING,
       discountApprovedPercent: new Prisma.Decimal(0),
       items: [],
@@ -744,7 +865,7 @@ describe('OrdersService.requestDiscount', () => {
   it('within the seller limit: approves immediately and returns the discriminated immediate result', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
       discountApprovedPercent: new Prisma.Decimal(0),
@@ -787,7 +908,7 @@ describe('OrdersService.requestDiscount', () => {
   it('over the seller limit: creates a PENDING request, notifies directors, and returns needs_approval', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
       discountApprovedPercent: new Prisma.Decimal(0),
@@ -860,7 +981,7 @@ describe('OrdersService.requestDiscount', () => {
   it('refuses a second concurrent pending request (pending_exists)', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(15),
       discountApprovedPercent: new Prisma.Decimal(0),
@@ -890,7 +1011,7 @@ describe('OrdersService.requestDiscount', () => {
   it('refuses a discount request on a COMPLETED order (locked), with no side effects', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       status: OrderStatus.COMPLETED,
       subtotal: new Prisma.Decimal(1000),
       discountRequestedPercent: new Prisma.Decimal(0),
@@ -923,7 +1044,7 @@ describe('OrdersService.updateStatus audit', () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',
       status: OrderStatus.CONFIRMED,
-      sellerId: 'seller-1',
+      sellerId: 'seller-user-1',
       warehouseId: 'w1',
       items: [],
     });

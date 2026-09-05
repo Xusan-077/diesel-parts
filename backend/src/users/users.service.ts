@@ -56,13 +56,13 @@ export class UsersService {
   /**
    * Ported from lib/api/user-repository.ts's listStaff: same groupBy shape
    * (`by: ['sellerId'], where: { status: 'COMPLETED' }, _count: { _all: true }`),
-   * so a director sees who is active. Unlike root — where Order.sellerId
-   * points straight at User — this schema's Order.sellerId points at the
-   * Seller profile (Seller.userId -> User), so the per-seller counts are
-   * re-keyed to userId through a Seller lookup before merging into the list.
+   * so a director sees who is active. `Order.sellerId` is a FK straight to
+   * `User` (production's shape, same as root), so the grouped `sellerId` is
+   * already a user id and the counts merge into the list with no `Seller`
+   * indirection — the same way `analytics.service.ts` groups by seller.
    */
   async findAll() {
-    const [users, orderCounts, sellers] = await Promise.all([
+    const [users, orderCounts] = await Promise.all([
       this.prisma.user.findMany({
         select: SAFE_SELECT,
         orderBy: { createdAt: 'desc' },
@@ -72,17 +72,11 @@ export class UsersService {
         where: { status: OrderStatus.COMPLETED },
         _count: { _all: true },
       }),
-      this.prisma.seller.findMany({ select: { id: true, userId: true } }),
     ]);
 
-    const userIdBySellerId = new Map(sellers.map((s) => [s.id, s.userId]));
-    const completedOrdersByUserId = new Map<string, number>();
-    for (const row of orderCounts) {
-      const userId = userIdBySellerId.get(row.sellerId);
-      if (userId) {
-        completedOrdersByUserId.set(userId, row._count._all);
-      }
-    }
+    const completedOrdersByUserId = new Map(
+      orderCounts.map((row) => [row.sellerId, row._count._all]),
+    );
 
     return users.map((user) => ({
       ...user,

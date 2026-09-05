@@ -37,14 +37,18 @@ import {
 } from '../../generated/prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
 
-const ORDER_INCLUDE = {
+/**
+ * `Order.seller` is a FK straight to `User` (production's shape — the re-added
+ * `Seller` model is a separate optional profile with no `orders` back-relation),
+ * so the seller's name/phone are selected directly off `User`, the same way
+ * `analytics.service.ts` reads it. There is no `Seller` indirection on this
+ * relation. Exported so a spec can validate the shape against the generated
+ * `User` columns — TS excess-property checks don't fire on this `as const`
+ * object, so a stale nested key here would otherwise only fail at query time.
+ */
+export const ORDER_INCLUDE = {
   customer: { select: { id: true, name: true, phone: true } },
-  seller: {
-    select: {
-      id: true,
-      user: { select: { id: true, name: true, phone: true } },
-    },
-  },
+  seller: { select: { id: true, name: true, phone: true } },
   warehouse: { select: { id: true, name: true } },
   items: {
     include: { product: { select: { id: true, sku: true, nameEn: true } } },
@@ -92,7 +96,10 @@ export class OrdersService {
     if (actor.role === Role.SELLER) {
       if (!actor.sellerId)
         throw new ForbiddenException('This account has no seller profile');
-      where.sellerId = actor.sellerId;
+      // `Order.sellerId` is a FK to `User`, so a seller's own orders are the
+      // ones raised under their user id — not their `Seller` profile id
+      // (`actor.sellerId`, which only gates the has-a-profile check above).
+      where.sellerId = actor.id;
     }
     if (query.status) where.status = query.status;
     if (query.customerId) where.customerId = query.customerId;
@@ -140,8 +147,11 @@ export class OrdersService {
       );
     }
 
+    // The `Seller` profile is looked up only for its default `warehouseId` —
+    // `Order.sellerId` itself is written as the user id below. Keyed by
+    // `userId` (unique) so the whole create path keys off `actor.id`.
     const seller = await this.prisma.seller.findUniqueOrThrow({
-      where: { id: actor.sellerId },
+      where: { userId: actor.id },
     });
     // Root CRM orders have no warehouse concept, and a migrated seller has
     // `warehouseId: null` (plan Task 10). `Order.warehouseId` is nullable, and
@@ -204,7 +214,7 @@ export class OrdersService {
             data: {
               orderNumber,
               customerId: customer.id,
-              sellerId: actor.sellerId!,
+              sellerId: actor.id,
               warehouseId,
               status: OrderStatus.PENDING,
               subtotal,

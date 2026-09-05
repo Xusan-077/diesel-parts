@@ -350,37 +350,44 @@ clean; `jest` **361/361** (360 + one new PREPARING-detour transition test);
 `sellers.service.ts`, `invoices.service.ts`, `auth.service.ts`,
 `users.service.ts` — untouched (were already tsc-clean).
 
-### 🟠 OPEN — `Order.sellerId` identity confusion (Seller.id vs User.id)
+### DONE — `Order.sellerId` identity confusion resolved (2026-09-05)
 
-Not a `tsc` error, so out of step 3's itemised scope, but it **will 500 the
-orders endpoints once `backend/` is redeployed** — flagging per this
-checklist's "hit a real endpoint after deploy" rule. Step 2 made
-`Order.sellerId` a FK to **`User`** (no `Seller` back-relation), but three
-places still treat it as (or read through) a `Seller`:
+Step 2 made `Order.sellerId` a FK to **`User`** (no `Seller` back-relation);
+every place that still treated it as — or read through — a `Seller` now uses
+the plain user id, matching `analytics.service.ts`. Approach chosen:
+**`AuthenticatedUser.sellerId` keeps its honest meaning** (the optional
+`Seller` profile id, still `user.seller?.id` from `auth.service` — untouched,
+so no auth/JWT/spec churn); it stays only as the "has a seller profile" gate.
+Order ownership everywhere is `Order.sellerId === actor.id`.
 
-1. **`orders.service.ts` `ORDER_INCLUDE`** — `seller: { select: { id, user: {…} } }`.
-   `Order.seller` is a `User`; `user` is an unknown nested field →
-   `PrismaClientValidationError` at runtime on `GET /api/orders` and
-   `/api/orders/:id`. (Compiles only because `ORDER_INCLUDE` is an
-   `as const` variable, so excess-property checks don't fire.)
-2. **`orders.service.ts` `create()` / `checkout.service.ts`** — write
-   `sellerId: actor.sellerId` / `houseSeller.id`, both of which are a
-   **`Seller.id`** (`AuthenticatedUser.sellerId` = `user.seller?.id`, set in
-   `auth.service.issueTokens`). That id is not a valid `User.id` → FK
-   violation on order create. `assertOrderVisible(actor, order.sellerId)`
-   has the same mismatch.
-3. **`users.service.ts` `findAll()`** — still re-keys an `order.groupBy` by
-   `sellerId` through `Seller.userId`; with `sellerId` already a `User.id`
-   the map is empty and `completedOrders` is always 0 (fallback, harmless,
-   but wrong).
+- `orders.service.ts` — `ORDER_INCLUDE.seller` selects `{ id, name, phone }`
+  straight off `User` (exported now, so a spec validates its columns against
+  the generated `User` field enum — the `as const` blind spot that let the
+  old `seller.user` shape compile); `findAll` scopes on `actor.id`; `create()`
+  writes `sellerId: actor.id` and looks the `Seller` profile up by
+  `userId` purely for its default `warehouseId`.
+- `common/order-access.ts` — `assertOrderVisible` compares `actor.id`
+  (covers order-items / invoices / payments, which all route through it).
+- `checkout/house-seller.ts` — the house account is now a bare `User` (no
+  `Seller` profile); `getOrCreateHouseSeller` returns its user id.
+- `users.service.ts` `findAll()` — `groupBy(['sellerId'])` keys straight to
+  the user, `Seller` re-key deleted.
+- `customers.service.ts` `findOrders` + `dashboard.service.ts` `orderScope`
+  — seller-scoped order queries filter on `actor.id`.
+- `common/scope.ts` / `seller-inquiries.controller.ts` — misleading
+  "points at `Seller`" doc comments corrected (`orderReadScope` behaviour was
+  already `actor.id` and is unused by any service).
 
-Prod has **0 orders**, so none of this is exercised today and no unit test
-(all mock Prisma) catches it. Fix options: either make
-`AuthenticatedUser.sellerId` carry the `User.id` and keep a separate lookup
-for the `Seller` profile's `warehouseId`, or map `Seller.id → userId` on the
-order write path. Touches `orders.service` + `checkout.service` +
-`order-access.ts` + `auth` + their specs — a coherent piece of its own, best
-done before or with the redeploy below.
+Verification: `tsc --noEmit` 0, `eslint` clean, `jest` **366/366** (+5 new
+in `orders.service.spec` / `users.service.spec` / `house-seller.spec` that
+fail against the pre-fix code — the include-shape column check and the
+`create` write-id assertion both verified RED), `nest build` exit 0. A live
+DB smoke script is committed at `backend/scripts/smoke-order-seller-fk.ts`
+(covers the ORDER_INCLUDE resolve, the FK really being `→ User`, the
+`groupBy` keying, and the house-seller path) — **run it against a DB on the
+current schema as part of the redeploy verification below** (local
+`diesel_parts_erp` is still on the old consolidated `@@map` schema, so it
+needs prod, staging, or a fresh `db push`).
 
 ### THEN — redeploy `backend/` to Railway
 
@@ -388,8 +395,10 @@ Step 3 has landed (tsc + eslint + build + tests all clean). Push and let
 Railway rebuild/deploy `backend/`. That replaces deploy `72b73ab6` and
 **clears the 🔴 catalog outage above** — the new build's Prisma client
 targets prod's actual (`Product`/`Category`/`Brand`) tables. Verify
-`/api/catalog/products` returns 200 afterward — **and `/api/orders`**, which
-will surface the 🟠 item above if it hasn't been fixed first.
+`/api/catalog/products` returns 200 afterward — **and `/api/orders`**
+(the `Order.sellerId → User` fix above is in; run
+`backend/scripts/smoke-order-seller-fk.ts` against prod, or exercise
+create + list + detail by hand, to confirm).
 
 ## Open items (not fixed in this pass — flagging for a decision)
 

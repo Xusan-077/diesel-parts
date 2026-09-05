@@ -236,7 +236,10 @@ export class CustomersService {
       if (!actor.sellerId) {
         throw new ForbiddenException('This account has no seller profile');
       }
-      where.sellerId = actor.sellerId;
+      // `Order.sellerId` is a FK to `User` — scope to the actor's user id,
+      // not their `Seller` profile id (`actor.sellerId`, the has-a-profile
+      // gate above).
+      where.sellerId = actor.id;
     }
 
     const [data, total] = await this.prisma.$transaction([

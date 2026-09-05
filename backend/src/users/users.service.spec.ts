@@ -13,7 +13,6 @@ function makePrisma(
   overrides: {
     user?: Record<string, unknown>;
     order?: Record<string, unknown>;
-    seller?: Record<string, unknown>;
   } = {},
 ) {
   return {
@@ -29,15 +28,11 @@ function makePrisma(
       groupBy: jest.fn().mockResolvedValue([]),
       ...overrides.order,
     },
-    seller: {
-      findMany: jest.fn().mockResolvedValue([]),
-      ...overrides.seller,
-    },
   } as unknown as PrismaService;
 }
 
 describe('UsersService.findAll', () => {
-  it('returns each user with a completedOrders aggregate keyed through their seller profile', async () => {
+  it('returns each user with a completedOrders aggregate keyed directly by Order.sellerId (a User FK)', async () => {
     const users = [
       {
         id: 'user-1',
@@ -53,16 +48,13 @@ describe('UsersService.findAll', () => {
       },
     ];
     const findMany = jest.fn().mockResolvedValue(users);
+    // Order.sellerId is the user id — no Seller.id -> Seller.userId re-key.
     const groupBy = jest
       .fn()
-      .mockResolvedValue([{ sellerId: 'seller-1', _count: { _all: 3 } }]);
-    const sellerFindMany = jest
-      .fn()
-      .mockResolvedValue([{ id: 'seller-1', userId: 'user-1' }]);
+      .mockResolvedValue([{ sellerId: 'user-1', _count: { _all: 3 } }]);
     const prisma = makePrisma({
       user: { findMany },
       order: { groupBy },
-      seller: { findMany: sellerFindMany },
     });
     const service = new UsersService(prisma, makeAudit().audit);
 

@@ -66,10 +66,9 @@ export class SellerInquiriesController {
 }
 
 /**
- * `Inquiry.assignedSellerId` is a foreign key to `User.id` (see
- * `common/scope.ts`'s doc comment on `orderReadScope`, which points at
- * `Seller.id` instead), so the scope actor's `id` here is the signed-in
- * user's own id — not `user.sellerId`.
+ * `Inquiry.assignedSellerId` — like `Order.sellerId` — is a foreign key to
+ * `User.id`, so the scope actor's `id` here is the signed-in user's own id,
+ * not `user.sellerId` (which is the separate `Seller` profile id).
  */
 function toActor(user: AuthenticatedUser): ScopeActor {
   return { id: user.id, role: user.role };

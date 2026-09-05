@@ -67,14 +67,10 @@ export function customerWriteScope(
 /**
  * Orders are never pooled: one always belongs to the seller who raised it.
  *
- * Unlike `inquiryReadScope`/`customerReadScope` above, `Order.sellerId` is a
- * foreign key to the `Seller` record (see `AuthenticatedUser.sellerId`), not
- * to `User.id` — the new schema's `assignedSellerId` columns point at `User`,
- * but `Order.sellerId` points at `Seller` (compare `order-access.ts`'s
- * `assertOrderVisible`, which already reads `actor.sellerId`, not
- * `actor.id`). A caller building the `ScopeActor` for this pair must pass the
- * actor's *Seller* id in `id` — a director has none and never needs one,
- * since `isDirector` short-circuits before it is read.
+ * `Order.sellerId` is a foreign key to `User` (production's shape), the same
+ * as the `assignedSellerId` columns — so the scope is just `sellerId ===
+ * actor.id`, and `ScopeActor.id` is the plain user id here as everywhere else.
+ * `order-access.ts`'s `assertOrderVisible` compares the same way.
  */
 export function orderReadScope(actor: ScopeActor): Prisma.OrderWhereInput {
   return isDirector(actor) ? {} : { sellerId: actor.id };

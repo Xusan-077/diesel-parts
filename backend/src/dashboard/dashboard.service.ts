@@ -15,8 +15,10 @@ export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   private orderScope(actor: AuthenticatedUser): Prisma.OrderWhereInput {
+    // `Order.sellerId` is a FK to `User`; `actor.sellerId` only tells us the
+    // seller has a profile, the scope filter itself is the user id.
     return actor.role === Role.SELLER && actor.sellerId
-      ? { sellerId: actor.sellerId }
+      ? { sellerId: actor.id }
       : {};
   }
 
