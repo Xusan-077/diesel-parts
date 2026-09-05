@@ -29,9 +29,13 @@ export interface RevenueChartProps {
  * `series.current`/`series.previous` from `getRevenueSeries()`, the same
  * query the old `TrendChart` read — only the rendering changed.
  *
- * `--color-accent` rather than shadcn's own `--chart-1..5`: this panel has
- * one brand hue, not a five-colour categorical set, and the brief asks for
- * the accent explicitly ("Recharts grafiklarni accent rangda").
+ * The curve is drawn in `--data-green`, the revenue hue from the
+ * CATEGORICAL DATA PALETTE — the same green the Revenue KPI tile wears —
+ * not in `--accent`. Revenue means one thing on this dashboard whatever
+ * the director has set the chrome accent to, and the brand red is kept
+ * off the charts. The gridlines read from `--chart-grid-faint` (a 7–8%
+ * ink wash) rather than the solid `--border-subtle`, so they sit under
+ * the data instead of competing with it.
  */
 export function RevenueChart({
   current,
@@ -50,7 +54,7 @@ export function RevenueChart({
   const formatDay = (day: string) => dayFormat.format(new Date(day));
 
   const config = {
-    current: { label: currentLabel, color: "var(--accent)" },
+    current: { label: currentLabel, color: "var(--data-green)" },
     previous: { label: previousLabel, color: "var(--border-strong)" },
   } satisfies ChartConfig;
 
@@ -59,11 +63,11 @@ export function RevenueChart({
       <AreaChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="director-revenue-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.35} />
-            <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.02} />
+            <stop offset="5%" stopColor="var(--data-green)" stopOpacity={0.28} />
+            <stop offset="95%" stopColor="var(--data-green)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="var(--border-subtle)" />
+        <CartesianGrid vertical={false} stroke="var(--chart-grid-faint)" />
         <XAxis
           dataKey="day"
           tickLine={false}
@@ -95,7 +99,7 @@ export function RevenueChart({
         <Area
           dataKey="current"
           type="monotone"
-          stroke="var(--accent)"
+          stroke="var(--data-green)"
           fill="url(#director-revenue-fill)"
           strokeWidth={2}
         />

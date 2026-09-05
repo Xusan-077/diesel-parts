@@ -89,6 +89,7 @@ export default async function DirectorDashboardPage({
             value={formatInteger(summary.current.revenue)}
             unit={t.currency}
             icon={Wallet}
+            tone="revenue"
             change={summary.revenueChange}
             comparisonLabel={comparison}
             noComparisonLabel={t.noComparison}
@@ -97,6 +98,7 @@ export default async function DirectorDashboardPage({
             label={t.orders}
             value={formatInteger(summary.current.orders)}
             icon={ReceiptText}
+            tone="orders"
             change={summary.ordersChange}
             comparisonLabel={comparison}
             noComparisonLabel={t.noComparison}
@@ -106,6 +108,7 @@ export default async function DirectorDashboardPage({
             value={formatInteger(summary.averageOrderValue)}
             unit={t.currency}
             icon={TrendingUp}
+            tone="average"
             change={percentChange(summary.averageOrderValue, previousAverage)}
             comparisonLabel={comparison}
             hint={fill(t.averageHint, { orders: formatInteger(summary.current.orders) })}
@@ -116,6 +119,7 @@ export default async function DirectorDashboardPage({
             value={formatInteger(summary.pipelineValue)}
             unit={t.currency}
             icon={Hourglass}
+            tone="pipeline"
             hint={t.pipelineHint}
           />
         </section>
@@ -137,9 +141,9 @@ export default async function DirectorDashboardPage({
               totalLabel={t.orders}
               emptyMessage={t.mixEmpty}
               slices={[
-                { id: "completed", label: t.mixCompleted, value: mix.completed, color: "var(--success)" },
-                { id: "open", label: t.mixOpen, value: mix.open, color: "var(--chart-series)" },
-                { id: "cancelled", label: t.mixCancelled, value: mix.cancelled, color: "var(--danger)" },
+                { id: "completed", label: t.mixCompleted, value: mix.completed, color: "var(--data-green)" },
+                { id: "open", label: t.mixOpen, value: mix.open, color: "var(--data-blue)" },
+                { id: "cancelled", label: t.mixCancelled, value: mix.cancelled, color: "var(--data-red)" },
               ]}
             />
           </PanelCard>

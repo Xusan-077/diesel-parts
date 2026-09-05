@@ -30,7 +30,11 @@ export function SellerRankList({
               {formatValue(row.value)}
             </span>
           </div>
-          <Progress value={(row.value / max) * 100} className="h-1.5" />
+          <Progress
+            value={(row.value / max) * 100}
+            className="h-1.5 bg-data-green-surface"
+            indicatorClassName="bg-data-green"
+          />
           <span className="type-caption text-muted">{row.meta}</span>
         </li>
       ))}

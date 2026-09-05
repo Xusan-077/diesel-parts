@@ -4,6 +4,26 @@ import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
 
 /**
+ * Which semantic hue the icon disc wears. Each KPI on the dashboard gets
+ * one — revenue reads green, order count blue, average-order-value
+ * purple, pipeline amber — drawn from the CATEGORICAL DATA PALETTE in
+ * globals.css so a future tile picks the same token rather than a fresh
+ * inline colour. `neutral` is the quiet default for the lower queue
+ * tiles, which are a count and not a headline figure. The brand red is
+ * deliberately not an option here: it stays on the nav, the logo and the
+ * primary buttons.
+ */
+export type StatTone = "revenue" | "orders" | "average" | "pipeline" | "neutral";
+
+const TONE: Record<StatTone, { disc: string; icon: string }> = {
+  revenue: { disc: "bg-data-green-surface", icon: "text-data-green" },
+  orders: { disc: "bg-data-blue-surface", icon: "text-data-blue" },
+  average: { disc: "bg-data-purple-surface", icon: "text-data-purple" },
+  pipeline: { disc: "bg-data-amber-surface", icon: "text-data-amber" },
+  neutral: { disc: "bg-surface-muted", icon: "text-muted" },
+};
+
+/**
  * The Dashboard's stat card: shadcn `Card` body, plus the change pill the
  * brief asks for as a `Badge` in spirit (its own pill classes rather than the
  * shadcn `Badge` component, since the up/down arrow has to live inside the
@@ -23,6 +43,7 @@ export function StatCard({
   hint,
   icon: IconCmp,
   emphasis = "loud",
+  tone = "neutral",
   noComparisonLabel,
 }: {
   label: string;
@@ -33,8 +54,10 @@ export function StatCard({
   hint?: string;
   icon?: LucideIcon;
   emphasis?: "loud" | "quiet";
+  tone?: StatTone;
   noComparisonLabel?: string;
 }) {
+  const toneClasses = TONE[tone];
   const delta = change === undefined || change === null ? null : formatDelta(change);
   const rising = (change ?? 0) > 0;
   const flat = change === 0;
@@ -45,8 +68,13 @@ export function StatCard({
       <CardContent className="flex h-full flex-col px-5">
         <div className="flex items-start justify-between gap-3">
           {IconCmp ? (
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-accent-edge bg-accent-subtle">
-              <IconCmp aria-hidden="true" className="size-4 text-accent-strong" />
+            <span
+              className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-full",
+                toneClasses.disc,
+              )}
+            >
+              <IconCmp aria-hidden="true" className={cn("size-4", toneClasses.icon)} />
             </span>
           ) : (
             <span aria-hidden="true" />

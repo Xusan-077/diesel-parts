@@ -228,6 +228,33 @@
      says the right thing: the gap belongs to the comparison, not to either
      line. */
   --chart-hatch: color-mix(in srgb, var(--chart-context) 45%, transparent);
+
+  /* --- Categorical data palette -----------------------------------------
+     The dashboard shows several things at once — four KPI tiles side by
+     side, an order-status donut — and each needs a colour that means one
+     thing. The accent family deliberately cannot do this: it is a single
+     hue, and a director repaints it. These five never move with the
+     accent picker, because "revenue is green" has to stay true whatever
+     the chrome is set to.
+
+     Each hue is a solid mark colour that clears 3:1 on --surface, plus a
+     ~10% tint for the disc or bar sitting behind the mark. Green lines up
+     with the good-news --success green and red with a true alert red on
+     purpose — a completed order and a rising figure read as the same
+     colour. Validated as two working sets (the KPI quad green/blue/
+     purple/amber, and the donut trio green/blue/red) for adjacent-pair
+     CVD separation in both themes; amber and red never share a grouping,
+     which is why the full five are not a single validated ramp. */
+  --data-green: #1a8f4c;   /* revenue · completed orders */
+  --data-blue: #2a78d6;    /* order count · orders in progress */
+  --data-purple: #9d2f8f;  /* average order value */
+  --data-amber: #b26a00;   /* pipeline / pending value */
+  --data-red: #cc2f2f;     /* cancelled orders */
+  --data-green-surface: color-mix(in srgb, var(--data-green) 10%, transparent);
+  --data-blue-surface: color-mix(in srgb, var(--data-blue) 10%, transparent);
+  --data-purple-surface: color-mix(in srgb, var(--data-purple) 10%, transparent);
+  --data-amber-surface: color-mix(in srgb, var(--data-amber) 12%, transparent);
+  --data-red-surface: color-mix(in srgb, var(--data-red) 10%, transparent);
 }
 
 .dark {
@@ -302,6 +329,23 @@
   --gauge-track: color-mix(in srgb, var(--foreground) 11%, transparent);
   --chart-grid-faint: color-mix(in srgb, var(--foreground) 8%, transparent);
   --chart-hatch: color-mix(in srgb, var(--chart-context) 42%, transparent);
+
+  /* The same five hues, re-stepped for the dark surface — mid-tone, not a
+     flip. Purple leans further to magenta here than its light step does:
+     against the dark blue, a blue-violet collapses onto it for a
+     protanope, and the magenta step is what clears the CVD gate. The
+     tints ride a little heavier (16%) since the same mix reads dimmer on
+     a dark ground. */
+  --data-green: #33a066;
+  --data-blue: #3987e5;
+  --data-purple: #bf63b2;
+  --data-amber: #c98500;
+  --data-red: #e06b64;
+  --data-green-surface: color-mix(in srgb, var(--data-green) 16%, transparent);
+  --data-blue-surface: color-mix(in srgb, var(--data-blue) 16%, transparent);
+  --data-purple-surface: color-mix(in srgb, var(--data-purple) 16%, transparent);
+  --data-amber-surface: color-mix(in srgb, var(--data-amber) 18%, transparent);
+  --data-red-surface: color-mix(in srgb, var(--data-red) 16%, transparent);
 }
 
 /* ==========================================================================
@@ -828,6 +872,19 @@
   --color-chart-series: var(--chart-series);
   --color-chart-context: var(--chart-context);
   --color-chart-grid: var(--chart-grid);
+
+  /* Categorical data palette — `bg-data-green-surface` / `text-data-green`,
+     one hue per dashboard metric. See the CATEGORICAL DATA PALETTE note. */
+  --color-data-green: var(--data-green);
+  --color-data-green-surface: var(--data-green-surface);
+  --color-data-blue: var(--data-blue);
+  --color-data-blue-surface: var(--data-blue-surface);
+  --color-data-purple: var(--data-purple);
+  --color-data-purple-surface: var(--data-purple-surface);
+  --color-data-amber: var(--data-amber);
+  --color-data-amber-surface: var(--data-amber-surface);
+  --color-data-red: var(--data-red);
+  --color-data-red-surface: var(--data-red-surface);
   --color-field-border: var(--field-border);
   --color-brand-red: var(--brand-red);
 
