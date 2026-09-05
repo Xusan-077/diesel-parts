@@ -165,7 +165,8 @@ describe('CheckoutService.createOrder', () => {
       productId: 'p1',
       productSku: 'SKU-1',
       productName: 'Filter',
-      quantity: 2,
+      qty: 2,
+      unitPrice: new Prisma.Decimal(100),
     });
 
     expect(clear).toHaveBeenCalledWith('998901234567');

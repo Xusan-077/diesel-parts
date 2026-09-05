@@ -22,9 +22,8 @@ interface OrderLine {
   productId: string;
   productSku: string;
   productName: string;
-  quantity: number;
-  price: Prisma.Decimal;
-  total: Prisma.Decimal;
+  qty: number;
+  unitPrice: Prisma.Decimal;
 }
 
 @Injectable()
@@ -58,15 +57,12 @@ export class CheckoutService {
           `Product ${product.sku} has no catalog price and cannot be bought online`,
         );
       }
-      const price = product.price;
-      const total = price.mul(item.quantity);
       return {
         productId: product.id,
         productSku: product.sku,
         productName: product.nameEn,
-        quantity: item.quantity,
-        price,
-        total,
+        qty: item.quantity,
+        unitPrice: product.price,
       };
     });
   }
@@ -92,12 +88,12 @@ export class CheckoutService {
     ]);
 
     const subtotal = lines.reduce(
-      (sum, line) => sum.add(line.total),
+      (sum, line) => sum.add(line.unitPrice.mul(line.qty)),
       new Prisma.Decimal(0),
     );
     // Always 0, never client-supplied: a caller-set fee let a shopper zero out
-    // what should be a real delivery charge, since Order.total (this sum) is
-    // exactly what Payme is told to collect. Revisit once a real delivery-fee
+    // what should be a real delivery charge, since Order.totalAmount (this sum)
+    // is exactly what Payme is told to collect. Revisit once a real delivery-fee
     // calculation (method/zone -> price) exists to validate a client value against.
     const deliveryFee = new Prisma.Decimal(0);
     const total = subtotal.add(deliveryFee);
@@ -115,7 +111,7 @@ export class CheckoutService {
         warehouseId: null,
         subtotal,
         deliveryFee,
-        total,
+        totalAmount: total,
         notes: dto.notes?.trim() || null,
         deliveryMethod: dto.deliveryMethod,
         deliveryCity:
@@ -125,13 +121,7 @@ export class CheckoutService {
         deliveryStreet:
           dto.deliveryMethod === 'DELIVERY' ? (dto.street ?? null) : null,
         deliveryNotes: dto.deliveryNotes?.trim() || null,
-        items: {
-          create: lines.map(({ price, total: lineTotal, ...rest }) => ({
-            ...rest,
-            price,
-            total: lineTotal,
-          })),
-        },
+        items: { create: lines },
       },
     });
 
