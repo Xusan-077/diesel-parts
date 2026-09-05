@@ -22,7 +22,7 @@ describe('RolesGuard', () => {
 
   it('denies a role not in the required list', () => {
     const reflector = {
-      getAllAndOverride: () => [Role.DIRECTOR],
+      getAllAndOverride: () => [Role.MANAGER, Role.DIRECTOR, Role.SUPER_ADMIN],
     } as unknown as Reflector;
     const guard = new RolesGuard(reflector);
     expect(() => guard.canActivate(makeContext({ role: Role.SELLER }))).toThrow(
@@ -32,7 +32,7 @@ describe('RolesGuard', () => {
 
   it('allows a role that is in the required list', () => {
     const reflector = {
-      getAllAndOverride: () => [Role.SELLER, Role.DIRECTOR],
+      getAllAndOverride: () => [Role.SELLER, Role.MANAGER],
     } as unknown as Reflector;
     const guard = new RolesGuard(reflector);
     expect(guard.canActivate(makeContext({ role: Role.SELLER }))).toBe(true);
