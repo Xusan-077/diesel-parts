@@ -10,6 +10,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   StockMovementType,
+  StockStatus,
   NotificationType,
 } from '../generated/prisma/client';
 
@@ -100,6 +101,10 @@ async function main() {
           price: p.sell,
           purchasePrice: p.buy,
           minStock: p.minStock,
+          specs: {},
+          // Recomputed from Inventory on every read (ProductsService.withStock);
+          // this is just a valid starting value for the non-null column.
+          stockStatus: StockStatus.available,
         },
       }),
     ),
@@ -129,16 +134,26 @@ async function main() {
 
   // --- Users & Sellers -------------------------------------------------------
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
-  const userDefs: { phone: string; role: Role }[] = [
-    { phone: '+998901112233', role: Role.SUPER_ADMIN },
-    { phone: '+998901112234', role: Role.DIRECTOR },
-    { phone: '+998901112235', role: Role.MANAGER },
-    { phone: '+998901112236', role: Role.SELLER },
-    { phone: '+998901112237', role: Role.SELLER },
-    { phone: '+998901112238', role: Role.VIEWER },
+  const userDefs: { name: string; email: string; phone: string; role: Role }[] = [
+    { name: 'Sarvar Admin', email: 'admin@diesel-parts.uz', phone: '+998901112233', role: Role.SUPER_ADMIN },
+    { name: 'Otabek Direktor', email: 'director@diesel-parts.uz', phone: '+998901112234', role: Role.DIRECTOR },
+    { name: 'Kamola Menejer', email: 'manager@diesel-parts.uz', phone: '+998901112235', role: Role.MANAGER },
+    { name: 'Jasur Sotuvchi', email: 'seller1@diesel-parts.uz', phone: '+998901112236', role: Role.SELLER },
+    { name: 'Dilshod Sotuvchi', email: 'seller2@diesel-parts.uz', phone: '+998901112237', role: Role.SELLER },
+    { name: 'Nigora Kuzatuvchi', email: 'viewer@diesel-parts.uz', phone: '+998901112238', role: Role.VIEWER },
   ];
   const users = await Promise.all(
-    userDefs.map((u) => prisma.user.create({ data: { phone: u.phone, passwordHash, role: u.role } })),
+    userDefs.map((u) =>
+      prisma.user.create({
+        data: {
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          passwordHash,
+          role: u.role,
+        },
+      }),
+    ),
   );
 
   const [sellerUserA, sellerUserB] = users.filter((u) => u.role === Role.SELLER);
