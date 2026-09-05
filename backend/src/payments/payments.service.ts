@@ -61,7 +61,7 @@ export class PaymentsService {
       });
       const totalPaid = paidSoFar._sum.amount ?? new Prisma.Decimal(0);
 
-      const paymentStatus = totalPaid.gte(order.total)
+      const paymentStatus = totalPaid.gte(order.totalAmount)
         ? OrderPaymentStatus.PAID
         : totalPaid.gt(0)
           ? OrderPaymentStatus.PARTIAL
