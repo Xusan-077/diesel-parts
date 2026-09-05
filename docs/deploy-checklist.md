@@ -158,7 +158,7 @@ point at `https://api.diesel-parts.uz` unless a staging backend exists).
 
 - Fixed in this pass: `main.ts` used `app.enableCors({ origin: true, credentials: true })`, which reflects _any_ request's `Origin` header back as allowed — with `credentials: true` that's a real CORS misconfiguration (any site can make credentialed requests). Replaced with an explicit allowlist read from `CORS_ORIGINS` (see table above), defaulting to `localhost:3000` only when unset.
 
-## STATUS — backend schema alignment (2026-09-01, in progress)
+## STATUS — backend schema alignment (steps 1–3 done 2026-09-05; redeploy pending)
 
 Approach chosen: **adapt `backend/` to production's _current_ (root) Postgres
 schema**, not migrate production forward to `backend/`'s consolidated schema.
@@ -323,35 +323,73 @@ step 3 (the 11 files below) and shipping a new Railway deploy of `backend/`,
 explicitly out of scope for this session. Flagged because the storefront's
 public catalog API is down *right now*, independent of anything done here.
 
-### NEXT — step 3 (code adaptation to the new schema, no migration) — NOT STARTED
+### DONE — step 3 (code adaptation to the new schema, no migration) — 2026-09-05
 
-**11 files, 91 `tsc` errors.** Wire the service layer onto the now-present
-models/columns and restore the enum maps:
+**11 files, 91 → 0 `tsc` errors.** One commit per file/concern
+(`1604a64`..`b800b09`), same cadence as step 1b:
 
-| File | Errs | What it needs |
+| Commit | File | What was done |
 | --- | --- | --- |
-| `src/analytics/analytics.service.ts` | 45 | `Order.total`→`totalAmount`; `OrderItem.quantity/price`→`qty/unitPrice`; `include` for `order.customer`/`order.seller`; `_sum`/`_count` undefined guards |
-| `src/products/products.service.ts` (+ spec) | 17+1 | inventory-join result typed `never` — wire `availableQuantity`/`stockStatus` off the new `Inventory` model |
-| `src/dashboard/dashboard.service.ts` | 14 | `Order.total`→`totalAmount`; `OrderItem.quantity`→`qty`; `_sum` guards |
-| `src/reports/reports.service.ts` | 4 | `Order.total`→`totalAmount`; `_sum` guards |
-| `src/payme/payme.service.ts` | 4 | `Order.total`→`totalAmount` |
-| `prisma/seed.ts` | 2 | `User.create` needs `name`+`email`; `Product.create` shape |
-| `src/payments/payments.service.ts` | 1 | `Order.total`→`totalAmount` |
-| `src/checkout/checkout.service.ts` | 1 | `OrderItem` create uses `quantity/price/total`→`qty/unitPrice` |
-| `src/common/roles.ts` | 1 | `Record<Role,number>` needs SUPER_ADMIN/MANAGER/VIEWER weights |
-| `src/orders/order-status-transitions.ts` | 1 | `Record<OrderStatus,…>` needs NEW/PREPARING transitions (D3) |
+| `1604a64` | `analytics.service.ts` (+ spec) | `Order.total`→`totalAmount` everywhere; `OrderItem.quantity/price`→`qty/unitPrice`; `recentOrders` selects `seller.name` directly and `sellerPerformance`/`sellerScorecards` drop the `Seller.id`→`Seller.userId` re-key (`Order.sellerId` is a FK to `User`); `_sum`/`_count` optional-chained |
+| `64135d4` | `products.service.ts` | `withStock` retyped against a concrete `ProductWithInventories` payload (was generic → the `...product` spread intersected the stored `Product.stockStatus` enum with the derived one and collapsed every mapped row to `never`, 18 downstream errors) |
+| `7279bc6` | `dashboard.service.ts` | `Order.total`→`totalAmount`; `_sum { quantity, total }`→`_sum { qty }`; `topProducts` revenue summed as `qty * unitPrice` from a lines fetch (no per-line total column) |
+| `9018ba3` | `reports.service.ts` | `Order.total`→`totalAmount`; `_sum` guards |
+| `e7890df` | `payme.service.ts` (+ spec) | `Order.total`→`totalAmount` in the amount-match checks, payment amount, and `recomputeOrderPaymentStatus` |
+| `757026d` | `prisma/seed.ts` | `User.create` given `name`+`email`; `Product.create` given `specs` + `stockStatus` |
+| `0d0d9b4` | `payments.service.ts` | `Order.total`→`totalAmount` in `create()` |
+| `7a17a6d` | `checkout.service.ts` (+ spec) | `OrderLine` carries `qty`/`unitPrice`; subtotal derived as `unitPrice*qty`; `Order.total`→`totalAmount` |
+| `d6a8294` | `common/roles.ts` (+ guard spec) | full five-role hierarchy restored (reverts step-1b's `392461f`) — ROLE_RANK, ALL_ROLES, MANAGER_UP, DIRECTOR_UP, SELLER_UP. Without it a real MANAGER/SUPER_ADMIN (the seed now makes both) 403s on every `@Roles(...MANAGER_UP)` route |
+| `d16138f` | `order-status-transitions.ts` (+ spec) | `NEW`/`PREPARING` transitions restored (D3): `CONFIRMED → PREPARING → COMPLETED` detour added (direct `CONFIRMED → COMPLETED` kept so no `orders.service` test regresses); `NEW` mapped to `PENDING`'s out-edges. Also `orders.service.wasReserved()` now treats `PREPARING` as reserved (honours the step-1b TODO left there) |
+| `b800b09` | `customers.service.spec.ts` | prettier-wrap of a pre-existing step-1b mock line, to make the "eslint clean" gate green |
+
+Verification (all green): `tsc --noEmit` 0 errors; `eslint {src,apps,libs,test}`
+clean; `jest` **361/361** (360 + one new PREPARING-detour transition test);
+`nest build` exit 0.
 
 `inventory.service.ts`, `warehouses.service.ts`, `carts.service.ts`,
 `sellers.service.ts`, `invoices.service.ts`, `auth.service.ts`,
-`users.service.ts` — **now tsc-clean**, no step-3 work.
+`users.service.ts` — untouched (were already tsc-clean).
+
+### 🟠 OPEN — `Order.sellerId` identity confusion (Seller.id vs User.id)
+
+Not a `tsc` error, so out of step 3's itemised scope, but it **will 500 the
+orders endpoints once `backend/` is redeployed** — flagging per this
+checklist's "hit a real endpoint after deploy" rule. Step 2 made
+`Order.sellerId` a FK to **`User`** (no `Seller` back-relation), but three
+places still treat it as (or read through) a `Seller`:
+
+1. **`orders.service.ts` `ORDER_INCLUDE`** — `seller: { select: { id, user: {…} } }`.
+   `Order.seller` is a `User`; `user` is an unknown nested field →
+   `PrismaClientValidationError` at runtime on `GET /api/orders` and
+   `/api/orders/:id`. (Compiles only because `ORDER_INCLUDE` is an
+   `as const` variable, so excess-property checks don't fire.)
+2. **`orders.service.ts` `create()` / `checkout.service.ts`** — write
+   `sellerId: actor.sellerId` / `houseSeller.id`, both of which are a
+   **`Seller.id`** (`AuthenticatedUser.sellerId` = `user.seller?.id`, set in
+   `auth.service.issueTokens`). That id is not a valid `User.id` → FK
+   violation on order create. `assertOrderVisible(actor, order.sellerId)`
+   has the same mismatch.
+3. **`users.service.ts` `findAll()`** — still re-keys an `order.groupBy` by
+   `sellerId` through `Seller.userId`; with `sellerId` already a `User.id`
+   the map is empty and `completedOrders` is always 0 (fallback, harmless,
+   but wrong).
+
+Prod has **0 orders**, so none of this is exercised today and no unit test
+(all mock Prisma) catches it. Fix options: either make
+`AuthenticatedUser.sellerId` carry the `User.id` and keep a separate lookup
+for the `Seller` profile's `warehouseId`, or map `Seller.id → userId` on the
+order write path. Touches `orders.service` + `checkout.service` +
+`order-access.ts` + `auth` + their specs — a coherent piece of its own, best
+done before or with the redeploy below.
 
 ### THEN — redeploy `backend/` to Railway
 
-After step 3 lands (tsc + eslint + build clean), push and let Railway
-rebuild/deploy `backend/`. That replaces deploy `72b73ab6` and **clears the
-🔴 catalog outage above** — the new build's Prisma client targets prod's
-actual (`Product`/`Category`/`Brand`) tables. Verify `/api/catalog/products`
-returns 200 afterward.
+Step 3 has landed (tsc + eslint + build + tests all clean). Push and let
+Railway rebuild/deploy `backend/`. That replaces deploy `72b73ab6` and
+**clears the 🔴 catalog outage above** — the new build's Prisma client
+targets prod's actual (`Product`/`Category`/`Brand`) tables. Verify
+`/api/catalog/products` returns 200 afterward — **and `/api/orders`**, which
+will surface the 🟠 item above if it hasn't been fixed first.
 
 ## Open items (not fixed in this pass — flagging for a decision)
 
