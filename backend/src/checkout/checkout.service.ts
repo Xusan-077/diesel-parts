@@ -11,12 +11,22 @@ import { OrdersService } from '../orders/orders.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { getOrCreateHouseSeller } from './house-seller';
 import { buildPaymeCheckoutUrl, toTiyin } from '../payme/payme-money';
-import { extractNationalDigits } from '../common/phone';
+import { extractNationalDigits, toCanonicalPhone } from '../common/phone';
 import {
   Prisma,
   PaymentMethod,
   PaymentStatus,
 } from '../../generated/prisma/client';
+
+/** The storefront's payment choice, mapped to the `PaymentMethod` enum. */
+const PAYMENT_METHOD_BY_CHOICE: Record<
+  CreateCheckoutDto['paymentMethod'],
+  PaymentMethod
+> = {
+  ONLINE: PaymentMethod.ONLINE,
+  CASH: PaymentMethod.CASH,
+  SELLER_AGREEMENT: PaymentMethod.SELLER_AGREEMENT,
+};
 
 interface OrderLine {
   productId: string;
@@ -98,6 +108,8 @@ export class CheckoutService {
     const deliveryFee = new Prisma.Decimal(0);
     const total = subtotal.add(deliveryFee);
 
+    const isDelivery = dto.deliveryMethod === 'DELIVERY';
+
     const order = await this.prisma.order.create({
       data: {
         orderNumber,
@@ -113,13 +125,17 @@ export class CheckoutService {
         deliveryFee,
         totalAmount: total,
         notes: dto.notes?.trim() || null,
+        // Canonical `998XXXXXXXXX`, matching Customer.phone's stored form. The
+        // DTO already validated it is a real 9-digit number.
+        contactPhone: toCanonicalPhone(dto.phone) ?? dto.phone,
         deliveryMethod: dto.deliveryMethod,
-        deliveryCity:
-          dto.deliveryMethod === 'DELIVERY' ? (dto.city ?? null) : null,
-        deliveryDistrict:
-          dto.deliveryMethod === 'DELIVERY' ? (dto.district ?? null) : null,
-        deliveryStreet:
-          dto.deliveryMethod === 'DELIVERY' ? (dto.street ?? null) : null,
+        deliveryRegion: isDelivery ? (dto.region ?? null) : null,
+        deliveryCity: isDelivery ? (dto.city ?? null) : null,
+        deliveryDistrict: isDelivery ? (dto.district ?? null) : null,
+        deliveryStreet: isDelivery ? (dto.street ?? null) : null,
+        deliveryHouse: isDelivery ? (dto.house ?? null) : null,
+        deliveryApartment: isDelivery ? (dto.apartment ?? null) : null,
+        deliveryLandmark: isDelivery ? (dto.landmark ?? null) : null,
         deliveryNotes: dto.deliveryNotes?.trim() || null,
         items: { create: lines },
       },
@@ -127,18 +143,21 @@ export class CheckoutService {
 
     await this.carts.clear(phone);
 
+    // Every order gets a PENDING payment row in its chosen method. Gateway
+    // payments carry `provider: 'payme'`; cash and seller-agreement rows are
+    // staff-recorded and leave it null, exactly like a POS payment.
+    await this.prisma.payment.create({
+      data: {
+        orderId: order.id,
+        amount: total,
+        method: PAYMENT_METHOD_BY_CHOICE[dto.paymentMethod],
+        status: PaymentStatus.PENDING,
+        provider: dto.paymentMethod === 'ONLINE' ? 'payme' : null,
+      },
+    });
+
     let checkoutUrl: string | null = null;
     if (dto.paymentMethod === 'ONLINE') {
-      await this.prisma.payment.create({
-        data: {
-          orderId: order.id,
-          amount: total,
-          method: PaymentMethod.ONLINE,
-          status: PaymentStatus.PENDING,
-          provider: 'payme',
-        },
-      });
-
       const merchantId = this.config?.get<string>('PAYME_MERCHANT_ID');
       if (merchantId) {
         checkoutUrl = buildPaymeCheckoutUrl({

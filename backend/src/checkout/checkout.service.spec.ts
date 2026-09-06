@@ -14,6 +14,7 @@ function baseDto(
   return {
     firstName: 'Aziz',
     lastName: 'Karimov',
+    phone: '+998 90 123-45-67',
     deliveryMethod: 'PICKUP',
     termsAccepted: true,
     paymentMethod: 'ONLINE',
@@ -44,10 +45,15 @@ function makeDeps() {
           customerId: string;
           sellerId: string;
           warehouseId: string | null;
+          contactPhone: string | null;
           deliveryMethod: string;
+          deliveryRegion: string | null;
           deliveryCity: string | null;
           deliveryDistrict: string | null;
           deliveryStreet: string | null;
+          deliveryHouse: string | null;
+          deliveryApartment: string | null;
+          deliveryLandmark: string | null;
           deliveryNotes: string | null;
           items: { create: Array<Record<string, unknown>> };
         };
@@ -55,7 +61,10 @@ function makeDeps() {
     ]
   >();
   const orderFindUnique = jest.fn();
-  const paymentCreate = jest.fn();
+  const paymentCreate = jest.fn<
+    Promise<unknown>,
+    [{ data: { method: string; provider: string | null; status: string } }]
+  >();
   const prisma = {
     product: { findMany: productFindMany },
     order: { create: orderCreate, findUnique: orderFindUnique },
@@ -79,6 +88,7 @@ function makeDeps() {
     productFindMany,
     orderCreate,
     orderFindUnique,
+    paymentCreate,
   };
 }
 
@@ -160,6 +170,10 @@ describe('CheckoutService.createOrder', () => {
     expect(callArgs.data.deliveryCity).toBeNull();
     expect(callArgs.data.deliveryDistrict).toBeNull();
     expect(callArgs.data.deliveryStreet).toBeNull();
+    expect(callArgs.data.deliveryRegion).toBeNull();
+    expect(callArgs.data.deliveryHouse).toBeNull();
+    // The DTO's "+998 90 123-45-67" is stored canonical.
+    expect(callArgs.data.contactPhone).toBe('998901234567');
     expect(callArgs.data.items.create).toHaveLength(1);
     expect(callArgs.data.items.create[0]).toMatchObject({
       productId: 'p1',
@@ -209,19 +223,73 @@ describe('CheckoutService.createOrder', () => {
       '998901234567',
       baseDto({
         deliveryMethod: 'DELIVERY',
-        city: 'Toshkent',
+        region: 'Toshkent shahri',
         district: 'Chilonzor',
-        street: 'Bunyodkor 12',
+        street: 'Bunyodkor',
+        house: '12',
+        apartment: '42',
+        landmark: 'Metro yonida',
         deliveryNotes: '3-qavat',
       }),
     );
 
     const callArgs = orderCreate.mock.calls[0][0];
     expect(callArgs.data.deliveryMethod).toBe('DELIVERY');
-    expect(callArgs.data.deliveryCity).toBe('Toshkent');
+    expect(callArgs.data.deliveryRegion).toBe('Toshkent shahri');
     expect(callArgs.data.deliveryDistrict).toBe('Chilonzor');
-    expect(callArgs.data.deliveryStreet).toBe('Bunyodkor 12');
+    expect(callArgs.data.deliveryStreet).toBe('Bunyodkor');
+    expect(callArgs.data.deliveryHouse).toBe('12');
+    expect(callArgs.data.deliveryApartment).toBe('42');
+    expect(callArgs.data.deliveryLandmark).toBe('Metro yonida');
     expect(callArgs.data.deliveryNotes).toBe('3-qavat');
+  });
+
+  it('records each payment method on the payment row, with Payme only for ONLINE', async () => {
+    for (const [paymentMethod, expectedProvider] of [
+      ['ONLINE', 'payme'],
+      ['CASH', null],
+      ['SELLER_AGREEMENT', null],
+    ] as const) {
+      const deps = makeDeps();
+      deps.getCart.mockResolvedValue({
+        items: [{ productId: 'p1', quantity: 1 }],
+      });
+      deps.productFindMany.mockResolvedValue([
+        {
+          id: 'p1',
+          sku: 'SKU-1',
+          nameEn: 'Filter',
+          isActive: true,
+          price: new Prisma.Decimal(100),
+        },
+      ]);
+      deps.orderCreate.mockResolvedValue({
+        id: 'ord-1',
+        orderNumber: 'DP-1001',
+        total: new Prisma.Decimal(100),
+      });
+      const config = {
+        get: jest.fn().mockReturnValue('merchant-1'),
+      } as unknown as ConfigService;
+
+      const service = new CheckoutService(
+        deps.prisma,
+        deps.cartsService,
+        deps.customersService,
+        deps.ordersService,
+        config,
+      );
+      const result = await service.createOrder(
+        '998901234567',
+        baseDto({ paymentMethod }),
+      );
+
+      const paymentArgs = deps.paymentCreate.mock.calls[0][0];
+      expect(paymentArgs.data.method).toBe(paymentMethod);
+      expect(paymentArgs.data.provider).toBe(expectedProvider);
+      expect(paymentArgs.data.status).toBe('PENDING');
+      expect(result.checkoutUrl === null).toBe(paymentMethod !== 'ONLINE');
+    }
   });
 
   it('rejects when a cart line references a retired or missing product', async () => {

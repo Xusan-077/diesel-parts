@@ -55,6 +55,9 @@ enum PaymentMethod {
   CARD
   TRANSFER
   ONLINE
+  /// Self-checkout: the shopper asked to settle terms with a manager. The order
+  /// is created, no gateway payment is attempted, and a person follows up.
+  SELLER_AGREEMENT
 }
 
 enum PaymentStatus {
@@ -351,6 +354,19 @@ model Order {
   deliveryDistrict         String?
   deliveryStreet           String?
   deliveryNotes            String?
+  /// Structured self-checkout address, added alongside the flat columns above.
+  /// A DELIVERY order fills `deliveryRegion` + `deliveryHouse` (required in the
+  /// DTO); apartment and landmark are optional. All nullable so orders created
+  /// before this block existed are untouched. Coordinates are a later step —
+  /// `deliveryLatitude` / `deliveryLongitude` will slot in here.
+  deliveryRegion           String?
+  deliveryHouse            String?
+  deliveryApartment        String?
+  deliveryLandmark         String?
+  /// The contact number for THIS order, canonical `998XXXXXXXXX`. May differ
+  /// from the account's verified number — someone ordering for delivery to a
+  /// colleague. Nullable: pre-existing orders have none.
+  contactPhone             String?
   notes                    String?
   /// Null until a CRM order is confirmed and inventory needs reserving; a POS
   /// order sets it up front.
