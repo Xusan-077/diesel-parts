@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { callBackendPhoneVerified } from "@/lib/api/internal-backend";
 import { apiError, parseJsonBody } from "@/lib/api/route-auth";
 import { checkoutRequestSchema } from "@/lib/schemas";
+import { toBackendCheckoutBody } from "@/lib/store/checkout-payload";
 
 interface CheckoutResult {
   order: Record<string, unknown>;
@@ -20,9 +21,12 @@ export async function POST(request: Request) {
     return body.response;
   }
 
+  // `toBackendCheckoutBody` resolves the region <select>'s slug to the label
+  // backend/ stores; every other field passes straight through now that the DTO
+  // accepts the full form.
   const result = await callBackendPhoneVerified<CheckoutResult>(session.phone, "checkout", {
     method: "POST",
-    body: { ...body.data, returnBaseUrl: process.env.NEXT_PUBLIC_SITE_URL },
+    body: { ...toBackendCheckoutBody(body.data), returnBaseUrl: process.env.NEXT_PUBLIC_SITE_URL },
   });
 
   return NextResponse.json({ success: true, ...result });

@@ -27,6 +27,13 @@ export type CartMergeInput = z.infer<typeof cartMergeSchema>;
 
 export const checkoutDeliveryMethodSchema = z.enum(["PICKUP", "DELIVERY"]);
 
+/**
+ * The shopper's payment choice — matches backend/'s CreateCheckoutDto
+ * (`@IsIn(['ONLINE', 'CASH', 'SELLER_AGREEMENT'])`). `CASH` is pickup-only,
+ * enforced by the refine below and again server-side.
+ */
+export const checkoutPaymentMethodSchema = z.enum(["ONLINE", "CASH", "SELLER_AGREEMENT"]);
+
 function optionalTrimmedString(max: number) {
   return z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
@@ -56,21 +63,34 @@ export const checkoutRequestSchema = z
   .object({
     firstName: z.string().trim().min(1, "required").max(60, "tooLong"),
     lastName: z.string().trim().min(1, "required").max(60, "tooLong"),
+    // A contact phone for THIS order — a courier or a manager needs a number to
+    // call, and it may differ from the account's verified one. Validated here
+    // and again by backend/'s CreateCheckoutDto (`@IsUzPhone`), which stores it
+    // on the order.
+    phone: z
+      .string()
+      .trim()
+      .min(1, "required")
+      .refine((value) => isValidPhone(value), "invalidPhone"),
     email: optionalEmail,
     companyName: optionalTrimmedString(160),
     taxId: optionalTrimmedString(32),
     deliveryMethod: checkoutDeliveryMethodSchema,
-    city: optionalTrimmedString(120),
+    // A region slug from lib/data/uz-regions.ts — "viloyat / shahar" in the UI.
+    region: optionalTrimmedString(60),
     district: optionalTrimmedString(120),
     street: optionalTrimmedString(200),
+    house: optionalTrimmedString(60),
+    apartment: optionalTrimmedString(40),
+    landmark: optionalTrimmedString(200),
     deliveryNotes: optionalTrimmedString(500),
     notes: z.string().max(2000).optional(),
     termsAccepted: z.boolean().refine((value) => value === true, "termsRequired"),
-    paymentMethod: z.literal("ONLINE"),
+    paymentMethod: checkoutPaymentMethodSchema,
   })
-  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.city), {
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.region), {
     message: "required",
-    path: ["city"],
+    path: ["region"],
   })
   .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.district), {
     message: "required",
@@ -79,7 +99,17 @@ export const checkoutRequestSchema = z
   .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.street), {
     message: "required",
     path: ["street"],
-  });
+  })
+  .refine((value) => value.deliveryMethod !== "DELIVERY" || Boolean(value.house), {
+    message: "required",
+    path: ["house"],
+  })
+  // Cash is a pickup-only option: there is no courier to hand it to. The UI
+  // hides it once delivery is chosen; this is the matching server-side guard.
+  .refine(
+    (value) => value.paymentMethod !== "CASH" || value.deliveryMethod !== "DELIVERY",
+    { message: "cashNotForDelivery", path: ["paymentMethod"] },
+  );
 
 export type CheckoutRequestInput = z.infer<typeof checkoutRequestSchema>;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { toast } from "sonner";
@@ -26,6 +26,25 @@ interface CheckoutClientProps {
   lang: Locale;
   dict: Dictionary["checkout"];
   cartDict: Dictionary["cart"];
+  footerDict: Dictionary["footer"];
+  /** The signed-in session's phone-verified number, pre-filling the contact
+   *  field on the details form. */
+  phone: string;
+}
+
+/** The submit button follows the payment choice: pay now, or send the order
+ *  for someone to follow up. */
+function submitLabelFor(
+  paymentMethod: CheckoutRequestInput["paymentMethod"],
+  dict: Dictionary["checkout"],
+): string {
+  if (paymentMethod === "CASH") {
+    return dict.submitConfirm;
+  }
+  if (paymentMethod === "SELLER_AGREEMENT") {
+    return dict.submitSend;
+  }
+  return dict.submit;
 }
 
 type Status = "submitting" | "idle" | "success" | "error";
@@ -68,13 +87,27 @@ function extractErrorMessage(error: unknown): string | null {
  * `POST /api/v1/checkout`, once, at the moment it is actually needed rather
  * than on every cart edit.
  */
-export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
+export function CheckoutClient({ lang, dict, cartDict, footerDict, phone }: CheckoutClientProps) {
   const cart = useCart();
   const { profile } = useProfile();
   const formId = useId();
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [choices, setChoices] = useState<{
+    deliveryMethod: CheckoutRequestInput["deliveryMethod"];
+    paymentMethod: CheckoutRequestInput["paymentMethod"];
+  }>({ deliveryMethod: "PICKUP", paymentMethod: "ONLINE" });
+
+  const onChoicesChange = useCallback(
+    (next: {
+      deliveryMethod: CheckoutRequestInput["deliveryMethod"];
+      paymentMethod: CheckoutRequestInput["paymentMethod"];
+    }) => setChoices(next),
+    [],
+  );
+
+  const submitLabel = submitLabelFor(choices.paymentMethod, dict);
 
   const ids = cart.items.map((item) => item.productId);
   const { items: resolved, isLoading, isSuccess } = useResolvedProducts(ids, lang);
@@ -210,7 +243,15 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
           </CardContent>
         </Card>
 
-        <CheckoutDetailsForm formId={formId} dict={dict} profile={profile} onSubmit={placeOrder} />
+        <CheckoutDetailsForm
+          formId={formId}
+          dict={dict}
+          footerDict={footerDict}
+          profile={profile}
+          defaultPhone={phone}
+          onChoicesChange={onChoicesChange}
+          onSubmit={placeOrder}
+        />
       </div>
 
       <aside className="hidden lg:sticky lg:top-40 lg:block">
@@ -228,11 +269,12 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
               total={total}
               totalLabel={totalLabel}
               unpricedCount={unpriced}
+              deliveryMethod={choices.deliveryMethod}
               errorMessage={status === "error" ? errorMessage : null}
             />
 
             <Button type="submit" form={formId} size="lg" className="mt-6 w-full" disabled={status === "submitting"}>
-              {status === "submitting" ? dict.submitting : dict.submit}
+              {status === "submitting" ? dict.submitting : submitLabel}
             </Button>
           </CardContent>
         </Card>
@@ -241,7 +283,7 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
       <CheckoutSummarySheet
         formId={formId}
         submitting={status === "submitting"}
-        submitLabel={dict.submit}
+        submitLabel={submitLabel}
         submittingLabel={dict.submitting}
         cartDict={cartDict}
         checkoutDict={dict}
@@ -250,6 +292,7 @@ export function CheckoutClient({ lang, dict, cartDict }: CheckoutClientProps) {
         total={total}
         totalLabel={totalLabel}
         unpricedCount={unpriced}
+        deliveryMethod={choices.deliveryMethod}
         errorMessage={status === "error" ? errorMessage : null}
       />
     </div>

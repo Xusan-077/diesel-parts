@@ -12,6 +12,8 @@ describe("checkoutFieldError", () => {
   it("maps a known code to its sentence", () => {
     expect(checkoutFieldError(dict, "termsRequired")).toBe(dict.errorTermsRequired);
     expect(checkoutFieldError(dict, "invalidEmail")).toBe(dict.errorInvalidEmail);
+    expect(checkoutFieldError(dict, "invalidPhone")).toBe(dict.errorInvalidPhone);
+    expect(checkoutFieldError(dict, "cashNotForDelivery")).toBe(dict.errorCashNotForDelivery);
     expect(checkoutFieldError(dict, "tooLong")).toBe(dict.errorTooLong);
     expect(checkoutFieldError(dict, "required")).toBe(dict.errorRequired);
   });

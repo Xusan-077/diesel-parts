@@ -52,7 +52,7 @@ export function CheckoutSummarySheet({
             <Icon icon={ChevronUp} size="sm" />
             {checkoutDict.mobileSummaryLabel}
           </span>
-          <span className="font-medium tabular-nums">
+          <span className="type-title tabular-nums text-foreground">
             {total > 0 ? totalLabel : cartDict.priceOnRequest}
           </span>
         </button>
