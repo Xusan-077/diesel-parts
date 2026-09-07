@@ -39,12 +39,34 @@ function backendOrder(overrides: Record<string, unknown> = {}) {
     subtotal: "200.00",
     discountRequestedPercent: "0",
     discountApprovedPercent: "10",
-    total: "180.00",
+    totalAmount: "180.00",
     notes: "call back",
     inquiryId: null,
     createdAt: "2026-08-01T00:00:00.000Z",
     updatedAt: "2026-08-02T00:00:00.000Z",
     customer: { id: "cus-1", name: "Aziz", phone: "998901234567" },
+    // `backend/` HEAD: FK straight to `User`, name selected onto `seller`.
+    seller: { id: "u-1", name: "Vali", phone: "998900000000" },
+    items: [
+      {
+        id: "li-1",
+        productId: "prod-1",
+        productSku: "SKU-1",
+        productName: "Fuel Filter",
+        qty: 2,
+        unitPrice: "100.00",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+/** The pre-redeploy wire shape still live on Railway until the backend deploy. */
+function legacyBackendOrder(overrides: Record<string, unknown> = {}) {
+  return {
+    ...backendOrder(),
+    totalAmount: undefined,
+    total: "180.00",
     seller: { id: "seller-1", user: { id: "u-1", name: "Vali", phone: "998900000000" } },
     items: [
       {
@@ -112,6 +134,18 @@ describe("order-repository", () => {
         accessToken: "tok",
         query: { status: undefined, customerId: undefined, page: 1 },
       });
+    });
+
+    it("still maps the pre-redeploy wire shape (nested seller, total, quantity/price)", async () => {
+      vi.mocked(backendRequest).mockResolvedValue({
+        data: [legacyBackendOrder()],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      });
+
+      const page = await listOrders(actor, { page: 1 });
+
+      expect(page.items[0].sellerName).toBe("Vali");
+      expect(page.items[0].totalAmount).toBe(180);
     });
   });
 

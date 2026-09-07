@@ -109,14 +109,25 @@ export type OrderDiscountResult =
 /*  Wire shapes — backend/'s `ORDER_INCLUDE` payload                          */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * `backend/` HEAD (post the 2026-09 `Order.sellerId → User` / `Order.total →
+ * totalAmount` / `OrderItem.quantity|price → qty|unitPrice` alignment — see
+ * docs/deploy-checklist.md) sends the first spelling of each pair below. The
+ * second is the pre-redeploy shape still live on Railway until that deploy
+ * lands, so every read here accepts either and this whole dual shape is
+ * deletable cruft once prod is on the new build.
+ */
 interface BackendOrderItem {
   id: string;
   productId: string;
   productSku: string;
   productName: string;
-  quantity: number;
-  price: string;
-  total: string;
+  qty?: number;
+  unitPrice?: string;
+  /** Pre-redeploy spelling. */
+  quantity?: number;
+  price?: string;
+  total?: string;
 }
 
 interface BackendDiscountRequest {
@@ -139,13 +150,21 @@ interface BackendOrder {
   subtotal: string;
   discountRequestedPercent: string;
   discountApprovedPercent: string;
-  total: string;
+  totalAmount?: string;
+  /** Pre-redeploy spelling. */
+  total?: string;
   notes: string | null;
   inquiryId: string | null;
   createdAt: string;
   updatedAt: string;
   customer: { id: string; name: string; phone: string };
-  seller: { id: string; user: { id: string; name: string; phone: string | null } };
+  seller: {
+    id: string;
+    name?: string;
+    phone?: string | null;
+    /** Pre-redeploy nesting: the FK went straight to `User` in the alignment. */
+    user?: { id: string; name: string; phone: string | null };
+  };
   items: BackendOrderItem[];
   discountRequests?: BackendDiscountRequest[];
 }
@@ -194,13 +213,13 @@ function toRow(o: BackendOrder): OrderRow {
     customerId: o.customerId,
     customerName: o.customer.name,
     sellerId: o.sellerId,
-    sellerName: o.seller.user.name,
+    sellerName: o.seller.name ?? o.seller.user?.name ?? "",
     status: toRootStatus(o.status),
     currency: o.currency,
     subtotal: Number(o.subtotal),
     discountRequestedPercent: Number(o.discountRequestedPercent),
     discountApprovedPercent: Number(o.discountApprovedPercent),
-    totalAmount: Number(o.total),
+    totalAmount: Number(o.totalAmount ?? o.total ?? 0),
     notes: o.notes,
     inquiryId: o.inquiryId,
     itemCount: o.items.length,
@@ -210,14 +229,18 @@ function toRow(o: BackendOrder): OrderRow {
 }
 
 function toLine(it: BackendOrderItem): OrderLineRow {
+  const qty = it.qty ?? it.quantity ?? 0;
+  const unitPrice = Number(it.unitPrice ?? it.price ?? 0);
   return {
     id: it.id,
     productId: it.productId,
     productSku: it.productSku,
     productName: it.productName,
-    qty: it.quantity,
-    unitPrice: Number(it.price),
-    lineTotal: Number(it.total),
+    qty,
+    unitPrice,
+    // `backend/` HEAD has no stored line total (it is qty × unitPrice); the
+    // pre-redeploy payload carried one.
+    lineTotal: it.total != null ? Number(it.total) : qty * unitPrice,
   };
 }
 
