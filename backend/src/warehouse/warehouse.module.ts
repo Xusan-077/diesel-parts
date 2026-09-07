@@ -5,6 +5,8 @@ import { WarehouseProductsController } from './products/warehouse-products.contr
 import { WarehouseProductsService } from './products/warehouse-products.service';
 import { GoodsReceiptsController } from './receipts/goods-receipts.controller';
 import { GoodsReceiptsService } from './receipts/goods-receipts.service';
+import { WarehouseReportsController } from './reports/warehouse-reports.controller';
+import { WarehouseReportsService } from './reports/warehouse-reports.service';
 
 /**
  * Phase 1 of the warehouse (ombor) module — goods receipts and the
@@ -14,7 +16,15 @@ import { GoodsReceiptsService } from './receipts/goods-receipts.service';
  */
 @Module({
   imports: [ProductsModule, AuditModule],
-  controllers: [WarehouseProductsController, GoodsReceiptsController],
-  providers: [WarehouseProductsService, GoodsReceiptsService],
+  controllers: [
+    WarehouseProductsController,
+    GoodsReceiptsController,
+    WarehouseReportsController,
+  ],
+  providers: [
+    WarehouseProductsService,
+    GoodsReceiptsService,
+    WarehouseReportsService,
+  ],
 })
 export class WarehouseModule {}
