@@ -63,10 +63,28 @@ export class CreateProductDto {
   @IsString()
   imageUrl?: string;
 
+  /** Scanned barcode (EAN/UPC or in-house). Unique — a duplicate is a 409. */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  barcode?: string;
+
+  /** Unit of issue — "dona", "litr", "komplekt". Free text. */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  unit?: string;
+
   @IsOptional()
   @IsInt()
   @Min(0)
   minStock?: number;
+
+  /** Target on-hand for replenishment suggestions; distinct from minStock. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  recommendedStock?: number;
 
   /**
    * Not a Product column (stock is Inventory-derived) — when given, the

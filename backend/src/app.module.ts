@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { BrandsModule } from './brands/brands.module';
 import { ProductsModule } from './products/products.module';
 import { WarehousesModule } from './warehouses/warehouses.module';
+import { WarehouseModule } from './warehouse/warehouse.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { StockMovementsModule } from './stock-movements/stock-movements.module';
 import { OrdersModule } from './orders/orders.module';
@@ -41,6 +42,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     BrandsModule,
     ProductsModule,
     WarehousesModule,
+    WarehouseModule,
     InventoryModule,
     StockMovementsModule,
     OrdersModule,
