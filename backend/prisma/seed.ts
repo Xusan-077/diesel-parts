@@ -35,9 +35,13 @@ async function main() {
   // --- Warehouses ---------------------------------------------------------
   const warehouses = await Promise.all(
     [
-      { name: 'Main Warehouse - Tashkent', location: 'Tashkent, Yashnobod district' },
-      { name: 'Samarkand Branch', location: 'Samarkand, Siob market area' },
-      { name: 'Bukhara Branch', location: 'Bukhara, industrial zone' },
+      {
+        name: 'Main Warehouse - Tashkent',
+        code: 'W1',
+        location: 'Tashkent, Yashnobod district',
+      },
+      { name: 'Samarkand Branch', code: 'W2', location: 'Samarkand, Siob market area' },
+      { name: 'Bukhara Branch', code: 'W3', location: 'Bukhara, industrial zone' },
     ].map((w) => prisma.warehouse.create({ data: w })),
   );
 

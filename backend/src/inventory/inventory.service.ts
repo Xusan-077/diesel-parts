@@ -280,6 +280,12 @@ export class InventoryService {
         return { quantity: 0, reserved: quantity };
       case StockMovementType.RELEASE:
         return { quantity: 0, reserved: -quantity };
+      // PURCHASE / WRITE_OFF / TRANSFER_* / INVENTORY_ADJUSTMENT are produced by
+      // the warehouse module's own flows, never by this manual endpoint.
+      default:
+        throw new BadRequestException(
+          `Manual adjust does not support movement type ${type}`,
+        );
     }
   }
 

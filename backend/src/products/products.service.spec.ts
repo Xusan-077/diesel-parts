@@ -880,7 +880,7 @@ describe('ProductsService.importCsv', () => {
     await service.importCsv(toCsv([csvRow()]), 'actor-1');
 
     expect(warehouseCreate).toHaveBeenCalledWith({
-      data: { name: "Katalog (ko'chirilgan)" },
+      data: { name: "Katalog (ko'chirilgan)", code: 'KATALOG' },
     });
     expect(inventoryUpsert).toHaveBeenCalledWith({
       where: {
