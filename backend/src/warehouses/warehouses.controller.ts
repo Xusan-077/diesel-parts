@@ -6,11 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
+import { QueryWarehousesDto } from './dto/query-warehouses.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -23,8 +25,8 @@ export class WarehousesController {
 
   @Get()
   @Roles(...ALL_ROLES)
-  findAll() {
-    return this.warehouses.findAll();
+  findAll(@Query() query: QueryWarehousesDto) {
+    return this.warehouses.findAll(query);
   }
 
   @Get(':id')

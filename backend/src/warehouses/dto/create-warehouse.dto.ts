@@ -1,4 +1,5 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { WarehouseStatus } from '../../../generated/prisma/client';
 
 export class CreateWarehouseDto {
   @IsString()
@@ -14,7 +15,21 @@ export class CreateWarehouseDto {
   @MinLength(1)
   code?: string;
 
+  /** Loose label, kept for back-compat. `address` is the structured field. */
   @IsOptional()
   @IsString()
   location?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  /** User id of the warehouse manager. Must reference an existing user (400). */
+  @IsOptional()
+  @IsString()
+  managerId?: string;
+
+  @IsOptional()
+  @IsEnum(WarehouseStatus)
+  status?: WarehouseStatus;
 }
