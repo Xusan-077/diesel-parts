@@ -644,7 +644,7 @@ export class ProductsService {
     });
     if (existing) return existing.id;
     const created = await this.prisma.warehouse.create({
-      data: { name: CATALOG_WAREHOUSE_NAME },
+      data: { name: CATALOG_WAREHOUSE_NAME, code: 'KATALOG' },
     });
     return created.id;
   }

@@ -41,6 +41,24 @@ describe('AuditService', () => {
       });
     });
 
+    it('persists ipAddress only when the caller supplies one', async () => {
+      const create = jest.fn().mockResolvedValue({});
+      const service = new AuditService(makePrisma({ create }));
+
+      await service.record({
+        userId: 'user-1',
+        action: AuditAction.APPROVE,
+        entityType: 'GoodsReceipt',
+        entityId: 'gr-1',
+        ipAddress: '10.0.0.5',
+      });
+
+      const arg = (create.mock.calls as unknown[][])[0][0] as {
+        data: { ipAddress?: string };
+      };
+      expect(arg.data.ipAddress).toBe('10.0.0.5');
+    });
+
     it('never throws when the write fails, and logs the failure instead', async () => {
       const create = jest.fn().mockRejectedValue(new Error('db down'));
       const prisma = makePrisma({ create });

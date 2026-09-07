@@ -11,6 +11,8 @@ export interface AuditEntry {
   entityId: string;
   before?: unknown;
   after?: unknown;
+  /** Client IP of the triggering request, when the caller has it. */
+  ipAddress?: string | null;
 }
 
 /** Fixed page size for the audit trail listing (not client-configurable). */
@@ -39,6 +41,7 @@ export class AuditService {
           entityId: entry.entityId,
           before: entry.before as Prisma.InputJsonValue | undefined,
           after: entry.after as Prisma.InputJsonValue | undefined,
+          ...(entry.ipAddress ? { ipAddress: entry.ipAddress } : {}),
         },
       });
     } catch (error) {

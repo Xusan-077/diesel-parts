@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -248,6 +249,26 @@ export class InventoryService {
     }
   }
 
+  /**
+   * Atomically decrements on-hand stock, refusing to cross zero: the guard
+   * lives in the `WHERE` so two concurrent callers cannot both pass a
+   * read-then-write check. `count === 0` means either the row is gone or the
+   * decrement would go negative. Receipts only ever add, so Phase 1 does not
+   * call this — the write-off / transfer flows (Phase 3+) do.
+   */
+  async decrementOnHandOrThrow(tx: Tx, inventoryId: string, quantity: number) {
+    const result = await tx.inventory.updateMany({
+      where: { id: inventoryId, quantity: { gte: quantity } },
+      data: { quantity: { decrement: quantity } },
+    });
+    if (result.count === 0) {
+      throw new ConflictException(
+        "Mahsulot qoldig'i yetarli emas yoki inventar qatori topilmadi",
+      );
+    }
+    return tx.inventory.findUniqueOrThrow({ where: { id: inventoryId } });
+  }
+
   private async getOrCreateInventoryRow(
     tx: Tx,
     productId: string,
@@ -280,6 +301,12 @@ export class InventoryService {
         return { quantity: 0, reserved: quantity };
       case StockMovementType.RELEASE:
         return { quantity: 0, reserved: -quantity };
+      // PURCHASE / WRITE_OFF / TRANSFER_* / INVENTORY_ADJUSTMENT are produced by
+      // the warehouse module's own flows, never by this manual endpoint.
+      default:
+        throw new BadRequestException(
+          `Manual adjust does not support movement type ${type}`,
+        );
     }
   }
 
