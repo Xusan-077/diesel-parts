@@ -302,6 +302,7 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                             size="icon"
                             className="size-8"
                             aria-label={"Amallar: " + product.name}
+                            title="Amallar"
                             disabled={editLoader.loadingId === product.id}
                           >
                             {editLoader.loadingId === product.id ? (
@@ -473,7 +474,10 @@ function Pager({
   return (
     <nav aria-label="Sahifalar" className="mt-8 flex items-center gap-3 text-sm">
       {page > 1 ? (
-        <Link href={href(page - 1)} className="text-muted hover:text-foreground">
+        <Link
+          href={href(page - 1)}
+          className="text-muted transition-colors hover:text-foreground"
+        >
           ← Oldingi
         </Link>
       ) : null}
@@ -481,7 +485,10 @@ function Pager({
         {page} / {totalPages}
       </span>
       {page < totalPages ? (
-        <Link href={href(page + 1)} className="text-muted hover:text-foreground">
+        <Link
+          href={href(page + 1)}
+          className="text-muted transition-colors hover:text-foreground"
+        >
           Keyingi →
         </Link>
       ) : null}

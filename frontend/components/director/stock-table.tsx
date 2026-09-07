@@ -61,7 +61,10 @@ export function StockPager({
   return (
     <nav aria-label="Sahifalar" className="mt-6 flex items-center gap-3 text-sm">
       {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className="text-muted hover:text-foreground">
+        <Link
+          href={hrefFor(page - 1)}
+          className="text-muted transition-colors hover:text-foreground"
+        >
           ← Oldingi
         </Link>
       ) : null}
@@ -69,7 +72,10 @@ export function StockPager({
         {page} / {totalPages}
       </span>
       {page < totalPages ? (
-        <Link href={hrefFor(page + 1)} className="text-muted hover:text-foreground">
+        <Link
+          href={hrefFor(page + 1)}
+          className="text-muted transition-colors hover:text-foreground"
+        >
           Keyingi →
         </Link>
       ) : null}

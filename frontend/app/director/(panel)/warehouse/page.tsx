@@ -58,8 +58,18 @@ export default async function DirectorWarehousePage({
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <StatCard label="Jami mahsulot" value={String(counts.data.total)} icon={Package} />
-        <StatCard label="Kam qoldi" value={String(counts.data.limited)} icon={TriangleAlert} />
-        <StatCard label="Tugagan" value={String(counts.data.outOfStock)} icon={PackageX} />
+        <StatCard
+          label="Kam qoldi"
+          value={String(counts.data.limited)}
+          icon={TriangleAlert}
+          tone={counts.data.limited > 0 ? "warning" : "neutral"}
+        />
+        <StatCard
+          label="Tugagan"
+          value={String(counts.data.outOfStock)}
+          icon={PackageX}
+          tone={counts.data.outOfStock > 0 ? "danger" : "neutral"}
+        />
       </div>
 
       <div className="mt-8">

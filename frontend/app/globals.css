@@ -149,6 +149,15 @@
   --danger-surface: #fee9e8;
   --warning: #796e1e;         /* gold-olive, 38° off the accent hue */
   --warning-surface: #f9f4cf;
+  /* Neutral information — "Processing", "in progress", a passive note that is
+     not good news, not a warning and not an error. Aliased onto the data
+     palette's blue rather than given a fourth status hex: the blue is already
+     tuned against this ramp for exactly this lightness, and "in progress" is
+     the same idea whether it is a status pill or a donut slice. Named
+     separately so a status pill reads as a status, and so the two can diverge
+     later without a find-and-replace. */
+  --info: var(--data-blue);
+  --info-surface: var(--data-blue-surface);
 
   /* --- Chart -------------------------------------------------------------
      The dashboard compares this period against the last one. That is an
@@ -296,6 +305,9 @@
   --danger-surface: #381616;
   --warning: #e6d982;
   --warning-surface: #312c0d;
+  /* See the light half. Re-stepped only because its source token does. */
+  --info: var(--data-blue);
+  --info-surface: var(--data-blue-surface);
 
   /* Re-stepped for the dark surface, not flipped. */
   --chart-series: #ff8a5c;
@@ -869,6 +881,8 @@
   --color-success-surface: var(--success-surface);
   --color-warning: var(--warning);
   --color-warning-surface: var(--warning-surface);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
   --color-chart-series: var(--chart-series);
   --color-chart-context: var(--chart-context);
   --color-chart-grid: var(--chart-grid);
@@ -1404,6 +1418,30 @@
   .bg-accent *:focus-visible {
     outline-color: #ffffff;
     box-shadow: 0 0 0 4px var(--accent);
+  }
+
+  /*
+   * Browser autofill. Chrome and Safari paint a fixed pale-blue (or yellow)
+   * background and a black text fill onto an autocompleted field, straight over
+   * the field box — the value the design system never gets a say in. There is
+   * no property that clears the background, so the standard fix is to mask it
+   * with an inset shadow large enough to cover the control, and to restate the
+   * text colour as our own token. The `transition` delay keeps that fill from
+   * flashing the UA blue for a frame before the shadow paints.
+   *
+   * `--surface` because every text field in this app sits in a `fieldBox`
+   * (components/ui/field-styles.ts) whose own background is `--surface`; the
+   * autofilled control has to disappear into it. Re-applied on `:hover`,
+   * `:focus` and `:active` because WebKit re-asserts its own colours on each.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--foreground);
+    caret-color: var(--foreground);
+    box-shadow: 0 0 0 100px var(--surface) inset;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
 

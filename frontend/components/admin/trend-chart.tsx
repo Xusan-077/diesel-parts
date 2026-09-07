@@ -74,10 +74,18 @@ function niceMax(value: number): number {
 /**
  * Revenue this period against the one before it.
  *
- * This is an emphasis pair, not two categories: the current window carries the
- * brand hue and the comparison window is deliberately neutral and dashed, so the
- * eye lands on the line that matters. One y-axis, always — both series are the
- * same measure in the same currency.
+ * This is an emphasis pair, not two categories: the current window carries a
+ * solid mark colour and the comparison window is deliberately neutral and
+ * dashed, so the eye lands on the line that matters. One y-axis, always — both
+ * series are the same measure in the same currency.
+ *
+ * `seriesColor` is the current window's hue. It defaults to `--chart-series` so
+ * every existing call site is unchanged, and the analytics screen passes a
+ * `--data-*` token per measure instead — revenue green, order count blue,
+ * average-ticket purple — so the line agrees with the KPI it came from rather
+ * than painting three different measures in the one brand accent. Nothing about
+ * the current-vs-previous reading depends on it: the solid-vs-dashed contrast
+ * and the grey comparison line carry that on their own.
  *
  * The one thing the reader actually wants off this chart is the *gap* — are we
  * ahead of last month, and by how much — and two lines leave them measuring it
@@ -97,6 +105,7 @@ export function TrendChart({
   previousLabel,
   format = MONEY_FORMAT,
   measureLabel = "to'plangan daromad",
+  seriesColor = "var(--chart-series)",
 }: {
   current: DayPoint[];
   previous: DayPoint[];
@@ -109,6 +118,9 @@ export function TrendChart({
   format?: ValueFormat;
   /** Names the series in the caption and the accessible summary. */
   measureLabel?: string;
+  /** The current window's line/fill/dot colour. A CSS colour, normally a
+      token: `var(--data-blue)`. Defaults to the brand chart hue. */
+  seriesColor?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   // Two dashboards on one page would otherwise share one gradient id.
@@ -237,7 +249,11 @@ export function TrendChart({
     <figure className="m-0">
       <figcaption className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
         <span className="flex items-center gap-2 text-foreground">
-          <span aria-hidden="true" className="h-0.5 w-5 rounded-full bg-chart-series" />
+          <span
+          aria-hidden="true"
+          className="h-0.5 w-5 rounded-full"
+          style={{ backgroundColor: seriesColor }}
+        />
           {currentLabel}
         </span>
         <span className="flex items-center gap-2 text-muted">
@@ -325,9 +341,9 @@ export function TrendChart({
                * only half a fix for. It stops at 0.03 rather than 0 so the fill
                * fades into the baseline instead of ending on a visible edge.
                */}
-              <stop offset="0%" stopColor="var(--chart-series)" stopOpacity="0.32" />
-              <stop offset="70%" stopColor="var(--chart-series)" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="var(--chart-series)" stopOpacity="0.03" />
+              <stop offset="0%" stopColor={seriesColor} stopOpacity="0.32" />
+              <stop offset="70%" stopColor={seriesColor} stopOpacity="0.08" />
+              <stop offset="100%" stopColor={seriesColor} stopOpacity="0.03" />
             </linearGradient>
 
             {/*
@@ -403,7 +419,7 @@ export function TrendChart({
           <path
             d={currentPath}
             fill="none"
-            stroke="var(--chart-series)"
+            stroke={seriesColor}
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -424,7 +440,7 @@ export function TrendChart({
                 cx={xs[xs.length - 1]}
                 cy={yOf(endCurrent)}
                 r="4"
-                fill="var(--chart-series)"
+                fill={seriesColor}
                 stroke="var(--surface)"
                 strokeWidth="2"
               />
@@ -438,7 +454,7 @@ export function TrendChart({
                 x2={xs[hover]}
                 y1={PAD.top}
                 y2={PAD.top + PLOT_H}
-                stroke="var(--chart-series)"
+                stroke={seriesColor}
                 strokeWidth="1"
                 strokeDasharray="3 3"
                 vectorEffect="non-scaling-stroke"
@@ -455,7 +471,7 @@ export function TrendChart({
                 cx={xs[hover]}
                 cy={yOf(current[hover]?.value ?? 0)}
                 r="4.5"
-                fill="var(--chart-series)"
+                fill={seriesColor}
                 stroke="var(--surface)"
                 strokeWidth="2"
               />
@@ -497,7 +513,7 @@ export function TrendChart({
             style={{
               left:
                 Math.min(92, Math.max(8, (xs[hover ?? 0] / W) * 100)) + "%",
-              borderLeftColor: "var(--chart-series)",
+              borderLeftColor: seriesColor,
               borderLeftWidth: "2px",
             }}
           >

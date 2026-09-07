@@ -64,7 +64,7 @@ export function OrdersTable({
                 </TableCell>
                 <TableCell className="text-right font-mono">{formatMoney(order.total)}</TableCell>
                 <TableCell className="text-right">
-                  <Link href={`/seller/orders/${order.id}`} className="text-xs font-medium text-accent hover:underline">
+                  <Link href={`/seller/orders/${order.id}`} className="text-xs font-medium text-accent-strong hover:underline">
                     Ko&apos;rish
                   </Link>
                 </TableCell>

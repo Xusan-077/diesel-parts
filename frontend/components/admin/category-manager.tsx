@@ -308,7 +308,7 @@ function CategoryRow({
     <div className={child ? "py-2 pl-6" : "py-3"}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         {category.icon ? (
-          <span className="self-center text-accent-strong">
+          <span className="self-center text-muted">
             <CatalogIcon icon={category.icon} />
           </span>
         ) : null}

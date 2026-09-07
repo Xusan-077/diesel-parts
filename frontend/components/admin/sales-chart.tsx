@@ -37,6 +37,14 @@ const METRICS: readonly {
   format: ValueFormat;
   measureLabel: string;
   summary: (total: number) => string;
+  /**
+   * The line colour for this measure, from the CATEGORICAL DATA PALETTE — the
+   * same hue its KPI tile wears on the dashboard (revenue green, order count
+   * blue, average-ticket purple), so switching the measure recolours the line
+   * to agree with the figure above it. Never the brand accent: a director
+   * repaints that, and "revenue is green" has to stay true.
+   */
+  color: string;
 }[] = [
   {
     key: "revenue",
@@ -45,6 +53,7 @@ const METRICS: readonly {
     format: MONEY_FORMAT,
     measureLabel: "to'plangan daromad",
     summary: formatSum,
+    color: "var(--data-green)",
   },
   {
     key: "orders",
@@ -53,6 +62,7 @@ const METRICS: readonly {
     format: COUNT_FORMAT,
     measureLabel: "to'plangan buyurtmalar soni",
     summary: (total) => formatInteger(total) + " ta",
+    color: "var(--data-blue)",
   },
   {
     key: "average",
@@ -67,6 +77,7 @@ const METRICS: readonly {
     format: MONEY_FORMAT,
     measureLabel: "kunlik o'rtacha chek",
     summary: formatSum,
+    color: "var(--data-purple)",
   },
 ];
 
@@ -88,11 +99,18 @@ export function SalesChart({
   periodLabel,
   previousLabel,
   filename,
+  compact = false,
 }: {
   series: Record<SalesMetric, ChartMetricSeries>;
   periodLabel: string;
   previousLabel: string;
   filename: string;
+  /**
+   * Drop the per-tab period total and delta, leaving a plain label switcher.
+   * Used where the three totals are already the page's hero row and repeating
+   * them on the chart's tabs would be the same number said twice.
+   */
+  compact?: boolean;
 }) {
   const [active, setActive] = useState<SalesMetric>("revenue");
   const metric = METRICS.find((entry) => entry.key === active) ?? METRICS[0];
@@ -113,6 +131,26 @@ export function SalesChart({
           {METRICS.map((entry) => {
             const selected = entry.key === metric.key;
             const delta = formatDelta(series[entry.key].change);
+
+            if (compact) {
+              return (
+                <button
+                  key={entry.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setActive(entry.key)}
+                  className={cn(
+                    "type-label rounded-md border px-3 py-2 transition-colors",
+                    selected
+                      ? "border-accent-edge bg-accent-subtle text-foreground"
+                      : "border-border text-muted hover:bg-surface-hover hover:text-foreground",
+                  )}
+                >
+                  {entry.label}
+                </button>
+              );
+            }
 
             return (
               <button
@@ -177,6 +215,7 @@ export function SalesChart({
           previousLabel={previousLabel}
           format={metric.format}
           measureLabel={metric.measureLabel}
+          seriesColor={metric.color}
         />
       </div>
 
