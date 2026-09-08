@@ -54,6 +54,17 @@ export type FieldErrors = Record<string, string>;
 const CUSTOM_MESSAGES: Record<string, string> = {
   slug_format: "Faqat kichik lotin harflari, raqam va defis: cat-fuel-injector",
   no_fields: "Hech bo'lmasa bitta maydonni to'ldiring",
+  // Warehouse module
+  required: "Bu maydon to'ldirilishi shart",
+  tooLong: "Juda uzun",
+  codeFormat: "Faqat lotin harflari, raqam va defis: MARKAZ, W-2",
+  invalidDate: "Sanani tekshiring",
+  atLeastOneLine: "Kamida bitta qator qo'shing",
+  tooManyLines: "Juda ko'p qator",
+  integer: "Butun son kiriting",
+  min1: "Kamida 1 bo'lsin",
+  min0: "Manfiy bo'lmasin",
+  twoDecimals: "Ko'pi bilan 2 kasr belgisi",
 };
 
 function translateIssue(issue: z.core.$ZodIssue): string {

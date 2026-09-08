@@ -4,10 +4,12 @@ import type {
   MovementsReportQuery,
   ProductMovementsQuery,
   WarehouseProductListQuery,
+  WarehouseWriteInput,
 } from "@/lib/schemas";
 import type {
   GoodsReceiptPage,
   MovementPage,
+  WarehouseDetail,
   WarehouseProductPage,
   WarehouseRow,
 } from "@/lib/api/warehouse-repository";
@@ -42,6 +44,36 @@ export async function fetchWarehouses(): Promise<WarehouseRow[]> {
     "/warehouse/warehouses",
   );
   return data.warehouses;
+}
+
+export async function fetchWarehouse(id: string): Promise<WarehouseDetail> {
+  const { data } = await panelClient.get<{ warehouse: WarehouseDetail } & Envelope>(
+    `/warehouse/warehouses/${id}`,
+  );
+  return data.warehouse;
+}
+
+export async function createWarehouse(input: WarehouseWriteInput): Promise<WarehouseRow> {
+  const { data } = await panelClient.post<{ warehouse: WarehouseRow } & Envelope>(
+    "/warehouse/warehouses",
+    input,
+  );
+  return data.warehouse;
+}
+
+export async function updateWarehouse(
+  id: string,
+  input: WarehouseWriteInput,
+): Promise<WarehouseRow> {
+  const { data } = await panelClient.patch<{ warehouse: WarehouseRow } & Envelope>(
+    `/warehouse/warehouses/${id}`,
+    input,
+  );
+  return data.warehouse;
+}
+
+export async function deleteWarehouse(id: string): Promise<void> {
+  await panelClient.delete(`/warehouse/warehouses/${id}`);
 }
 
 export async function fetchProductMovements(
