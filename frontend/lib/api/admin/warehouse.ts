@@ -1,0 +1,84 @@
+import { panelClient } from "./client";
+import type {
+  GoodsReceiptListQuery,
+  MovementsReportQuery,
+  ProductMovementsQuery,
+  WarehouseProductListQuery,
+} from "@/lib/schemas";
+import type {
+  GoodsReceiptPage,
+  MovementPage,
+  WarehouseProductPage,
+  WarehouseRow,
+} from "@/lib/api/warehouse-repository";
+
+/**
+ * Every warehouse request the browser makes, typed once — the client-side
+ * counterpart to `lib/api/warehouse-repository.ts` (which is the server's).
+ * Each hits an `/api/v1/warehouse/*` route that authenticates and proxies to
+ * `backend/`; a component never spells one of these URLs.
+ */
+
+interface Envelope {
+  success?: boolean;
+}
+
+export async function fetchWarehouseProducts(
+  query: WarehouseProductListQuery,
+): Promise<WarehouseProductPage> {
+  const { data } = await panelClient.get<WarehouseProductPage & Envelope>("/warehouse/products", {
+    params: {
+      q: query.q || undefined,
+      status: query.status,
+      warehouseId: query.warehouseId,
+      page: query.page,
+    },
+  });
+  return data;
+}
+
+export async function fetchWarehouses(): Promise<WarehouseRow[]> {
+  const { data } = await panelClient.get<{ warehouses: WarehouseRow[] } & Envelope>(
+    "/warehouse/warehouses",
+  );
+  return data.warehouses;
+}
+
+export async function fetchProductMovements(
+  productId: string,
+  query: ProductMovementsQuery,
+): Promise<MovementPage> {
+  const { data } = await panelClient.get<MovementPage & Envelope>(
+    `/warehouse/products/${productId}/movements`,
+    { params: { warehouseId: query.warehouseId, type: query.type, page: query.page } },
+  );
+  return data;
+}
+
+export async function fetchMovementsReport(query: MovementsReportQuery): Promise<MovementPage> {
+  const { data } = await panelClient.get<MovementPage & Envelope>("/warehouse/reports/movements", {
+    params: {
+      warehouseId: query.warehouseId,
+      productId: query.productId,
+      type: query.type,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      page: query.page,
+    },
+  });
+  return data;
+}
+
+export async function fetchGoodsReceipts(
+  query: GoodsReceiptListQuery,
+): Promise<GoodsReceiptPage> {
+  const { data } = await panelClient.get<GoodsReceiptPage & Envelope>("/warehouse/goods-receipts", {
+    params: {
+      q: query.q || undefined,
+      status: query.status,
+      warehouseId: query.warehouseId,
+      page: query.page,
+    },
+  });
+  return data;
+}

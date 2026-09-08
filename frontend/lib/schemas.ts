@@ -642,6 +642,13 @@ export const stockMovementTypeSchema = z.enum([
 export const goodsReceiptStatusSchema = z.enum(["DRAFT", "APPROVED", "CANCELLED"]);
 export const warehouseStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 
+/** The warehouse list, optionally narrowed to active/inactive. */
+export const warehouseListQuerySchema = z.object({
+  status: warehouseStatusSchema.optional(),
+});
+
+export type WarehouseListQuery = z.infer<typeof warehouseListQuerySchema>;
+
 /** The warehouse product table's URL state — also its React Query key. */
 export const warehouseProductListQuerySchema = z.object({
   q: z.string().max(200).default(""),
