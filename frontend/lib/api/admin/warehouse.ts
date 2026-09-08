@@ -1,12 +1,14 @@
 import { panelClient } from "./client";
 import type {
   GoodsReceiptListQuery,
+  GoodsReceiptWriteInput,
   MovementsReportQuery,
   ProductMovementsQuery,
   WarehouseProductListQuery,
   WarehouseWriteInput,
 } from "@/lib/schemas";
 import type {
+  GoodsReceiptDetail,
   GoodsReceiptPage,
   MovementPage,
   WarehouseDetail,
@@ -113,4 +115,46 @@ export async function fetchGoodsReceipts(
     },
   });
   return data;
+}
+
+export async function fetchGoodsReceipt(id: string): Promise<GoodsReceiptDetail> {
+  const { data } = await panelClient.get<{ receipt: GoodsReceiptDetail } & Envelope>(
+    `/warehouse/goods-receipts/${id}`,
+  );
+  return data.receipt;
+}
+
+export async function createGoodsReceipt(
+  input: GoodsReceiptWriteInput,
+): Promise<GoodsReceiptDetail> {
+  const { data } = await panelClient.post<{ receipt: GoodsReceiptDetail } & Envelope>(
+    "/warehouse/goods-receipts",
+    input,
+  );
+  return data.receipt;
+}
+
+export async function updateGoodsReceipt(
+  id: string,
+  input: GoodsReceiptWriteInput,
+): Promise<GoodsReceiptDetail> {
+  const { data } = await panelClient.patch<{ receipt: GoodsReceiptDetail } & Envelope>(
+    `/warehouse/goods-receipts/${id}`,
+    input,
+  );
+  return data.receipt;
+}
+
+export async function approveGoodsReceipt(id: string): Promise<GoodsReceiptDetail> {
+  const { data } = await panelClient.post<{ receipt: GoodsReceiptDetail } & Envelope>(
+    `/warehouse/goods-receipts/${id}/approve`,
+  );
+  return data.receipt;
+}
+
+export async function cancelGoodsReceipt(id: string): Promise<GoodsReceiptDetail> {
+  const { data } = await panelClient.post<{ receipt: GoodsReceiptDetail } & Envelope>(
+    `/warehouse/goods-receipts/${id}/cancel`,
+  );
+  return data.receipt;
 }

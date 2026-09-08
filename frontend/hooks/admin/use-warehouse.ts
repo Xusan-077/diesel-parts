@@ -3,17 +3,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { adminKeys } from "@/lib/api/admin/keys";
 import {
+  approveGoodsReceipt,
+  cancelGoodsReceipt,
+  createGoodsReceipt,
   createWarehouse,
   deleteWarehouse,
+  fetchGoodsReceipt,
   fetchGoodsReceipts,
   fetchMovementsReport,
   fetchProductMovements,
   fetchWarehouse,
   fetchWarehouseProducts,
   fetchWarehouses,
+  updateGoodsReceipt,
   updateWarehouse,
 } from "@/lib/api/admin/warehouse";
 import type {
+  GoodsReceiptDetail,
   GoodsReceiptPage,
   MovementPage,
   WarehouseDetail,
@@ -22,6 +28,7 @@ import type {
 } from "@/lib/api/warehouse-repository";
 import type {
   GoodsReceiptListQuery,
+  GoodsReceiptWriteInput,
   MovementsReportQuery,
   ProductMovementsQuery,
   WarehouseProductListQuery,
@@ -127,5 +134,52 @@ export function useGoodsReceipts(query: GoodsReceiptListQuery, initialData?: Goo
     queryFn: () => fetchGoodsReceipts(query),
     initialData,
     staleTime: PANEL_STALE_MS,
+  });
+}
+
+export function useGoodsReceipt(id: string, initialData?: GoodsReceiptDetail) {
+  return useQuery({
+    queryKey: adminKeys.warehouse.receipts.detail(id),
+    queryFn: () => fetchGoodsReceipt(id),
+    initialData,
+    staleTime: PANEL_STALE_MS,
+  });
+}
+
+/*
+ * Create and edit carry no toast — the form pins field refusals and announces
+ * its own success. Approve and cancel do: they are one-click actions from a
+ * detail page, and the outcome ("stock moved" / "cancelled") is the whole
+ * point. Approval touches inventory, so it invalidates the module-wide prefix.
+ */
+export function useCreateGoodsReceipt() {
+  return usePanelMutation<GoodsReceiptWriteInput, GoodsReceiptDetail>({
+    run: createGoodsReceipt,
+    invalidates: [adminKeys.warehouse.receipts.all],
+  });
+}
+
+export function useUpdateGoodsReceipt() {
+  return usePanelMutation<{ id: string; values: GoodsReceiptWriteInput }, GoodsReceiptDetail>({
+    run: ({ id, values }) => updateGoodsReceipt(id, values),
+    invalidates: [adminKeys.warehouse.receipts.all],
+  });
+}
+
+export function useApproveGoodsReceipt(onDone?: () => void) {
+  return usePanelMutation<{ id: string }, GoodsReceiptDetail>({
+    run: ({ id }) => approveGoodsReceipt(id),
+    invalidates: [adminKeys.warehouse.all],
+    success: "Qabul tasdiqlandi — qoldiqlar yangilandi",
+    onDone,
+  });
+}
+
+export function useCancelGoodsReceipt(onDone?: () => void) {
+  return usePanelMutation<{ id: string }, GoodsReceiptDetail>({
+    run: ({ id }) => cancelGoodsReceipt(id),
+    invalidates: [adminKeys.warehouse.receipts.all],
+    success: "Qabul bekor qilindi",
+    onDone,
   });
 }
