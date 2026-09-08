@@ -75,7 +75,7 @@ export function WarehouseSubnav() {
         );
       })}
 
-      <span className="ml-auto flex items-center gap-1.5 pb-2 pl-3">
+      <span className="ml-auto hidden items-center gap-1.5 pb-2 pl-3 lg:flex">
         {SOON.map((label) => (
           <span
             key={label}
