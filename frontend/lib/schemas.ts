@@ -619,3 +619,112 @@ export const profileDetailsSchema = z.object({
 });
 
 export type ProfileDetailsInput = z.infer<typeof profileDetailsSchema>;
+
+
+/* ── Director panel: warehouse ───────────────────────────────────────────── */
+
+/** The three states `deriveStockStatus()` produces, as a query value. */
+export const stockStatusSchema = z.enum(["available", "limited", "out_of_stock"]);
+
+/** The stock ledger's movement vocabulary — backend/'s `StockMovementType`. */
+export const stockMovementTypeSchema = z.enum([
+  "IN",
+  "OUT",
+  "RESERVE",
+  "RELEASE",
+  "PURCHASE",
+  "WRITE_OFF",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "INVENTORY_ADJUSTMENT",
+]);
+
+export const goodsReceiptStatusSchema = z.enum(["DRAFT", "APPROVED", "CANCELLED"]);
+export const warehouseStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
+
+/** The warehouse product table's URL state — also its React Query key. */
+export const warehouseProductListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  status: stockStatusSchema.optional(),
+  warehouseId: z.string().min(1).optional(),
+  page: adminPageSchema,
+});
+
+export type WarehouseProductListQuery = z.infer<typeof warehouseProductListQuerySchema>;
+
+/** One product's stock ledger, on its detail page. */
+export const productMovementsQuerySchema = z.object({
+  warehouseId: z.string().min(1).optional(),
+  type: stockMovementTypeSchema.optional(),
+  page: adminPageSchema,
+});
+
+export type ProductMovementsQuery = z.infer<typeof productMovementsQuerySchema>;
+
+/** The goods-receipt list's filters. */
+export const goodsReceiptListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  status: goodsReceiptStatusSchema.optional(),
+  warehouseId: z.string().min(1).optional(),
+  page: adminPageSchema,
+});
+
+export type GoodsReceiptListQuery = z.infer<typeof goodsReceiptListQuerySchema>;
+
+/** The global stock-ledger report's filters. */
+export const movementsReportQuerySchema = z.object({
+  warehouseId: z.string().min(1).optional(),
+  productId: z.string().min(1).optional(),
+  type: stockMovementTypeSchema.optional(),
+  /** `YYYY-MM-DD` from a `<input type="date">`; widened to a day range server-side. */
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate").optional(),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate").optional(),
+  page: adminPageSchema,
+});
+
+export type MovementsReportQuery = z.infer<typeof movementsReportQuerySchema>;
+
+/**
+ * Create / edit a warehouse. Messages are codes — the modal is rendered in
+ * three languages and looks the wording up, like every other panel form.
+ */
+export const warehouseWriteSchema = z.object({
+  name: z.string().trim().min(1, "required").max(120, "tooLong"),
+  /** Blank ⇒ backend assigns the next free `W<n>`. */
+  code: z
+    .string()
+    .trim()
+    .max(40, "tooLong")
+    .regex(/^[A-Za-z0-9-]*$/, "codeFormat")
+    .optional(),
+  address: z.string().trim().max(300, "tooLong").optional(),
+  managerId: z.string().min(1).optional(),
+  status: warehouseStatusSchema.default("ACTIVE"),
+});
+
+export type WarehouseWriteInput = z.infer<typeof warehouseWriteSchema>;
+
+/** One line of a goods receipt, as the intake form collects it. */
+export const goodsReceiptItemSchema = z.object({
+  productId: z.string().min(1, "required"),
+  quantity: z.coerce.number().int("integer").min(1, "min1"),
+  unitCost: z.coerce
+    .number()
+    .min(0, "min0")
+    .refine((value) => Number.isFinite(value) && Math.round(value * 100) === value * 100, "twoDecimals"),
+});
+
+export type GoodsReceiptItemInput = z.infer<typeof goodsReceiptItemSchema>;
+
+/** A goods receipt (stock intake). Approval — the only thing that moves stock
+ *  — is a separate action on the detail page, never part of this payload. */
+export const goodsReceiptWriteSchema = z.object({
+  warehouseId: z.string().min(1, "required"),
+  supplierName: z.string().trim().max(160, "tooLong").optional(),
+  note: z.string().trim().max(2000, "tooLong").optional(),
+  discount: z.coerce.number().min(0, "min0").default(0),
+  tax: z.coerce.number().min(0, "min0").default(0),
+  items: z.array(goodsReceiptItemSchema).min(1, "atLeastOneLine").max(200, "tooManyLines"),
+});
+
+export type GoodsReceiptWriteInput = z.infer<typeof goodsReceiptWriteSchema>;

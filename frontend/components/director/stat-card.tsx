@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { formatDelta } from "@/lib/analytics/format";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,8 @@ export function StatCard({
   noComparisonLabel,
 }: {
   label: string;
-  value: string;
+  /** A formatted figure — a plain string, or a `NumberTicker` that counts to it. */
+  value: ReactNode;
   unit?: string;
   change?: number | null;
   comparisonLabel?: string;
