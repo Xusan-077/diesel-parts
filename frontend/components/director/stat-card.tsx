@@ -26,6 +26,7 @@ export type StatTone =
   | "average"
   | "pipeline"
   | "neutral"
+  | "success"
   | "warning"
   | "danger";
 
@@ -35,6 +36,10 @@ const TONE: Record<StatTone, { disc: string; icon: string }> = {
   average: { disc: "bg-data-purple-surface", icon: "text-data-purple" },
   pipeline: { disc: "bg-data-amber-surface", icon: "text-data-amber" },
   neutral: { disc: "bg-surface-muted", icon: "text-muted" },
+  // `success` joins the `warning` / `danger` status pair for a figure that
+  // reads as good news in its own right — money in, a profit — using the same
+  // `--success` token the panel's badges do, not a repaintable accent.
+  success: { disc: "bg-success-surface", icon: "text-success" },
   warning: { disc: "bg-warning-surface", icon: "text-warning" },
   danger: { disc: "bg-danger-surface", icon: "text-danger" },
 };

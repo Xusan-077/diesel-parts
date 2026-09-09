@@ -735,3 +735,111 @@ export const goodsReceiptWriteSchema = z.object({
 });
 
 export type GoodsReceiptWriteInput = z.infer<typeof goodsReceiptWriteSchema>;
+
+/* ── Director panel: finance (moliya) ────────────────────────────────────── */
+
+/** `YYYY-MM-DD` from an `<input type="date">`; widened to a day range server-side. */
+const isoDaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate");
+
+/** backend/'s `PaymentMethod` enum. */
+export const paymentMethodSchema = z.enum([
+  "CASH",
+  "CARD",
+  "TRANSFER",
+  "ONLINE",
+  "SELLER_AGREEMENT",
+]);
+
+export type PaymentMethodValue = z.infer<typeof paymentMethodSchema>;
+
+/** The subset a staff member may pick when recording a debt payment by hand. */
+export const manualPaymentMethodSchema = z.enum(["CASH", "CARD", "TRANSFER"]);
+
+/** `Expense.category` — see the finance module spec. */
+export const expenseCategorySchema = z.enum([
+  "RENT",
+  "SALARY",
+  "UTILITIES",
+  "LOGISTICS",
+  "TAX",
+  "SUPPLIES",
+  "MARKETING",
+  "BANK",
+  "OTHER",
+]);
+
+export type ExpenseCategoryValue = z.infer<typeof expenseCategorySchema>;
+
+/** An order's debt state — `PAID` is not debt, so it is not offered as a filter. */
+export const debtStatusSchema = z.enum(["UNPAID", "PARTIAL"]);
+
+/** The full set a debt row can carry (a cleared order comes back `PAID`). */
+export type DebtStatusValue = "UNPAID" | "PARTIAL" | "PAID";
+
+/** Shared date window for the finance KPI header. */
+export const financeSummaryQuerySchema = z.object({
+  dateFrom: isoDaySchema.optional(),
+  dateTo: isoDaySchema.optional(),
+});
+
+export type FinanceSummaryQuery = z.infer<typeof financeSummaryQuerySchema>;
+
+/** The payments (income) ledger's URL state — also its React Query key. */
+export const financePaymentListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  method: paymentMethodSchema.optional(),
+  dateFrom: isoDaySchema.optional(),
+  dateTo: isoDaySchema.optional(),
+  page: adminPageSchema,
+});
+
+export type FinancePaymentListQuery = z.infer<typeof financePaymentListQuerySchema>;
+
+/** The expenses ledger's filters. */
+export const financeExpenseListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  category: expenseCategorySchema.optional(),
+  dateFrom: isoDaySchema.optional(),
+  dateTo: isoDaySchema.optional(),
+  page: adminPageSchema,
+});
+
+export type FinanceExpenseListQuery = z.infer<typeof financeExpenseListQuerySchema>;
+
+/** The debt list's filters. */
+export const financeDebtListQuerySchema = z.object({
+  q: z.string().max(200).default(""),
+  status: debtStatusSchema.optional(),
+  page: adminPageSchema,
+});
+
+export type FinanceDebtListQuery = z.infer<typeof financeDebtListQuerySchema>;
+
+/**
+ * Create / edit an expense. Messages are codes — the modal looks the wording
+ * up per locale, like every other panel form.
+ */
+export const expenseWriteSchema = z.object({
+  title: z.string().trim().min(1, "required").max(160, "tooLong"),
+  category: expenseCategorySchema,
+  amount: z.coerce
+    .number()
+    .positive("positive")
+    .refine((value) => Number.isFinite(value) && Math.round(value * 100) === value * 100, "twoDecimals"),
+  spentAt: isoDaySchema,
+  note: z.string().trim().max(2000, "tooLong").optional(),
+});
+
+export type ExpenseWriteInput = z.infer<typeof expenseWriteSchema>;
+
+/** Record a partial (or clearing) payment against a debtor's order. */
+export const debtPaymentSchema = z.object({
+  amount: z.coerce
+    .number()
+    .positive("positive")
+    .refine((value) => Number.isFinite(value) && Math.round(value * 100) === value * 100, "twoDecimals"),
+  method: manualPaymentMethodSchema,
+  paidAt: isoDaySchema.optional(),
+});
+
+export type DebtPaymentInput = z.infer<typeof debtPaymentSchema>;
