@@ -17,11 +17,15 @@ import type { AdminNavItem } from "@/lib/auth/admin-nav";
  * reads as a broken panel, not as a roadmap, so the groups the brief sketched
  * for warehouse movements, returns and debts are absent until those pages are.
  */
-export type NavGroupId = "overview" | "catalog" | "sales" | "management";
+export type NavGroupId = "overview" | "finance" | "catalog" | "sales" | "management";
 
 /** Group order, and the routes each one claims. */
 const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
   { id: "overview", hrefs: ["/director", "/director/analytics", "/admin/seller"] },
+  // A group of one renders bare in `PanelNav` (no heading) — which is exactly
+  // "a separate top-level nav item". Money sits next to Analitika: both are
+  // director cockpit views, not catalogue or sales-floor work.
+  { id: "finance", hrefs: ["/director/finance"] },
   {
     id: "catalog",
     hrefs: ["/director/products", "/director/warehouse", "/director/categories", "/director/discounts"],

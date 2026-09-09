@@ -17,6 +17,7 @@ import {
   Percent,
   Star,
   Users,
+  Wallet,
   Warehouse,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -37,6 +38,7 @@ import { Icon } from "@/components/ui/icon";
 const GLYPH: Record<string, LucideIcon> = {
   "/director": LayoutDashboard,
   "/admin/seller": LayoutDashboard,
+  "/director/finance": Wallet,
   "/director/products": Package,
   "/director/warehouse": Warehouse,
   "/director/customers": BookUser,

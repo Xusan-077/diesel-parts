@@ -2,6 +2,10 @@ import type {
   AdminProductListQuery,
   AuditListQuery,
   CustomerListQuery,
+  FinanceDebtListQuery,
+  FinanceExpenseListQuery,
+  FinancePaymentListQuery,
+  FinanceSummaryQuery,
   GoodsReceiptListQuery,
   InquiryListQuery,
   MovementsReportQuery,
@@ -87,6 +91,24 @@ export const adminKeys = {
       all: ["admin", "warehouse", "reports"] as const,
       movements: (query: MovementsReportQuery) =>
         ["admin", "warehouse", "reports", "movements", query] as const,
+    },
+  },
+  finance: {
+    /** Prefix over the whole module — recording a debt payment or an expense
+     *  moves the KPI header, which every tab shows. */
+    all: ["admin", "finance"] as const,
+    summary: (query: FinanceSummaryQuery) => ["admin", "finance", "summary", query] as const,
+    payments: (query: FinancePaymentListQuery) =>
+      ["admin", "finance", "payments", query] as const,
+    expenses: {
+      all: ["admin", "finance", "expenses"] as const,
+      list: (query: FinanceExpenseListQuery) =>
+        ["admin", "finance", "expenses", "list", query] as const,
+    },
+    debts: {
+      all: ["admin", "finance", "debts"] as const,
+      list: (query: FinanceDebtListQuery) =>
+        ["admin", "finance", "debts", "list", query] as const,
     },
   },
 } as const;
