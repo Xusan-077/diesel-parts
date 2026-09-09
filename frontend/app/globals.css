@@ -1872,20 +1872,13 @@ body {
    one raised centre button. Desktop keeps the three-row header (`HeaderNav`
    appears at `lg`), so the bar is `lg:hidden` and nothing here runs above it.
 
-   Material. The header and the footer are the site's dark chrome (#151719 in
-   both themes — see the MARKETING SITE PALETTE block). The tab bar is that
-   same chrome one shade deeper, so a bar floating over a scrolled page reads
-   as sitting *above* the frame rather than being a torn-off piece of it. It
-   repaints the chrome palette the way `header-plate` does — scoped to its own
-   subtree, every child still naming the role ("secondary copy inside the
-   frame") and the role resolving to the value that reads on #0d0e11. The
-   Radix sheet the centre button opens is portalled out of this subtree, so it
-   carries the class too.
-
-   The orange is the workshop accent the 404 plate already pins (`--nf-orange`,
-   7.4:1 on this ground) rather than the storefront's brighter `--chrome-accent`
-   (#ff8a5c) — the bar is one deliberately loud element and the deeper orange
-   is what carries that against the deeper black.
+   No palette of its own. It paints with the same `--chrome*` tokens as the
+   header and the footer (see the MARKETING SITE PALETTE block) — `bg-chrome`,
+   `text-chrome-secondary`, the `--chrome-accent` marker on the active tab —
+   and the brand red `--accent` on the centre button, the fill every primary
+   button on the site already wears. Only `--mobile-tabbar-clearance` is
+   declared here: the room the fixed bar needs reserved at the foot of the
+   page.
    ========================================================================== */
 
 .site-root {
@@ -1900,17 +1893,4 @@ body {
   .site-root {
     --mobile-tabbar-clearance: calc(4rem + env(safe-area-inset-bottom));
   }
-}
-
-.mobile-tabbar {
-  --chrome: #0d0e11;
-  --chrome-surface: #17191d;
-  --chrome-hover: #1c1f24;
-  --chrome-border: #23262b;
-  --chrome-border-strong: #7d848b;
-  --chrome-foreground: #f2f3f5;
-  --chrome-secondary: #b5babe;
-  --chrome-muted: #7d848b;
-  --chrome-accent: #f77d2a;
-  --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
 }

@@ -26,6 +26,13 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
  * has no always-visible way to Home, the catalog, the cart or the cabinet
  * without opening the drawer first. Desktop keeps that header untouched.
  *
+ * It is the same dark material as the header and the footer — `--chrome`
+ * (#151719 in both themes) with the marketing accent (`--chrome-accent` for
+ * the active tab, the brand red `--accent` on the centre button, the same
+ * fill every primary button on the site wears). No palette of its own; a
+ * `border-t` and an upward shadow are what separate it from the footer when
+ * it floats over it.
+ *
  * The centre button is a part-number search, not a fifth destination. Diesel
  * buyers almost always arrive holding the OEM number stamped on the part that
  * failed, and that is a different job from browsing: one field, framed around
@@ -38,7 +45,11 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
  * Hide-on-scroll follows the header exactly (`useScrollDirection` +
  * `isHeaderCondensed`): gone while the shopper reads downward, back the moment
  * they scroll up or reach the top. `transform` only, so the page layout never
- * moves; `prefers-reduced-motion` flattens the transition in globals.css.
+ * moves; `prefers-reduced-motion` flattens the transition in globals.css. The
+ * scroll tracker is remounted per route (`key={pathname}` on the inner
+ * component) so a fresh page always starts with the bar shown — the hook
+ * keeps its state across client navigations, and Next's scroll-to-top does
+ * not reliably produce a scroll event it could read.
  *
  * It stays out of the way on `/cart` and `/checkout`, which pin their own
  * total-and-continue bar to the same edge — during checkout a jump to the
@@ -63,8 +74,26 @@ function hasOwnBottomBar(pathname: string): boolean {
   return isNavItemActive(pathname, "/cart") || isNavItemActive(pathname, "/checkout");
 }
 
-export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBarProps) {
+export function MobileTabBar(props: MobileTabBarProps) {
   const pathname = usePathname();
+
+  if (hasOwnBottomBar(pathname)) {
+    return null;
+  }
+
+  // Keyed by route: remounts the scroll tracker on every navigation so the bar
+  // is always shown on a fresh page rather than inheriting the hidden state
+  // from wherever the shopper was on the previous one.
+  return <MobileTabBarInner key={pathname} pathname={pathname} {...props} />;
+}
+
+function MobileTabBarInner({
+  pathname,
+  nav,
+  header,
+  mobileNav,
+  closeLabel,
+}: MobileTabBarProps & { pathname: string }) {
   const router = useRouter();
   const cart = useCart();
   const condensed = isHeaderCondensed(useScrollDirection());
@@ -73,10 +102,6 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { terms: history, add: addHistoryTerm } = useSearchHistory();
-
-  if (hasOwnBottomBar(pathname)) {
-    return null;
-  }
 
   const leading: Tab[] = [
     { href: "/", label: nav.home, icon: Home },
@@ -124,7 +149,7 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
             {showBadge ? (
               <span
                 aria-hidden
-                className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-chrome-accent px-1 text-[10px] font-semibold leading-none text-chrome ring-2 ring-[color:var(--chrome)]"
+                className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-accent-foreground ring-2 ring-[color:var(--chrome)]"
               >
                 {cartCountLabel}
               </span>
@@ -151,7 +176,7 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
         <nav
           aria-label={mobileNav.label}
           className={cn(
-            "mobile-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-chrome-border bg-chrome lg:hidden",
+            "fixed inset-x-0 bottom-0 z-40 border-t border-chrome-border bg-chrome lg:hidden",
             "pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-14px_rgb(0_0_0/0.7)]",
             "transition-transform duration-300 ease-out",
             condensed && "translate-y-[calc(100%+2rem)]"
@@ -166,11 +191,11 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
                   type="button"
                   aria-label={mobileNav.searchAction}
                   className={cn(
-                    "-translate-y-5 flex h-14 w-14 items-center justify-center rounded-full bg-chrome-accent text-chrome outline-none",
+                    "-translate-y-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground outline-none",
                     "ring-4 ring-[color:var(--chrome)]",
-                    "shadow-[0_8px_22px_-4px_color-mix(in_srgb,var(--chrome-accent)_55%,transparent)]",
+                    "shadow-[0_8px_22px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]",
                     "transition-transform hover:-translate-y-6",
-                    "focus-visible:ring-chrome-accent",
+                    "focus-visible:ring-accent-foreground",
                     "motion-reduce:transition-none motion-reduce:hover:-translate-y-5"
                   )}
                 >
@@ -211,7 +236,7 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
                     transition={MOTION.drawer}
-                    className="mobile-tabbar fixed inset-x-0 bottom-0 z-100 rounded-t-2xl border-t border-chrome-border bg-chrome pb-[max(1.5rem,env(safe-area-inset-bottom))] text-chrome-foreground shadow-[0_-24px_56px_-12px_rgb(0_0_0/0.7)]"
+                    className="fixed inset-x-0 bottom-0 z-100 rounded-t-2xl border-t border-chrome-border bg-chrome pb-[max(1.5rem,env(safe-area-inset-bottom))] text-chrome-foreground shadow-[0_-24px_56px_-12px_rgb(0_0_0/0.7)]"
                   >
                     <div className="mx-auto max-w-md px-4 pt-3">
                       <span
@@ -267,7 +292,7 @@ export function MobileTabBar({ nav, header, mobileNav, closeLabel }: MobileTabBa
                         </span>
                         <button
                           type="submit"
-                          className="h-11 shrink-0 rounded-md bg-chrome-accent px-4 text-sm font-semibold text-chrome outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-chrome-accent focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
+                          className="h-11 shrink-0 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground outline-none transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-chrome-accent focus-visible:ring-offset-2 focus-visible:ring-offset-chrome"
                         >
                           {mobileNav.searchSubmit}
                         </button>
