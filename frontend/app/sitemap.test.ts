@@ -58,14 +58,14 @@ describe("sitemap", () => {
   it("includes the home page once", async () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
-    expect(urls.filter((url) => url === "https://dieselparts.uz")).toHaveLength(1);
+    expect(urls.filter((url) => url === "https://diesel-parts.uz")).toHaveLength(1);
   });
 
   it("includes every product detail URL", async () => {
     const entries = await sitemap();
     const urls = new Set(entries.map((entry) => entry.url));
     for (const slug of PRODUCT_SLUGS) {
-      expect(urls.has(`https://dieselparts.uz/products/${slug}`)).toBe(true);
+      expect(urls.has(`https://diesel-parts.uz/products/${slug}`)).toBe(true);
     }
   });
 
@@ -80,7 +80,7 @@ describe("sitemap", () => {
     const entries = await sitemap();
 
     expect(entries).toHaveLength(STATIC_PATHS.length + blogPosts.length);
-    expect(entries.map((entry) => entry.url)).toContain("https://dieselparts.uz/products");
+    expect(entries.map((entry) => entry.url)).toContain("https://diesel-parts.uz/products");
   });
 
   /*
@@ -91,7 +91,7 @@ describe("sitemap", () => {
   it("emits no locale-prefixed URLs", async () => {
     const entries = await sitemap();
     for (const entry of entries) {
-      expect(entry.url).not.toMatch(/dieselparts\.uz\/(uz|ru|en)(\/|$)/);
+      expect(entry.url).not.toMatch(/diesel-parts\.uz\/(uz|ru|en)(\/|$)/);
     }
   });
 });
