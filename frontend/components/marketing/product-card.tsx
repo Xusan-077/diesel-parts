@@ -65,6 +65,7 @@ export function ProductCard({
   ribbon,
 }: ProductCardProps) {
   const price = formatPrice(product.price, lang);
+  const soldOut = product.stockStatus === "out_of_stock";
 
   return (
     /*
@@ -88,8 +89,23 @@ export function ProductCard({
           alt={product.name[lang]}
           zoomLabel={productDict.zoomLabel}
           closeLabel={productDict.zoomCloseLabel}
+          dimmed={soldOut}
           className="aspect-4/3 w-full"
         />
+
+        {/*
+          The "gone" marker sits over the centre of the blurred photo, not just
+          in the corner badge below — a whole card that has quietly greyed out
+          reads faster than one word tucked at the edge. `pointer-events-none`
+          so the zoom target underneath still answers a click.
+        */}
+        {soldOut ? (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+            <span className="rounded-md border border-border bg-background/85 px-3 py-1.5 type-eyebrow text-danger shadow-sm backdrop-blur-sm">
+              {stock.outOfStock}
+            </span>
+          </div>
+        ) : null}
 
         {ribbon ? (
           <span className="absolute left-3 top-3 z-10 rounded-full bg-accent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">

@@ -16,6 +16,7 @@ function setup(props?: Partial<Parameters<typeof CheckoutDetailsForm>[0]>) {
   render(
     <CheckoutDetailsForm
       formId="checkout-form"
+      lang="uz"
       dict={dict}
       footerDict={footerDict}
       profile={EMPTY_PROFILE}

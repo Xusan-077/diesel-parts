@@ -24,12 +24,11 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
  * component is never nested inside `.header-plate`, so it keeps resolving to
  * the true dark frame regardless of the page's own theme, same as before.
  *
- * `--success` is the one token left out: it re-steps per theme (a light-mode
- * green would all but disappear on this permanently dark plate), and there is
- * no chrome-scoped equivalent to reach for instead. This is `--success`'s own
- * dark-theme value, held as a literal rather than a variable for that reason.
+ * The "online" dot reads `--chrome-success`: `--success` itself re-steps per
+ * theme and its light value all but disappears on this permanently dark plate,
+ * so the chrome palette carries its own pinned status green alongside
+ * `--chrome-accent` and the rest (see globals.css).
  */
-const STATUS_ONLINE = "#7cd591";
 
 /**
  * Telegram's own mark. Lucide ships a generic paper plane, which reads as
@@ -207,14 +206,8 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
                 <p className="truncate text-sm font-semibold text-chrome-foreground">{support.title}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-chrome-secondary">
                   <span className="relative flex h-1.5 w-1.5 shrink-0">
-                    <span
-                      className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden"
-                      style={{ background: STATUS_ONLINE }}
-                    />
-                    <span
-                      className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                      style={{ background: STATUS_ONLINE }}
-                    />
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chrome-success opacity-60 motion-reduce:hidden" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-chrome-success" />
                   </span>
                   {support.status}
                 </p>
@@ -320,14 +313,8 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
           aria-hidden
           className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-chrome"
         >
-          <span
-            className="absolute inline-flex h-2 w-2 animate-ping rounded-full opacity-60 motion-reduce:hidden"
-            style={{ background: STATUS_ONLINE }}
-          />
-          <span
-            className="relative inline-flex h-2 w-2 rounded-full"
-            style={{ background: STATUS_ONLINE }}
-          />
+          <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-chrome-success opacity-60 motion-reduce:hidden" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-chrome-success" />
         </span>
       </button>
     </>

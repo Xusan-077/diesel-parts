@@ -235,4 +235,14 @@ describe("ProductCard as a grid cell", () => {
     expect(screen.queryByRole("button", { name: productActions.addToCart })).toBeNull();
     expect(screen.getByRole("link", { name: common.requestPrice })).toBeDefined();
   });
+
+  it("greys out an out-of-stock part and takes its add button away", () => {
+    renderWith({ product: { ...product, stockStatus: "out_of_stock" } });
+
+    // Three marks say it — the centre overlay, the corner badge, and the inert
+    // slot where the add button was — and none of them is a button.
+    expect(screen.getAllByText(common.stock.outOfStock).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole("button", { name: productActions.addToCart })).toBeNull();
+    expect(screen.queryByRole("button", { name: productActions.outOfStock })).toBeNull();
+  });
 });
