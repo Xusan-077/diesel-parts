@@ -466,6 +466,40 @@ Post-deploy verification, all PASS:
   auth middleware; routes resolve and preserve the intended path — was not
   reachable before this deploy).
 
+### DONE — follow-up: green the test baseline + fix a warehouse 500 (2026-09-09)
+
+Two follow-up branches, each `--no-ff` into `main`:
+
+1. `fix/pre-existing-test-failures` (merge `b373792`) — the 6 long-standing
+   vitest failures were all stale **test** assertions, no runtime change:
+   `count-up` (hero copy went 15→30), `sitemap` (domain `dieselparts.uz` →
+   `diesel-parts.uz`), `workshop-backdrop` (`--nf-*` → `--parallax-*` after
+   the parallax hook extraction). Suite: `0 failed | 1484 passed`.
+
+2. `fix/warehouse-number-ticker-rsc` (merge `cdaba86`) — **production 500 on
+   `/director/warehouse`** (and it would have hit the product / warehouse
+   detail pages). `<NumberTicker>` (a Client Component) was passed
+   `formatInteger` / `formatSum` as a prop from a Server Component — "Functions
+   cannot be passed directly to Client Components". Type-checked and built
+   clean because it only fails at render time, and the component had no test.
+   Fixed by making `format` a serializable name (`"plain" | "integer" | "sum"`,
+   resolved from a table inside the component), which also makes tsc reject the
+   old misuse. Added the component's first test. Vercel `diesel-parts-p0bj3xrnj`
+   — Ready / Production.
+
+Post-fix verification against prod, logged in as director
+(`director@dieselparts.uz` — note: no hyphen, unlike the seed's
+`director@diesel-parts.uz`), all PASS:
+- `GET /director/warehouse` → **200** (was 500), KPI tiles render
+  (`productCount` 19, rest 0 — no warehouse data seeded yet),
+  "So'nggi harakatlar" / "To'ldirish kerak" panels present.
+- `/products`, `/products/cat-injector-3126`, `/warehouses` (empty state
+  "Hali ombor yo'q"), `/incomes`, `/incomes/new` (Ombor / Yetkazib beruvchi
+  fields), `/reports/{stock,low-stock,movements}` → **200**, real content,
+  no error banner, no error digest in the payload.
+- Browser-console check not done — the Claude-in-Chrome extension was not
+  connected this session; verification was HTTP + SSR-HTML content only.
+
 ### DONE — backend + frontend redeployed (2026-09-07)
 
 `feat/dashboard-dataviz-color-tokens` (@ `34d4094`, warehouse Phase 1 merged)
