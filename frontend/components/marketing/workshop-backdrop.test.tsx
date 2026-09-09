@@ -63,13 +63,13 @@ describe("WorkshopBackdrop", () => {
     const { container } = render(<WorkshopBackdrop />);
     const root = scene(container);
 
-    expect(root.style.getPropertyValue("--nf-x")).toBe("");
+    expect(root.style.getPropertyValue("--parallax-x")).toBe("");
 
     movePointer(window.innerWidth, window.innerHeight / 2);
     await nextFrame();
 
-    expect(root.style.getPropertyValue("--nf-x")).toBe("13.0px");
-    expect(root.style.getPropertyValue("--nf-y")).toBe("0.0px");
+    expect(root.style.getPropertyValue("--parallax-x")).toBe("13.0px");
+    expect(root.style.getPropertyValue("--parallax-y")).toBe("0.0px");
   });
 
   it("leaves the scene alone when the visitor asked for less motion", async () => {
@@ -80,6 +80,6 @@ describe("WorkshopBackdrop", () => {
     movePointer(window.innerWidth, window.innerHeight);
     await nextFrame();
 
-    expect(root.style.getPropertyValue("--nf-x")).toBe("");
+    expect(root.style.getPropertyValue("--parallax-x")).toBe("");
   });
 });
