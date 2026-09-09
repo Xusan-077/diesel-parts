@@ -21,7 +21,7 @@ export default function SellerProductDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="h-8 w-64 animate-pulse rounded-sm bg-surface-muted" />
-        <div className="h-40 animate-pulse rounded-md bg-surface-muted" />
+        <div className="h-40 animate-pulse rounded-lg bg-surface-muted" />
       </div>
     );
   }
@@ -30,37 +30,40 @@ export default function SellerProductDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
         <div>
-          <p className="font-mono text-xs text-muted">{p.sku}</p>
-          <h1 className="text-xl font-semibold text-foreground">{p.name}</h1>
+          <p className="type-eyebrow flex items-center gap-2 font-mono text-muted">
+            <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-accent-strong" />
+            {p.sku}
+          </p>
+          <h1 className="type-page mt-1 text-foreground">{p.name}</h1>
         </div>
         <Badge tone={STOCK_STATUS_TONE[p.stockStatus]}>{STOCK_STATUS_LABEL[p.stockStatus]}</Badge>
-      </div>
+      </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-1">Sotuv narxi</p>
           <p className="font-mono text-lg text-foreground">{formatMoney(p.sellingPrice)}</p>
         </div>
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-1">Kategoriya</p>
           <p className="text-sm text-foreground">{p.category.name}</p>
         </div>
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-1">Brend</p>
           <p className="text-sm text-foreground">{p.brand.name}</p>
         </div>
       </div>
 
-      {p.description ? <p className="text-sm text-muted">{p.description}</p> : null}
+      {p.description ? <p className="type-body text-muted">{p.description}</p> : null}
 
       <div>
-        <p className="mb-2 text-sm font-medium text-foreground">Ombor bo&apos;yicha qoldiq</p>
+        <p className="type-title mb-3 text-foreground">Ombor bo&apos;yicha qoldiq</p>
         {stock.isError ? (
           <QueryErrorState error={stock.error} onRetry={() => stock.refetch()} />
         ) : stock.isLoading || !stock.data ? (
-          <div className="h-32 animate-pulse rounded-md bg-surface-muted" />
+          <div className="h-32 animate-pulse rounded-lg bg-surface-muted" />
         ) : (
           <Table>
             <TableHead>

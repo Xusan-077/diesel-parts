@@ -40,6 +40,10 @@ build_output.txt
 # vercel
 .vercel
 
+# vendored skill content, re-fetched from skills-lock.json (which IS committed).
+# Treated like node_modules: the lock is the source of truth, not the payload.
+/.agents/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -36,7 +36,13 @@ export default async function CheckoutPage() {
       <p className="mt-2 type-body text-muted">{dict.checkout.subtitle}</p>
 
       <div className="mt-10">
-        <CheckoutClient lang={lang} dict={dict.checkout} cartDict={dict.cart} />
+        <CheckoutClient
+          lang={lang}
+          dict={dict.checkout}
+          cartDict={dict.cart}
+          footerDict={dict.footer}
+          phone={session.phone}
+        />
       </div>
     </Container>
   );

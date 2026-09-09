@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { formatDelta } from "@/lib/analytics/format";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
@@ -9,11 +10,24 @@ import { cn } from "@/lib/utils";
  * purple, pipeline amber — drawn from the CATEGORICAL DATA PALETTE in
  * globals.css so a future tile picks the same token rather than a fresh
  * inline colour. `neutral` is the quiet default for the lower queue
- * tiles, which are a count and not a headline figure. The brand red is
- * deliberately not an option here: it stays on the nav, the logo and the
- * primary buttons.
+ * tiles, which are a count and not a headline figure.
+ *
+ * `warning` / `danger` are the status pair, for a tile whose figure is a
+ * shortage a director acts on — "Kam qoldi", "Tugagan" on the warehouse
+ * page — so the same count reads the same colour there as it does in the
+ * analytics inventory panel. They resolve to `--warning` / `--danger`,
+ * not to a repaintable accent: a critical status may not move with the
+ * chrome. Everywhere else the brand red stays off these tiles — it is for
+ * the nav, the logo and the primary buttons.
  */
-export type StatTone = "revenue" | "orders" | "average" | "pipeline" | "neutral";
+export type StatTone =
+  | "revenue"
+  | "orders"
+  | "average"
+  | "pipeline"
+  | "neutral"
+  | "warning"
+  | "danger";
 
 const TONE: Record<StatTone, { disc: string; icon: string }> = {
   revenue: { disc: "bg-data-green-surface", icon: "text-data-green" },
@@ -21,6 +35,8 @@ const TONE: Record<StatTone, { disc: string; icon: string }> = {
   average: { disc: "bg-data-purple-surface", icon: "text-data-purple" },
   pipeline: { disc: "bg-data-amber-surface", icon: "text-data-amber" },
   neutral: { disc: "bg-surface-muted", icon: "text-muted" },
+  warning: { disc: "bg-warning-surface", icon: "text-warning" },
+  danger: { disc: "bg-danger-surface", icon: "text-danger" },
 };
 
 /**
@@ -47,7 +63,8 @@ export function StatCard({
   noComparisonLabel,
 }: {
   label: string;
-  value: string;
+  /** A formatted figure — a plain string, or a `NumberTicker` that counts to it. */
+  value: ReactNode;
   unit?: string;
   change?: number | null;
   comparisonLabel?: string;

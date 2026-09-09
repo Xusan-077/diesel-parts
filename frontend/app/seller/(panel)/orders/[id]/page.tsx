@@ -21,32 +21,36 @@ export default function SellerOrderDetailPage() {
     return (
       <div className="flex flex-col gap-4">
         <div className="h-8 w-48 animate-pulse rounded-sm bg-surface-muted" />
-        <div className="h-40 animate-pulse rounded-md bg-surface-muted" />
+        <div className="h-40 animate-pulse rounded-lg bg-surface-muted" />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-6">
         <div>
-          <h1 className="font-mono text-xl font-semibold text-foreground">{order.orderNumber}</h1>
-          <p className="mt-1 text-xs text-muted">{formatDateTime(order.createdAt)}</p>
+          <p className="type-eyebrow flex items-center gap-2 text-muted">
+            <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-accent-strong" />
+            Buyurtma
+          </p>
+          <h1 className="type-page mt-1 font-mono text-foreground">{order.orderNumber}</h1>
+          <p className="type-caption mt-2 text-muted">{formatDateTime(order.createdAt)}</p>
         </div>
         <Badge tone={ORDER_STATUS_TONE[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
-      </div>
+      </header>
 
-      <div className="rounded-md border border-border bg-surface p-4">
+      <div className="panel">
         <OrderStatusStepper order={order} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-2">Mijoz</p>
           <p className="text-sm text-foreground">{order.customer.name}</p>
           <p className="font-mono text-xs text-muted">{order.customer.phone}</p>
         </div>
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-2">Ombor</p>
           <p className="text-sm text-foreground">{order.warehouse.name}</p>
         </div>

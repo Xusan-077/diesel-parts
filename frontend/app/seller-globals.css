@@ -1,66 +1,195 @@
 @import "tailwindcss";
 
-/*
- * Independent Tailwind entry point for the standalone seller panel
- * (/login, /seller/*). Deliberately NOT the shared app/globals.css: the
- * panel talks to a separate backend and was approved as its own system with
- * its own tokens (background #0D0E11, accent #F77D2A) rather than the
- * storefront/admin ramp — see the ACCENT REPAINT note in globals.css for why
- * that ramp must not move for this panel's sake, and vice versa.
- */
+/* ==========================================================================
+   STANDALONE SELLER PANEL — DESIGN TOKENS
+   --------------------------------------------------------------------------
+   Independent Tailwind entry point for the standalone seller panel
+   (/seller/login, /seller/*). It talks to a separate backend and keeps its
+   own token file rather than importing app/globals.css — the two apps must
+   be editable without moving each other.
+
+   What changed: the panel used to carry a hand-rolled palette of its own
+   (background #0D0E11, accent #F77D2A, a short status set). It now mirrors
+   the DIRECTOR panel's dark ramp value-for-value — same neutrals, same
+   status casts, the same categorical data palette and the same `panel` /
+   `type-*` recipes — so a seller and a director are looking at one product
+   in one visual language. The panel stays dark-only: there is no theme
+   toggle here, so this is a single `:root` block, not a light half plus a
+   `.dark` override.
+
+   THE ONE RULE, inherited from the director ramp:
+   the accent means "you can act on this, or you are here" — primary button,
+   active nav, selection, focus ring. It is never a status. `--danger` is a
+   separate red (#e05c5f) that reads clearly apart from the accent orange, so
+   "this is a warning, not a CTA" is legible from the colour alone.
+   ========================================================================== */
 
 :root {
+  /* Native controls (select lists, scrollbars, date picker) are painted by
+     the OS. This is the one declaration that tells it which theme. */
   color-scheme: dark;
 
-  --background: #0d0e11;
-  --surface: #16181d;
-  --surface-muted: #1c1f26;
-  --surface-hover: #21242c;
+  /* --- Neutral ramp — the director panel's dark steps --------------------
+     `surface` is the one container colour; `surface-muted` is a recessed
+     area inside it (table head, well, meter track). */
+  --background: #0b0d0e;       /* the page itself */
+  --background-subtle: #101315;/* an alternating band across the page */
+  --surface: #151819;          /* raised: cards, panels, menus, dialogs */
+  --surface-elevated: #202426; /* a thing that floats: menu, popover, dialog */
+  --surface-muted: #101315;    /* recessed: table heads, wells, tracks */
+  --surface-hover: #1b1f21;    /* pointer feedback on any of the above */
 
-  --foreground: #f3f4f6;
-  --muted: #9aa0ac;
-  --disabled: #5b616e;
+  /* Dividers are decorative and stay quiet. A *control* boundary — an input,
+     a segmented control — uses --border-strong / --field-border, which clear
+     the 3:1 that WCAG 1.4.11 asks of user-interface components. */
+  --border-color: #292e31;
+  --border-subtle: #202527;
+  --border-strong: #858c91;    /* 5.23:1 on surface */
 
-  --border-color: #262a33;
-  --border-strong: #333844;
+  --muted: #858c91;            /* meta beside a figure — 5.23:1 on surface */
+  --foreground: #f5f6f7;       /* 16.50:1 on surface */
+  --text-secondary: #b5babe;   /* body copy that is not a heading — 9.12:1 */
+  --text-disabled: #555b60;
+  --disabled: #555b60;         /* legacy alias — some seller controls name it */
 
-  --accent: #f77d2a;
-  --accent-hover: color-mix(in srgb, var(--accent) 88%, black);
-  --accent-active: color-mix(in srgb, var(--accent) 76%, black);
-  --accent-foreground: #17110a;
-  --accent-subtle: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  /* --- Accent: one hue, four jobs --------------------------------------- */
+  --accent: #ff6b2c;            /* FILL ONLY: primary button, active nav */
+  --accent-foreground: #0d0e0f; /* label on the fill */
+  --accent-edge: #e95720;       /* the 1px edge that keeps the button's shape */
+  --accent-strong: #ff8a5c;     /* TEXT: links, the active nav marker — 7.68:1 */
+  --accent-subtle: #2a1710;     /* tint fill */
+  --accent-hover: color-mix(in srgb, var(--accent) 90%, var(--surface));
+  --accent-active: color-mix(in srgb, var(--accent) 80%, var(--surface));
 
-  --danger: #f0553f;
-  --danger-surface: color-mix(in srgb, var(--danger) 16%, var(--surface));
-  --success: #3fb56d;
-  --success-surface: color-mix(in srgb, var(--success) 16%, var(--surface));
-  --warning: #e3b341;
-  --warning-surface: color-mix(in srgb, var(--warning) 16%, var(--surface));
-  --info: #4d95e8;
-  --info-surface: color-mix(in srgb, var(--info) 16%, var(--surface));
+  /* --- Status — separated by LIGHTNESS, not hue, so they survive CVD.
+     Always reinforcement, never the only signal: every mark also carries a
+     word, an arrow or an icon. */
+  --success: #7cd591;
+  --success-surface: #17301d;
+  --danger: #e05c5f;
+  --danger-surface: #381616;
+  --warning: #e6d982;
+  --warning-surface: #312c0d;
+  /* Neutral information — "Processing", "in progress". Aliased onto the data
+     palette's blue, the same call the director ramp makes. */
+  --info: var(--data-blue);
+  --info-surface: var(--data-blue-surface);
+
+  /* --- Categorical data palette — never moves ---------------------------
+     Each dashboard metric keeps its hue from screen to screen: revenue is
+     green, order count blue, and so on. Mid-tone for the dark surface, not a
+     flip. Matches the director panel's dark steps exactly. */
+  --data-green: #33a066;   /* revenue · completed */
+  --data-blue: #3987e5;    /* order count · in progress */
+  --data-purple: #bf63b2;  /* average order value */
+  --data-amber: #c98500;   /* pipeline / pending */
+  --data-red: #e06b64;     /* cancelled */
+  --data-green-surface: color-mix(in srgb, var(--data-green) 16%, transparent);
+  --data-blue-surface: color-mix(in srgb, var(--data-blue) 16%, transparent);
+  --data-purple-surface: color-mix(in srgb, var(--data-purple) 16%, transparent);
+  --data-amber-surface: color-mix(in srgb, var(--data-amber) 18%, transparent);
+  --data-red-surface: color-mix(in srgb, var(--data-red) 16%, transparent);
+
+  /* --- Chart marks ----------------------------------------------------- */
+  --chart-series: #ff8a5c;
+  --chart-context: #858c91;
+  --chart-grid: #292e31;
+  --chart-grid-faint: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --gauge-track: color-mix(in srgb, var(--foreground) 11%, transparent);
+
+  /* --- Field --------------------------------------------------------------
+     The box is the only thing that says "control" on a busy screen, so its
+     edge is heavier than a divider. `--field-halo` is the focus bloom, mixed
+     from the accent and kept under ~35% so it reads as a glow, not a second
+     border. */
+  --field-border: #858c91;
+  --field-halo: color-mix(in srgb, var(--accent) 34%, transparent);
+  --field-halo-danger: color-mix(in srgb, var(--danger) 30%, transparent);
+
+  /* --- Elevation — dark needs a hairline of light as well as a shadow --- */
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.45), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --elevation-2: 0 8px 20px -4px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.05);
+  --elevation-3: 0 24px 56px -12px rgb(0 0 0 / 0.70), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  /* --- Panel elevation: the card recipe's four parts ------------------- */
+  --panel-edge-light: rgb(255 255 255 / 0.05);
+  --panel-card-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+  --panel-card-shadow-hover: 0 10px 28px -10px rgb(0 0 0 / 0.75);
+  --panel-edge-accent: color-mix(in srgb, var(--accent) 38%, var(--border-color));
+  --panel-wash: color-mix(in srgb, var(--accent) 7%, transparent);
+
+  /* The DieselParts mark red — a brand colour, not a role. The same red in
+     both panels; it must not move with anything. */
+  --brand-red: #d90606;
 }
 
+/* ==========================================================================
+   SCALES — override Tailwind's defaults in place, mirroring app/globals.css
+   so type and radius read identically across the two panels.
+   ========================================================================== */
+
 @theme {
+  /* --- Type: five steps + a lead size and display sizes --------------- */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5rem;
+  --text-lg--letter-spacing: -0.011em;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.75rem;
+  --text-xl--letter-spacing: -0.015em;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-2xl--letter-spacing: -0.021em;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-3xl--letter-spacing: -0.023em;
+
+  /* --- Weight: three, each with one job. The rest are deleted so a fourth
+     weight cannot quietly appear. */
+  --font-weight-thin: initial;
+  --font-weight-extralight: initial;
+  --font-weight-light: initial;
+  --font-weight-extrabold: initial;
+  --font-weight-black: initial;
+
+  /* --- Radius: four values by element size, matching the director panel */
+  --radius: 0.375rem;
+  --radius-xs: 0.125rem;
   --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.5rem;   /* the spec's "≤8px" ceiling — nothing in the panel rounds past this */
+  --radius-md: 0.375rem;   /* controls: buttons, inputs, chips, tabs */
+  --radius-lg: 0.625rem;   /* containers: cards, panels, menus, dialogs */
+  --radius-xl: 0.625rem;
+
+  /* --- Spacing: 4px base, unchanged */
+  --spacing: 0.25rem;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
   --color-surface-muted: var(--surface-muted);
   --color-surface-hover: var(--surface-hover);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
-  --color-disabled: var(--disabled);
+  --color-secondary: var(--text-secondary);
+  --color-disabled: var(--text-disabled);
   --color-border: var(--border-color);
+  --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-active: var(--accent-active);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-strong: var(--accent-strong);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-edge: var(--accent-edge);
   --color-danger: var(--danger);
   --color-danger-surface: var(--danger-surface);
   --color-success: var(--success);
@@ -69,8 +198,167 @@
   --color-warning-surface: var(--warning-surface);
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
+  --color-data-green: var(--data-green);
+  --color-data-green-surface: var(--data-green-surface);
+  --color-data-blue: var(--data-blue);
+  --color-data-blue-surface: var(--data-blue-surface);
+  --color-data-purple: var(--data-purple);
+  --color-data-purple-surface: var(--data-purple-surface);
+  --color-data-amber: var(--data-amber);
+  --color-data-amber-surface: var(--data-amber-surface);
+  --color-data-red: var(--data-red);
+  --color-data-red-surface: var(--data-red-surface);
+  --color-chart-series: var(--chart-series);
+  --color-chart-context: var(--chart-context);
+  --color-chart-grid: var(--chart-grid);
+  --color-field-border: var(--field-border);
+  --color-brand-red: var(--brand-red);
+
+  --shadow-xs: var(--elevation-1);
+  --shadow-sm: var(--elevation-1);
+  --shadow-md: var(--elevation-2);
+  --shadow-lg: var(--elevation-2);
+  --shadow-xl: var(--elevation-3);
+  --shadow-2xl: var(--elevation-3);
+
   --font-sans: var(--font-seller-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-seller-mono), ui-monospace, monospace;
+}
+
+/* ==========================================================================
+   SEMANTIC TYPE — named steps, identical to app/globals.css so a heading in
+   one panel matches the same heading in the other. Colour stays a separate
+   decision at the call site (`type-caption text-muted`).
+   ========================================================================== */
+
+@utility type-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@utility type-page {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  letter-spacing: var(--text-2xl--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-section {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  letter-spacing: var(--text-xl--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-title {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  letter-spacing: var(--text-lg--letter-spacing);
+  font-weight: 600;
+}
+
+@utility type-body {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+}
+
+@utility type-label {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 500;
+}
+
+@utility type-caption {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 400;
+}
+
+@utility type-figure {
+  font-family: var(--font-mono);
+  font-size: clamp(1.375rem, 0.85rem + 0.85vw, 1.625rem);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility type-figure-sm {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   CONTAINER & ROW RECIPES — the same `panel` the director pages are built
+   from, so a card is one object across both panels.
+   ========================================================================== */
+
+@utility panel {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface);
+  padding: calc(var(--spacing) * 6);
+  box-shadow:
+    inset 0 1px 0 var(--panel-edge-light),
+    var(--panel-card-shadow);
+}
+
+@utility panel-lift {
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    border-color: var(--panel-edge-accent);
+    box-shadow:
+      inset 0 1px 0 var(--panel-edge-light),
+      var(--panel-card-shadow-hover);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+@utility panel-wash {
+  background-image: radial-gradient(
+    130% 150% at 0% 0%,
+    var(--panel-wash),
+    transparent 60%
+  );
+}
+
+@utility row-hover {
+  transition: background-color 120ms ease;
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
+}
+
+/*
+ * The active navigation row: a filled accent plate with its own 1px edge —
+ * the same material as the primary button, so "you are here" and "you can
+ * press this" read as one vocabulary. The director panel's rail marks the
+ * active section the same way.
+ */
+@utility nav-plate {
+  border: 1px solid var(--accent-edge);
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: var(--panel-card-shadow);
 }
 
 .seller-root {
@@ -78,11 +366,18 @@
   color: var(--foreground);
 }
 
-/* Uppercase micro-labels: table heads, form labels, stat eyebrows. */
+/*
+ * Uppercase micro-labels: table heads, form labels, stat eyebrows. Kept as a
+ * class (it is on dozens of elements) but redefined to match `type-eyebrow`
+ * exactly — mono, 0.15em tracking — plus the muted colour those call sites
+ * expect, so the seller eyebrow and the director eyebrow are one mark.
+ */
 .seller-eyebrow {
+  font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.15em;
   font-size: 0.6875rem;
+  line-height: 1rem;
   font-weight: 500;
   color: var(--muted);
 }

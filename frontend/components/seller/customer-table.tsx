@@ -56,7 +56,7 @@ export function CustomerTable({
                 <TableCell className="font-mono text-muted">{customer.phone}</TableCell>
                 <TableCell className="text-right font-mono">{formatMoney(customer.debt)}</TableCell>
                 <TableCell className="text-right">
-                  <Link href={`/seller/customers/${customer.id}`} className="text-xs font-medium text-accent hover:underline">
+                  <Link href={`/seller/customers/${customer.id}`} className="text-xs font-medium text-accent-strong hover:underline">
                     Ko&apos;rish
                   </Link>
                 </TableCell>

@@ -4,6 +4,15 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { toCsv, type CsvColumn } from "@/lib/analytics/csv";
 import { Icon } from "@/components/ui/icon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/shadcn/tooltip";
+
+const TRIGGER_CLASS =
+  "inline-flex h-7 items-center gap-2 rounded-md border border-border px-3 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
  * Saves one table as CSV, from data the page already has.
@@ -31,6 +40,26 @@ export function ExportButton<T>({
 }) {
   const [done, setDone] = useState(false);
 
+  // Disabled with no explanation is a button that "does nothing" — the reader
+  // clicks it twice and then goes looking for a bug. The tooltip says why.
+  if (rows.length === 0) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">
+              <button type="button" disabled className={TRIGGER_CLASS + " pointer-events-none"}>
+                <Icon icon={Download} size="xs" />
+                {label}
+              </button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Bu davrda yuklab olinadigan ma&apos;lumot yo&apos;q</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
   function save() {
     const blob = new Blob([toCsv(columns, rows)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -54,12 +83,7 @@ export function ExportButton<T>({
   }
 
   return (
-    <button
-      type="button"
-      onClick={save}
-      disabled={rows.length === 0}
-      className="inline-flex h-7 items-center gap-2 rounded-md border border-border px-3 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-    >
+    <button type="button" onClick={save} className={TRIGGER_CLASS}>
       <Icon icon={Download} size="xs" />
       {done ? "Saqlandi" : label}
     </button>

@@ -11,7 +11,9 @@ const MESSAGE_KEY = {
   required: "errorRequired",
   tooLong: "errorTooLong",
   invalidEmail: "errorInvalidEmail",
+  invalidPhone: "errorInvalidPhone",
   termsRequired: "errorTermsRequired",
+  cashNotForDelivery: "errorCashNotForDelivery",
 } as const satisfies Record<string, keyof CheckoutDict>;
 
 export type CheckoutErrorCode = keyof typeof MESSAGE_KEY;

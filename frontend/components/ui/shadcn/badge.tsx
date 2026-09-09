@@ -19,6 +19,7 @@ const badgeVariants = cva(
            hand-rolled Badge in components/ui/badge.tsx. */
         success: "border-transparent bg-success-surface text-success",
         warning: "border-transparent bg-warning-surface text-warning",
+        info: "border-transparent bg-info-surface text-info",
         outline:
           "border-border text-foreground [a&]:hover:bg-panel-accent [a&]:hover:text-panel-accent-foreground",
         ghost: "[a&]:hover:bg-panel-accent [a&]:hover:text-panel-accent-foreground",

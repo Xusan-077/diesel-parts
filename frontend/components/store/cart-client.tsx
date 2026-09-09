@@ -18,6 +18,7 @@ import { ProductImage } from "@/components/product/product-image";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CartStickyBar } from "@/components/store/cart-sticky-bar";
 
 interface CartClientProps {
   lang: Locale;
@@ -135,6 +136,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
                     type="button"
                     onClick={() => cart.setQuantity(product.id, quantity - 1)}
                     aria-label={dict.decrease}
+                    title={dict.decrease}
                     className="flex h-9 w-9 items-center justify-center text-muted transition-colors hover:text-accent-strong"
                   >
                     <Icon icon={Minus} />
@@ -147,6 +149,7 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
                     onClick={() => cart.setQuantity(product.id, quantity + 1)}
                     disabled={quantity >= MAX_QUANTITY}
                     aria-label={dict.increase}
+                    title={dict.increase}
                     className="flex h-9 w-9 items-center justify-center text-muted transition-colors hover:text-accent-strong disabled:opacity-40"
                   >
                     <Icon icon={Plus} />
@@ -171,7 +174,9 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
         </ul>
       </div>
 
-      <aside className="lg:sticky lg:top-40">
+      {/* Hidden on a phone, where CartStickyBar carries the total and the
+          checkout button instead — the same split the checkout screen makes. */}
+      <aside className="hidden lg:sticky lg:top-40 lg:block">
         <Card>
           <CardHeader>
             <CardTitle>{dict.summaryTitle}</CardTitle>
@@ -187,10 +192,10 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
                 <dt className="text-muted">{dict.summaryUnits}</dt>
                 <dd className="tabular-nums text-foreground">{unitCount}</dd>
               </div>
-              <Separator className="my-1" />
-              <div className="flex justify-between">
+              <Separator className="my-3" />
+              <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-muted">{dict.summaryPrice}</dt>
-                <dd className="font-medium text-foreground">
+                <dd className="type-title tabular-nums text-foreground">
                   {total > 0 ? totalLabel : dict.priceOnRequest}
                 </dd>
               </div>
@@ -210,6 +215,12 @@ export function CartClient({ lang, dict, stock }: CartClientProps) {
           </CardContent>
         </Card>
       </aside>
+
+      <CartStickyBar
+        priceLabel={dict.summaryPrice}
+        totalLabel={total > 0 ? (totalLabel ?? dict.priceOnRequest) : dict.priceOnRequest}
+        checkoutLabel={dict.checkout}
+      />
     </div>
   );
 }

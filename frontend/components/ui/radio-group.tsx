@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Native radios, styled like `Checkbox` — a native box brings its own focus
@@ -46,13 +48,15 @@ export interface RadioGroupItemProps {
   value: string;
   label: React.ReactNode;
   description?: React.ReactNode;
+  /** Optional leading glyph, sized to sit level with the label + description. */
+  icon?: LucideIcon;
   disabled?: boolean;
   className?: string;
 }
 
 /** A selectable row rather than a bare dot — the label and the description
  *  both sit inside the click target, and the whole row marks the selection. */
-export function RadioGroupItem({ value, label, description, disabled, className }: RadioGroupItemProps) {
+export function RadioGroupItem({ value, label, description, icon, disabled, className }: RadioGroupItemProps) {
   const group = React.useContext(RadioGroupContext);
   if (!group) {
     throw new Error("RadioGroupItem must be rendered inside a RadioGroup");
@@ -80,6 +84,13 @@ export function RadioGroupItem({ value, label, description, disabled, className 
         onChange={() => group.onValueChange(value)}
         className="mt-0.5 size-4 shrink-0 accent-accent"
       />
+      {icon ? (
+        <Icon
+          icon={icon}
+          size="md"
+          className={cn("mt-0.5", checked ? "text-accent-strong" : "text-muted")}
+        />
+      ) : null}
       <span className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-foreground">{label}</span>
         {description ? <span className="text-xs text-muted">{description}</span> : null}

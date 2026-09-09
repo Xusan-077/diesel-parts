@@ -57,7 +57,7 @@ export function ProductTable({
           : products.map((product) => (
               <TableRow key={product.id}>
                 <TableCell className="font-mono">
-                  <Link href={`/seller/products/${product.id}`} className="text-accent hover:underline">
+                  <Link href={`/seller/products/${product.id}`} className="text-accent-strong hover:underline">
                     {product.sku}
                   </Link>
                 </TableCell>

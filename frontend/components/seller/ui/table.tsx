@@ -10,7 +10,7 @@ export interface TableProps {
 
 export function Table({ className, footer, children }: TableProps) {
   return (
-    <div className={cn("rounded-md border border-border", className)}>
+    <div className={cn("rounded-lg border border-border", className)}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">{children}</table>
       </div>

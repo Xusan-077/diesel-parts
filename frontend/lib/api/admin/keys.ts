@@ -2,7 +2,11 @@ import type {
   AdminProductListQuery,
   AuditListQuery,
   CustomerListQuery,
+  GoodsReceiptListQuery,
   InquiryListQuery,
+  MovementsReportQuery,
+  ProductMovementsQuery,
+  WarehouseProductListQuery,
 } from "@/lib/schemas";
 
 /**
@@ -55,5 +59,34 @@ export const adminKeys = {
     all: ["admin", "customers"] as const,
     list: (query: CustomerListQuery) => ["admin", "customers", "list", query] as const,
     detail: (id: string) => ["admin", "customers", "detail", id] as const,
+  },
+  warehouse: {
+    /** Prefix over the whole module — an approved receipt moves stock, which
+     *  touches products, movements and the dashboard at once. */
+    all: ["admin", "warehouse"] as const,
+    products: {
+      all: ["admin", "warehouse", "products"] as const,
+      list: (query: WarehouseProductListQuery) =>
+        ["admin", "warehouse", "products", "list", query] as const,
+      detail: (id: string) => ["admin", "warehouse", "products", "detail", id] as const,
+      movements: (id: string, query: ProductMovementsQuery) =>
+        ["admin", "warehouse", "products", "movements", id, query] as const,
+    },
+    warehouses: {
+      all: ["admin", "warehouse", "warehouses"] as const,
+      list: () => ["admin", "warehouse", "warehouses", "list"] as const,
+      detail: (id: string) => ["admin", "warehouse", "warehouses", "detail", id] as const,
+    },
+    receipts: {
+      all: ["admin", "warehouse", "receipts"] as const,
+      list: (query: GoodsReceiptListQuery) =>
+        ["admin", "warehouse", "receipts", "list", query] as const,
+      detail: (id: string) => ["admin", "warehouse", "receipts", "detail", id] as const,
+    },
+    reports: {
+      all: ["admin", "warehouse", "reports"] as const,
+      movements: (query: MovementsReportQuery) =>
+        ["admin", "warehouse", "reports", "movements", query] as const,
+    },
   },
 } as const;

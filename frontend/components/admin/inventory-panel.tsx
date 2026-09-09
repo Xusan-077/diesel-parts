@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, PackageX, Warehouse } from "lucide-react";
+import { AlertTriangle, ChevronRight, PackageX, Warehouse } from "lucide-react";
 import { formatCompact, formatInteger } from "@/lib/analytics/format";
 import { csvFilename } from "@/lib/analytics/csv";
 import type { InventorySummary, StockRow } from "@/lib/api/analytics-detail-repository";
@@ -106,25 +106,28 @@ function StockStat({
     <>
       <span
         className={cn(
-          "flex size-9 items-center justify-center rounded-full",
+          "flex size-10 items-center justify-center rounded-full",
+          // Red only when the figure is a critical one. A healthy stock total
+          // wears the same neutral disc as any other quiet metric — the panel
+          // reserves the brand hue for actions and status.
           tone === "danger"
             ? "bg-danger-surface text-danger"
             : tone === "warning"
               ? "bg-warning-surface text-warning"
-              : "bg-accent-subtle text-accent-strong",
+              : "bg-surface-muted text-muted",
         )}
       >
         <Icon icon={icon} size="md" />
       </span>
 
-      <span className="mt-4 block font-mono text-2xl font-semibold tabular-nums text-foreground">
+      <span className="type-figure-sm mt-4 block text-foreground">
         {value}
         {unit === undefined ? null : (
-          <span className="ml-1 text-sm font-normal text-muted">{unit}</span>
+          <span className="ml-1 font-sans text-sm font-normal text-muted">{unit}</span>
         )}
       </span>
-      <span className="mt-1 block text-sm text-foreground">{label}</span>
-      <span className="mt-1 block text-xs text-muted">{hint}</span>
+      <span className="type-label mt-1 block text-foreground">{label}</span>
+      <span className="type-caption mt-1 block text-muted">{hint}</span>
     </>
   );
 
@@ -136,10 +139,17 @@ function StockStat({
     <button
       type="button"
       onClick={onOpen}
-      className="panel text-left transition-colors hover:bg-surface-hover"
+      className="panel panel-lift group text-left"
     >
       {body}
-      <span className="mt-3 block text-xs text-accent-strong">{openLabel} →</span>
+      <span className="mt-3 inline-flex items-center gap-1 text-xs text-accent-strong">
+        {openLabel}
+        <Icon
+          icon={ChevronRight}
+          size="xs"
+          className="transition-transform group-hover:translate-x-0.5"
+        />
+      </span>
     </button>
   );
 }

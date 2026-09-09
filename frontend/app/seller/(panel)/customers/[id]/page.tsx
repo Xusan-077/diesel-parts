@@ -25,37 +25,41 @@ export default function SellerCustomerDetailPage() {
   }
 
   if (customer.isLoading || !customer.data) {
-    return <div className="h-40 animate-pulse rounded-md bg-surface-muted" />;
+    return <div className="h-40 animate-pulse rounded-lg bg-surface-muted" />;
   }
 
   const c = customer.data;
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">{c.name}</h1>
-        <p className="mt-1 font-mono text-sm text-muted">{c.phone}</p>
-      </div>
+      <header className="border-b border-border pb-6">
+        <p className="type-eyebrow flex items-center gap-2 text-muted">
+          <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-accent-strong" />
+          Mijoz
+        </p>
+        <h1 className="type-page mt-1 text-foreground">{c.name}</h1>
+        <p className="type-body mt-2 font-mono text-muted">{c.phone}</p>
+      </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-1">Qarzdorlik</p>
           <p className="font-mono text-lg text-foreground">{formatMoney(c.debt)}</p>
         </div>
         {c.telegram ? (
-          <div className="rounded-md border border-border bg-surface p-4">
+          <div className="panel">
             <p className="seller-eyebrow mb-1">Telegram</p>
             <p className="text-sm text-foreground">{c.telegram}</p>
           </div>
         ) : null}
-        <div className="rounded-md border border-border bg-surface p-4">
+        <div className="panel">
           <p className="seller-eyebrow mb-1">Ro&apos;yxatdan o&apos;tgan</p>
           <p className="text-sm text-foreground">{formatDate(c.createdAt)}</p>
         </div>
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-medium text-foreground">Buyurtmalar tarixi</p>
+        <p className="type-title mb-3 text-foreground">Buyurtmalar tarixi</p>
         {orders.isError ? (
           <QueryErrorState error={orders.error} onRetry={() => orders.refetch()} />
         ) : !orders.isLoading && orders.data && orders.data.data.length === 0 ? (
@@ -83,7 +87,7 @@ export default function SellerCustomerDetailPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono">{formatMoney(order.total)}</TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/seller/orders/${order.id}`} className="text-xs font-medium text-accent hover:underline">
+                        <Link href={`/seller/orders/${order.id}`} className="text-xs font-medium text-accent-strong hover:underline">
                           Ko&apos;rish
                         </Link>
                       </TableCell>

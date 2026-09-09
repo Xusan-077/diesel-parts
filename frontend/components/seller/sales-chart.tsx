@@ -29,8 +29,8 @@ export function SalesChart() {
       <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="sellerSalesFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--color-data-green)" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="var(--color-data-green)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke="var(--color-border)" vertical={false} />
@@ -58,7 +58,7 @@ export function SalesChart() {
           labelStyle={{ color: "var(--color-muted)" }}
           formatter={(value) => [formatMoney(Number(value)), "Sotuv"]}
         />
-        <Area type="monotone" dataKey="total" stroke="var(--color-accent)" strokeWidth={2} fill="url(#sellerSalesFill)" />
+        <Area type="monotone" dataKey="total" stroke="var(--color-data-green)" strokeWidth={2} fill="url(#sellerSalesFill)" />
       </AreaChart>
     </ResponsiveContainer>
   );

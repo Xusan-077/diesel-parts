@@ -217,7 +217,10 @@ export function AuditLog({
       {result.totalPages > 1 ? (
         <nav aria-label="Sahifalar" className="mt-8 flex items-center gap-3 text-sm">
           {result.page > 1 ? (
-            <Link href={href({ page: result.page - 1 })} className="text-muted hover:text-foreground">
+            <Link
+              href={href({ page: result.page - 1 })}
+              className="text-muted transition-colors hover:text-foreground"
+            >
               &larr; Oldingi
             </Link>
           ) : null}
@@ -225,7 +228,10 @@ export function AuditLog({
             {result.page} / {result.totalPages}
           </span>
           {result.page < result.totalPages ? (
-            <Link href={href({ page: result.page + 1 })} className="text-muted hover:text-foreground">
+            <Link
+              href={href({ page: result.page + 1 })}
+              className="text-muted transition-colors hover:text-foreground"
+            >
               Keyingi &rarr;
             </Link>
           ) : null}

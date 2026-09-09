@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { ShoppingCart, Users } from "lucide-react";
 import {
   getCustomerAnalytics,
   getInventorySummary,
@@ -7,11 +7,9 @@ import {
   getSellerScorecards,
 } from "@/lib/api/analytics-detail-repository";
 import { resolvePeriod } from "@/lib/analytics/period";
-import { formatCompact, formatInteger } from "@/lib/analytics/format";
+import { formatInteger } from "@/lib/analytics/format";
 import { csvFilename } from "@/lib/analytics/csv";
-import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/admin/page-header";
-import { PanelSection } from "@/components/admin/panel-section";
 import { AnalyticsPeriod } from "@/components/admin/analytics-period";
 import { DonutChart } from "@/components/admin/donut-chart";
 import { InventoryPanel } from "@/components/admin/inventory-panel";
@@ -20,6 +18,11 @@ import { RankBar } from "@/components/admin/rank-bar";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { SellerScorecardTable } from "@/components/admin/seller-scorecard-table";
 import { TopCustomersTable } from "@/components/admin/top-customers-table";
+import { HeroStats } from "@/components/director/hero-stats";
+import { PanelCard } from "@/components/director/panel-card";
+import { SectionHeading } from "@/components/director/section-heading";
+import { EmptyState } from "@/components/director/empty-state";
+import { AnalyticsGaps } from "@/components/director/analytics-gaps";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -38,6 +41,15 @@ function firstParam(value: string | string[] | undefined): string | undefined {
  * The window is resolved once, at the top, and handed to every query. Each
  * section deciding its own period is how a page ends up with a chart and a
  * table quietly describing different months.
+ *
+ * ── Reading order ────────────────────────────────────────────────────────────
+ * The page is one hierarchy, not four equal panels:
+ *   1  Savdo   — the hero figures and the dynamics chart. What a director came
+ *      to check, set loudest.
+ *   2  Ombor   — three drill-in figures and the movement pair, on white cards.
+ *   3  Xodimlar / Mijozlar — supporting detail, on the page's recessed ground
+ *      so the eye reads them as secondary.
+ *   ·  and the honest footer of what cannot be computed yet, quietest of all.
  */
 export default async function DirectorAnalyticsPage({
   searchParams,
@@ -65,6 +77,7 @@ export default async function DirectorAnalyticsPage({
       ? "Bugun"
       : formatInteger(period.days) + " kun";
 
+  const comparisonLabel = "oldingi davrga nisbatan";
   const customerTotal = customers.newCustomers + customers.returningCustomers;
 
   return (
@@ -83,23 +96,62 @@ export default async function DirectorAnalyticsPage({
         }
       />
 
-      {/* One rhythm for the whole page: 32px between blocks, cards carrying
-          their own 24px inside. Same as the dashboard, deliberately. */}
-      <div className="mt-8 space-y-8">
-        <PanelSection
-          title="Savdo"
-          description="Ko'rsatkichni tanlang — grafik o'sha o'lchovga o'tadi. Uzuq chiziq — oldingi davr."
-        >
-          <SalesChart
-            series={sales}
-            periodLabel={windowLabel}
-            previousLabel="Oldingi davr"
-            filename={csvFilename("savdo", period.from, period.to)}
-          />
-        </PanelSection>
-
+      <div className="mt-8 space-y-12">
+        {/* ── Level 1 · Savdo ──────────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="type-title text-foreground">Ombor</h2>
+          <HeroStats
+            items={[
+              {
+                id: "revenue",
+                label: "Daromad",
+                value: formatInteger(sales.revenue.currentTotal),
+                unit: "so'm",
+                change: sales.revenue.change,
+                comparisonLabel,
+                noComparisonLabel: "solishtirish uchun oldingi davr yo'q",
+              },
+              {
+                id: "orders",
+                label: "Buyurtmalar",
+                value: formatInteger(sales.orders.currentTotal),
+                unit: "ta",
+                change: sales.orders.change,
+                comparisonLabel,
+                noComparisonLabel: "solishtirish uchun oldingi davr yo'q",
+              },
+              {
+                id: "average",
+                label: "O'rtacha chek",
+                value: formatInteger(sales.average.currentTotal),
+                unit: "so'm",
+                change: sales.average.change,
+                comparisonLabel,
+                noComparisonLabel: "solishtirish uchun oldingi davr yo'q",
+              },
+            ]}
+          />
+
+          <PanelCard
+            title="Savdo dinamikasi"
+            description="Ko'rsatkichni tanlang — grafik o'sha o'lchovga o'tadi. Uzuq chiziq — oldingi davr."
+          >
+            <SalesChart
+              series={sales}
+              periodLabel={windowLabel}
+              previousLabel="Oldingi davr"
+              filename={csvFilename("savdo", period.from, period.to)}
+              compact
+            />
+          </PanelCard>
+        </section>
+
+        {/* ── Level 2 · Ombor ─────────────────────────────────────────────── */}
+        <section className="space-y-4">
+          <SectionHeading
+            title="Ombor"
+            description="Shelf holati va davr ichidagi harakat. Raqamlar bosiladi — orqasidagi ro'yxat ochiladi."
+          />
+
           <InventoryPanel
             summary={inventory}
             windowFrom={period.from}
@@ -107,19 +159,18 @@ export default async function DirectorAnalyticsPage({
           />
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <PanelSection
+            <PanelCard
               title="Tez sotiladigan"
               description="Davr ichida eng ko'p dona sotilgan mahsulotlar"
-              meta={inventory.lowStock.length > 0 ? undefined : undefined}
             >
               <FastMovingTable
                 rows={movement.fastMoving}
                 windowFrom={period.from}
                 windowTo={period.to}
               />
-            </PanelSection>
+            </PanelCard>
 
-            <PanelSection
+            <PanelCard
               title="Sotilmayotgan"
               description="Omborda turibdi, lekin bu davrda bitta ham sotilmadi"
             >
@@ -128,156 +179,124 @@ export default async function DirectorAnalyticsPage({
                 windowFrom={period.from}
                 windowTo={period.to}
               />
-            </PanelSection>
+            </PanelCard>
           </div>
         </section>
 
-        <section className="space-y-4">
-          <h2 className="type-title text-foreground">Xodimlar</h2>
+        {/* ── Level 3 · Xodimlar / Mijozlar ───────────────────────────────────
+            On the page's recessed ground: still open by default, but the muted
+            plate is what tells the eye these are supporting figures. */}
+        <div className="space-y-8 rounded-lg border border-border-subtle bg-background-subtle p-4 sm:p-6">
+          <section className="space-y-4">
+            <SectionHeading
+              level={2}
+              title="Xodimlar"
+              description="Yopilgan savdolar va konversiya, davr ichida"
+            />
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <PanelSection
-              title="Daromad bo'yicha"
-              description="Yopilgan savdolar, davr ichida"
-            >
-              <RankBar
-                rows={sellers.map((seller) => ({
-                  id: seller.sellerId,
-                  label: seller.name,
-                  value: seller.revenue,
-                  meta: formatInteger(seller.completedOrders) + " ta buyurtma",
-                }))}
-                emptyMessage="Bu davrda yopilgan buyurtma yo'q."
-              />
-            </PanelSection>
+            {sellers.length === 0 ? (
+              <div className="panel">
+                <EmptyState
+                  icon={Users}
+                  title="Bu davrda faoliyat yo'q"
+                  message="Tanlangan oraliqda hech bir xodim buyurtma ochmagan yoki yopmagan."
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 xl:grid-cols-3">
+                <PanelCard
+                  title="Daromad bo'yicha"
+                  description="Yopilgan savdolar, davr ichida"
+                >
+                  <RankBar
+                    rows={sellers.map((seller) => ({
+                      id: seller.sellerId,
+                      label: seller.name,
+                      value: seller.revenue,
+                      meta: formatInteger(seller.completedOrders) + " ta buyurtma",
+                    }))}
+                    emptyMessage="Bu davrda yopilgan buyurtma yo'q."
+                  />
+                </PanelCard>
 
-            <PanelSection
-              title="Batafsil"
-              description="Ustun nomini bosib tartiblang"
-              className="xl:col-span-2"
-            >
-              <SellerScorecardTable
-                rows={sellers}
-                windowFrom={period.from}
-                windowTo={period.to}
-              />
-            </PanelSection>
-          </div>
-        </section>
+                <PanelCard
+                  title="Batafsil"
+                  description="Ustun nomini bosib tartiblang"
+                  className="xl:col-span-2"
+                >
+                  <SellerScorecardTable
+                    rows={sellers}
+                    windowFrom={period.from}
+                    windowTo={period.to}
+                  />
+                </PanelCard>
+              </div>
+            )}
+          </section>
 
-        <section className="space-y-4">
-          <h2 className="type-title text-foreground">Mijozlar</h2>
+          <section className="space-y-4">
+            <SectionHeading
+              level={2}
+              title="Mijozlar"
+              description="Birinchi xaridiga qarab — ro'yxatga olingan sanasiga emas"
+            />
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <PanelSection
-              title="Yangi va qaytgan"
-              description="Birinchi xaridiga qarab, ro'yxatga olingan sanasiga emas"
-            >
-              <DonutChart
-                totalLabel="mijoz"
-                emptyMessage="Bu davrda xarid qilgan mijoz yo'q."
-                slices={[
-                  {
-                    id: "returning",
-                    label: "Qaytgan",
-                    value: customers.returningCustomers,
-                    colour: "var(--chart-series)",
-                  },
-                  {
-                    id: "new",
-                    label: "Yangi",
-                    value: customers.newCustomers,
-                    colour: "var(--success)",
-                  },
-                ]}
-              />
-              {customerTotal === 0 ? null : (
-                <p className="mt-4 text-xs text-muted">
-                  Jami {formatInteger(customerTotal)} ta mijoz xarid qildi.
-                </p>
-              )}
-            </PanelSection>
+            {customerTotal === 0 && customers.topCustomers.length === 0 ? (
+              <div className="panel">
+                <EmptyState
+                  icon={ShoppingCart}
+                  title="Bu davrda xarid yo'q"
+                  message="Tanlangan oraliqda hech bir mijoz buyurtma yopmagan."
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 xl:grid-cols-3">
+                <PanelCard
+                  title="Yangi va qaytgan"
+                  description="Davr ichida xarid qilgan mijozlarning tarkibi"
+                >
+                  <DonutChart
+                    totalLabel="mijoz"
+                    emptyMessage="Bu davrda xarid qilgan mijoz yo'q."
+                    slices={[
+                      {
+                        id: "returning",
+                        label: "Qaytgan",
+                        value: customers.returningCustomers,
+                        colour: "var(--data-blue)",
+                      },
+                      {
+                        id: "new",
+                        label: "Yangi",
+                        value: customers.newCustomers,
+                        colour: "var(--data-green)",
+                      },
+                    ]}
+                  />
+                  {customerTotal === 0 ? null : (
+                    <p className="type-caption mt-4 text-muted">
+                      Jami {formatInteger(customerTotal)} ta mijoz xarid qildi.
+                    </p>
+                  )}
+                </PanelCard>
 
-            <PanelSection
-              title="Eng yirik mijozlar"
-              description="Davr ichidagi xarid summasi bo'yicha"
-              className="xl:col-span-2"
-            >
-              <TopCustomersTable
-                rows={customers.topCustomers}
-                windowFrom={period.from}
-                windowTo={period.to}
-              />
-            </PanelSection>
-          </div>
-        </section>
+                <PanelCard
+                  title="Eng yirik mijozlar"
+                  description="Davr ichidagi xarid summasi bo'yicha"
+                  className="xl:col-span-2"
+                >
+                  <TopCustomersTable
+                    rows={customers.topCustomers}
+                    windowFrom={period.from}
+                    windowTo={period.to}
+                  />
+                </PanelCard>
+              </div>
+            )}
+          </section>
+        </div>
 
-        {/*
-          * The honest footer.
-          *
-          * Four sections were asked for that this screen does not draw, and
-          * saying so here is the difference between a panel that is incomplete
-          * and one that looks finished while quietly omitting the margin a
-          * director came to check. Each line names what is missing and what it
-          * needs — the same list, in more detail, sits at the foot of
-          * `analytics-detail-repository.ts`.
-          */}
-        <aside className="panel">
-          <div className="flex items-start gap-3">
-            <span className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted">
-              <Icon icon={Info} size="md" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="type-title text-foreground">Hozircha hisoblab bo&apos;lmaydi</h2>
-              <p className="mt-1 type-caption text-muted">
-                Quyidagilar uchun bazada ma&apos;lumot yo&apos;q — so&apos;rov emas, ustun
-                yetishmaydi.
-              </p>
-
-              <ul className="mt-4 space-y-3 text-sm">
-                <li className="border-l-2 border-border pl-3">
-                  <span className="text-foreground">Mahsulot rentabelligi (margin %)</span>
-                  <span className="mt-1 block text-xs text-muted">
-                    Kerak: <span className="font-mono">Product.purchasePrice</span> va sotuv
-                    paytidagi tannarx uchun <span className="font-mono">OrderItem.unitCost</span>.
-                  </span>
-                </li>
-                <li className="border-l-2 border-border pl-3">
-                  <span className="text-foreground">Yetkazib beruvchilar tahlili</span>
-                  <span className="mt-1 block text-xs text-muted">
-                    Kerak: <span className="font-mono">Supplier</span> modeli,{" "}
-                    <span className="font-mono">Product.supplierId</span> va narx tarixi uchun{" "}
-                    <span className="font-mono">SupplierPrice</span>.
-                  </span>
-                </li>
-                <li className="border-l-2 border-border pl-3">
-                  <span className="text-foreground">Qarzdorlik trendi</span>
-                  <span className="mt-1 block text-xs text-muted">
-                    Kerak: to&apos;lovlar hisobi —{" "}
-                    <span className="font-mono">Payment&#123; orderId, amount, paidAt &#125;</span>.
-                    Hozir har bir yopilgan buyurtma to&apos;liq to&apos;langan deb hisoblanadi.
-                  </span>
-                </li>
-                <li className="border-l-2 border-border pl-3">
-                  <span className="text-foreground">Ombor qiymati trendi</span>
-                  <span className="mt-1 block text-xs text-muted">
-                    Kerak: davriy snapshot —{" "}
-                    <span className="font-mono">InventorySnapshot&#123; takenAt, totalValue &#125;</span>.
-                    Tarixni keyin tiklab bo&apos;lmaydi, yozib borish kerak.
-                  </span>
-                </li>
-              </ul>
-
-              <p className="mt-4 text-xs text-muted">
-                Ombor qiymati katalog narxida hisoblangan:{" "}
-                <span className="font-mono tabular-nums">
-                  {formatCompact(inventory.totalValue)} so&apos;m
-                </span>
-                . Tannarx saqlanmagani uchun bu chakana baho, aktiv qiymati emas.
-              </p>
-            </div>
-          </div>
-        </aside>
+        <AnalyticsGaps totalValue={inventory.totalValue} />
       </div>
     </div>
   );

@@ -400,6 +400,68 @@ targets prod's actual (`Product`/`Category`/`Brand`) tables. Verify
 `backend/scripts/smoke-order-seller-fk.ts` against prod, or exercise
 create + list + detail by hand, to confirm).
 
+### DONE — first `prisma migrate deploy` to production (2026-09-07)
+
+`backend/prisma/migrations/` was re-baselined to prod's applied history
+earlier this session (9 root migrations vendored byte-for-byte + the
+`20260907090000_reconcile_product_image_labels` reconcile), so
+`prisma migrate deploy` — **not** `db execute` + `resolve --applied` — is now
+the supported path. `prisma migrate status` against prod confirmed a clean
+baseline (10 applied rows match by checksum, no divergence).
+
+Applied, after SQL review + explicit step-by-step approval:
+
+| migration | effect |
+| --- | --- |
+| `20260906120000_checkout_contact_payment_address` | `Order` +5 nullable cols (`contactPhone`, `deliveryApartment/House/Landmark/Region`); `PaymentMethod` +`SELLER_AGREEMENT`. Was still pending on prod (authored on the dashboard branch, verified on staging). |
+| `20260907090000_reconcile_product_image_labels` | `ADD COLUMN IF NOT EXISTS "imageLabels"` — no-op on prod (hotfix column), history now matches reality. |
+| `20260907100000_warehouse_phase1` | Warehouse module Phase 1 — new enums, `StockMovementType` +5 values, additive cols on `AuditLog`/`Inventory`/`Product`/`StockMovement`, `Warehouse.code` (nullable→backfill `W1..Wn`→NOT NULL), tables `GoodsReceipt`/`GoodsReceiptItem`/`GoodsReceiptSequence`. |
+
+All run via
+`railway run --service Postgres -- bash -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" npx prisma migrate deploy'`
+— credential never touched a file, `.env*` untouched, no backend code deploy.
+Pre-backup: `_db-backups/prod_20260907T151012Z.{dump,sql,sha256}` (23 tables,
+Product 19 / User 4 / AuditLog 70 / Order 0, `_prisma_migrations` 11 rows).
+
+Post-apply verification, all PASS:
+- `prisma migrate status` → **"Database schema is up to date!"** (exit 0), 13/13 applied.
+- `GET https://api.diesel-parts.uz/api/catalog/products` → **200**, 19 items,
+  `meta {page:1,limit:20,total:19,totalPages:1}` — the 🔴 catalog outage
+  above is already cleared (current deploy `4d64cda` carries the step-3 fix).
+- `GET https://api.diesel-parts.uz/` → 404 `Cannot GET /` — expected (global
+  prefix `api`, no healthcheck route configured), app is up and serving.
+
+### DONE — backend + frontend redeployed (2026-09-07)
+
+`feat/dashboard-dataviz-color-tokens` (@ `34d4094`, warehouse Phase 1 merged)
+fast-forwarded onto `origin/main`. A local `git checkout main` was blocked by
+two uncommitted working-tree files (`frontend/app/globals.css`,
+`frontend/components/director/stat-card.tsx` — also touched by commit
+`3f22fe9`), so the ref was pushed directly:
+`git push origin feat/dashboard-dataviz-color-tokens:main` (verified
+fast-forward, `4d64cda..34d4094`), then local `main` realigned with
+`git fetch` + `git branch -f main origin/main`. The ~70 uncommitted frontend
+files were left untouched (still local).
+
+- **Railway** deploy `a3d5fa36` — build (npm install → prisma generate →
+  nest build) clean, **SUCCESS / Online**. Boot log maps all 20
+  `/api/warehouse*` routes (`WarehousesController` 5, `WarehouseProducts` 6,
+  `GoodsReceipts` 6, `WarehouseReports` 3). No errors.
+- **Vercel** deploy `diesel-parts-2fnav1zsp` — **Ready / Production**, 32s
+  (frontend commit `3f22fe9`, dashboard data-viz tokens, rode along on the
+  same `main` push).
+
+Post-deploy verification, all PASS:
+- `GET /api/catalog/products` → 200, 19 items, `meta` unchanged; payload now
+  carries the new `Product` columns (`barcode`, `unit`, `recommendedStock`,
+  `averageCost`, `lastPurchaseCost`) as null/defaults — no breakage.
+- `GET /api/warehouse/products` and `GET /api/warehouses` → **401** (behind
+  `JwtAuthGuard` — route exists; was 404 before this deploy).
+- `GET https://www.diesel-parts.uz/` → 200, title renders.
+
+Nothing left open for the warehouse Phase 1 rollout — schema + code + frontend
+tokens are all live.
+
 ## Open items (not fixed in this pass — flagging for a decision)
 
 1. ~~**Dev and production may be sharing one Postgres.**~~ **RESOLVED

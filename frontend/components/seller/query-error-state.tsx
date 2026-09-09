@@ -12,11 +12,13 @@ import { SellerApiError } from "@/lib/api/seller-panel/client";
 export function QueryErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   if (error instanceof SellerApiError && error.status === 403) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-md border border-border bg-surface px-6 py-12 text-center">
-        <ShieldOff className="h-8 w-8 text-muted" />
-        <div>
-          <p className="text-sm font-medium text-foreground">Kirish cheklangan</p>
-          <p className="mt-1 text-xs text-muted">{error.message}</p>
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface px-6 py-12 text-center">
+        <span className="grid size-12 place-items-center rounded-full bg-surface-muted text-muted">
+          <ShieldOff className="size-5" />
+        </span>
+        <div className="space-y-1">
+          <p className="type-title text-foreground">Kirish cheklangan</p>
+          <p className="type-body text-muted">{error.message}</p>
         </div>
       </div>
     );
@@ -25,11 +27,13 @@ export function QueryErrorState({ error, onRetry }: { error: unknown; onRetry?: 
   const message = error instanceof SellerApiError ? error.message : "Ma'lumotlarni yuklab bo'lmadi";
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-md border border-border bg-surface px-6 py-12 text-center">
-      <AlertTriangle className="h-8 w-8 text-danger" />
-      <div>
-        <p className="text-sm font-medium text-foreground">Xatolik yuz berdi</p>
-        <p className="mt-1 text-xs text-muted">{message}</p>
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface px-6 py-12 text-center">
+      <span className="grid size-12 place-items-center rounded-full bg-danger-surface text-danger">
+        <AlertTriangle className="size-5" />
+      </span>
+      <div className="space-y-1">
+        <p className="type-title text-foreground">Xatolik yuz berdi</p>
+        <p className="type-body text-muted">{message}</p>
       </div>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>

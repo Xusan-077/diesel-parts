@@ -6,6 +6,20 @@ import { ANALYTICS_PERIOD_OPTIONS, MAX_CUSTOM_DAYS } from "@/lib/analytics/perio
 import { isoDay, type Range } from "@/lib/calendar";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Icon } from "@/components/ui/icon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/shadcn/tooltip";
+import { cn } from "@/lib/utils";
+
+/** One segment of the period control — active is the raised chip, matching the
+    dashboard's `PeriodToggle`. */
+const SEGMENT = "type-eyebrow inline-flex h-7 items-center gap-2 rounded-sm px-3 transition-colors";
+const SEGMENT_ACTIVE = "border border-accent-edge bg-accent text-accent-foreground";
+const SEGMENT_IDLE =
+  "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground";
 
 const PRESET_LABEL: Record<number, string> = {
   1: "Bugun",
@@ -80,10 +94,14 @@ export function AnalyticsPeriod({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <nav
+    <TooltipProvider>
+      {/* Presets and the custom range share one recessed track, so the four
+          links and the calendar read as one control with one selection rather
+          than as a nav plus a stray button beside it. */}
+      <div
+        role="group"
         aria-label="Davr"
-        className="flex items-center gap-1 rounded-md border border-border bg-surface-muted p-1"
+        className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-surface-muted p-1"
       >
         {ANALYTICS_PERIOD_OPTIONS.map((option) => {
           const active = !custom && option === days;
@@ -93,54 +111,48 @@ export function AnalyticsPeriod({
               key={option}
               href={presetHref(option)}
               aria-current={active ? "true" : undefined}
-              className={
-                "type-eyebrow inline-flex h-7 items-center rounded-sm px-3 transition-colors " +
-                (active
-                  ? /* The accent fill carries its 1px edge for the same reason
-                       the primary button does: the brand orange is 2.56:1 on
-                       white, under the 3:1 a control's boundary owes. */
-                    "border border-accent-edge bg-accent text-accent-foreground"
-                  : "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground")
-              }
+              className={cn(SEGMENT, active ? SEGMENT_ACTIVE : SEGMENT_IDLE)}
             >
               {PRESET_LABEL[option] ?? option}
             </a>
           );
         })}
-      </nav>
 
-      <DateRangePicker
-        start={firstDay}
-        end={lastDay}
-        max={today}
-        maxDays={MAX_CUSTOM_DAYS}
-        onApply={apply}
-        onClear={custom ? () => router.push(presetHref(30)) : undefined}
-      >
-        <button
-          type="button"
-          aria-current={custom ? "true" : undefined}
-          className={
-            "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs transition-colors " +
-            (custom
-              ? "border-accent-edge bg-accent text-accent-foreground"
-              : "border-border text-muted hover:bg-surface-hover hover:text-foreground")
-          }
-        >
-          <Icon icon={CalendarRange} size="xs" />
-          {custom ? (
-            // Once a range is in force the button stops saying what it does and
-            // starts saying what is selected — it is now a readout as much as a
-            // control, and the alternative is a chosen window with nowhere on
-            // screen that states it.
-            <span className="font-mono tabular-nums">
-              {firstDay} — {lastDay}
-            </span>
-          ) : (
-            "Boshqa oraliq"
-          )}
-        </button>
-      </DateRangePicker>
-    </div>
+        <span aria-hidden="true" className="mx-1 h-4 w-px shrink-0 bg-border" />
+
+        <Tooltip>
+          <DateRangePicker
+            start={firstDay}
+            end={lastDay}
+            max={today}
+            maxDays={MAX_CUSTOM_DAYS}
+            onApply={apply}
+            onClear={custom ? () => router.push(presetHref(30)) : undefined}
+          >
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-current={custom ? "true" : undefined}
+                className={cn(SEGMENT, custom ? SEGMENT_ACTIVE : SEGMENT_IDLE)}
+              >
+                <Icon icon={CalendarRange} size="xs" />
+                {custom ? (
+                  // Once a range is in force the button stops saying what it does
+                  // and starts saying what is selected — it is now a readout as
+                  // much as a control, and the alternative is a chosen window
+                  // with nowhere on screen that states it.
+                  <span className="font-mono tracking-normal tabular-nums normal-case">
+                    {firstDay} — {lastDay}
+                  </span>
+                ) : (
+                  "Oraliq"
+                )}
+              </button>
+            </TooltipTrigger>
+          </DateRangePicker>
+          <TooltipContent>Kalendardan boshqa oraliq tanlash</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   );
 }
