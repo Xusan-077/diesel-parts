@@ -431,6 +431,41 @@ Post-apply verification, all PASS:
 - `GET https://api.diesel-parts.uz/` → 404 `Cannot GET /` — expected (global
   prefix `api`, no healthcheck route configured), app is up and serving.
 
+### DONE — warehouse director-panel UI shipped to prod (2026-09-09)
+
+`feat/warehouse-ui-phase1` merged into `main` with `--no-ff` (merge commit
+`a652493`, `34d4094..a652493`) and pushed to `origin/main`. Frontend-only —
+no `prisma/schema.prisma` change (warehouse backend schema already live since
+2026-09-07), so no migration step. The merge also carried the two frontend
+branches that had been sitting local-only: the checkout contact+address+payment
+rebuild (`8a1bffc`, `746b7fa`) and the seller/director semantic + data-viz
+color tokens (`0de36e9`, `3f22fe9` was already live). Local branches
+`feat/warehouse-ui-phase1` and `feat/dashboard-dataviz-color-tokens` deleted
+(both fully merged, never pushed).
+
+Pre-merge verification on the merged tree, all PASS:
+- `npx tsc --noEmit` → clean.
+- `npx eslint .` → clean.
+- `npx next build` → Compiled successfully, exit 0; all 13
+  `/director/warehouse/*` routes present in the route manifest.
+- `npx vitest run` → `6 failed | 1478 passed`. The 6 are the documented
+  pre-existing baseline (`lib/count-up`, `app/sitemap`,
+  `components/marketing/workshop-backdrop`) — not warehouse-related, not a
+  regression (passing count rose 1456 → 1478 from the new warehouse specs).
+
+- **Vercel** deploy `dpl_GYDchjEtqP5QZ3sod46rqF9wBpvd`
+  (`diesel-parts-oipfrgmit`) — **Ready / Production**, created 15:28:55 +05
+  seconds after the push, aliased to `www.diesel-parts.uz` / `diesel-parts.uz`.
+- Backend untouched — no Railway deploy.
+
+Post-deploy verification, all PASS:
+- `GET https://www.diesel-parts.uz/` → 200.
+- `GET /director/warehouse`, `/director/warehouse/products`, `/warehouses`,
+  `/incomes`, `/incomes/new`, `/reports/stock`, `/reports/low-stock`,
+  `/reports/movements` → **307 → `/director/login?next=<path>`** (director
+  auth middleware; routes resolve and preserve the intended path — was not
+  reachable before this deploy).
+
 ### DONE — backend + frontend redeployed (2026-09-07)
 
 `feat/dashboard-dataviz-color-tokens` (@ `34d4094`, warehouse Phase 1 merged)
