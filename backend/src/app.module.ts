@@ -29,6 +29,7 @@ import { CartsModule } from './carts/carts.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { PaymeModule } from './payme/payme.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { FinanceModule } from './finance/finance.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     CheckoutModule,
     PaymeModule,
     AnalyticsModule,
+    FinanceModule,
   ],
   controllers: [AppController],
 })
