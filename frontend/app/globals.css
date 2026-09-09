@@ -1864,3 +1864,53 @@ body {
   filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.85)) drop-shadow(0 -1px 0 rgb(255 255 255 / 0.10))
     drop-shadow(0 12px 32px rgb(247 125 42 / 0.16));
 }
+
+/* ==========================================================================
+   THE MOBILE TAB BAR  —  components/layout/mobile-tab-bar.tsx
+   --------------------------------------------------------------------------
+   A phone-only bar pinned to the bottom of the storefront: four flat tabs and
+   one raised centre button. Desktop keeps the three-row header (`HeaderNav`
+   appears at `lg`), so the bar is `lg:hidden` and nothing here runs above it.
+
+   Material. The header and the footer are the site's dark chrome (#151719 in
+   both themes — see the MARKETING SITE PALETTE block). The tab bar is that
+   same chrome one shade deeper, so a bar floating over a scrolled page reads
+   as sitting *above* the frame rather than being a torn-off piece of it. It
+   repaints the chrome palette the way `header-plate` does — scoped to its own
+   subtree, every child still naming the role ("secondary copy inside the
+   frame") and the role resolving to the value that reads on #0d0e11. The
+   Radix sheet the centre button opens is portalled out of this subtree, so it
+   carries the class too.
+
+   The orange is the workshop accent the 404 plate already pins (`--nf-orange`,
+   7.4:1 on this ground) rather than the storefront's brighter `--chrome-accent`
+   (#ff8a5c) — the bar is one deliberately loud element and the deeper orange
+   is what carries that against the deeper black.
+   ========================================================================== */
+
+.site-root {
+  /* Height the fixed bar reserves at the foot of the page: its own box plus
+     the home-indicator inset. Read by the spacer under the footer and by the
+     floating contact widget, which lifts its launcher clear of the bar. Zero
+     on desktop, where the bar is not rendered. */
+  --mobile-tabbar-clearance: 0px;
+}
+
+@media (max-width: 1023.98px) {
+  .site-root {
+    --mobile-tabbar-clearance: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+.mobile-tabbar {
+  --chrome: #0d0e11;
+  --chrome-surface: #17191d;
+  --chrome-hover: #1c1f24;
+  --chrome-border: #23262b;
+  --chrome-border-strong: #7d848b;
+  --chrome-foreground: #f2f3f5;
+  --chrome-secondary: #b5babe;
+  --chrome-muted: #7d848b;
+  --chrome-accent: #f77d2a;
+  --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
+}

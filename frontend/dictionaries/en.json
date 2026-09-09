@@ -804,5 +804,14 @@
     "showMore": "Show {count} more",
     "loadError": "Reviews could not be loaded.",
     "retry": "Try again"
+  },
+  "mobileNav": {
+    "label": "Primary navigation",
+    "searchAction": "Search by part number",
+    "searchTitle": "Search by part number",
+    "searchHint": "Enter the OEM number of an injector, pump or any other part.",
+    "searchPlaceholder": "e.g. 0445120231",
+    "searchSubmit": "Search",
+    "recentTitle": "Recent searches"
   }
 }

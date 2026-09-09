@@ -291,7 +291,9 @@ export function FloatingContactWidget({ support, closeLabel }: FloatingContactWi
         aria-hidden={open || undefined}
         tabIndex={open ? -1 : undefined}
         className={cn(
-          "fixed bottom-4 right-4 z-60 flex h-14 w-14 items-center justify-center rounded-full bg-chrome shadow-[0_8px_24px_-4px_rgb(0_0_0/0.5)] outline-none ring-1 ring-white/10 transition-[transform,opacity] hover:scale-105 focus-visible:ring-2 focus-visible:ring-chrome-accent motion-reduce:hover:scale-100",
+          // Lifts clear of the phone-only bottom tab bar; `--mobile-tabbar-clearance`
+          // is 0px on desktop, so this resolves to the old `bottom-4` there.
+          "fixed right-4 bottom-[calc(1rem+var(--mobile-tabbar-clearance))] z-60 flex h-14 w-14 items-center justify-center rounded-full bg-chrome shadow-[0_8px_24px_-4px_rgb(0_0_0/0.5)] outline-none ring-1 ring-white/10 transition-[transform,opacity] hover:scale-105 focus-visible:ring-2 focus-visible:ring-chrome-accent motion-reduce:hover:scale-100",
           open && "pointer-events-none opacity-0"
         )}
       >
