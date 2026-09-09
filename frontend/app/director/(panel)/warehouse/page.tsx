@@ -52,14 +52,14 @@ export default async function WarehouseDashboardPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Mahsulotlar"
-          value={<NumberTicker value={d.productCount} format={formatInteger} />}
+          value={<NumberTicker value={d.productCount} format="integer" />}
           icon={Boxes}
           tone="orders"
           hint={`${formatInteger(d.warehouseCount)} ta ombor`}
         />
         <StatCard
           label="Umumiy qoldiq"
-          value={<NumberTicker value={d.totalOnHand} format={formatInteger} />}
+          value={<NumberTicker value={d.totalOnHand} format="integer" />}
           unit="dona"
           icon={Warehouse}
           tone="revenue"
@@ -67,14 +67,14 @@ export default async function WarehouseDashboardPage() {
         />
         <StatCard
           label="Kam qolgan"
-          value={<NumberTicker value={d.lowStockCount} format={formatInteger} />}
+          value={<NumberTicker value={d.lowStockCount} format="integer" />}
           icon={TriangleAlert}
           tone={d.lowStockCount > 0 ? "warning" : "neutral"}
           hint="Minimal qoldiqdan pastda"
         />
         <StatCard
           label="Tugagan"
-          value={<NumberTicker value={d.outOfStockCount} format={formatInteger} />}
+          value={<NumberTicker value={d.outOfStockCount} format="integer" />}
           icon={PackageX}
           tone={d.outOfStockCount > 0 ? "danger" : "neutral"}
           hint="Qoldiq nolga tushgan"
