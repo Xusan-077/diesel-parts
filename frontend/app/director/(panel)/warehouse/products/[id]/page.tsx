@@ -4,7 +4,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { BackendApiError } from "@/lib/api/backend-client";
 import { getWarehouseProduct, listProductMovements } from "@/lib/api/warehouse-repository";
 import { safeRead } from "@/lib/api/safe-read";
-import { formatInteger, formatSum } from "@/lib/analytics/format";
+import { formatSum } from "@/lib/analytics/format";
 import { PageHeader } from "@/components/admin/page-header";
 import { PanelCard } from "@/components/director/panel-card";
 import { StockStatusBadge } from "@/components/director/stock-status-badge";
@@ -82,7 +82,7 @@ export default async function WarehouseProductDetailPage({
           <div key={item.label} className="panel">
             <p className="type-eyebrow text-muted">{item.label}</p>
             <p className="type-figure-sm mt-1 text-foreground">
-              <NumberTicker value={item.value} format={formatInteger} />
+              <NumberTicker value={item.value} format="integer" />
               <span className="ml-1 type-caption text-muted">{product.unit}</span>
             </p>
           </div>
@@ -90,7 +90,7 @@ export default async function WarehouseProductDetailPage({
         <div className="panel">
           <p className="type-eyebrow text-muted">Qoldiq qiymati</p>
           <p className="type-figure-sm mt-1 text-foreground">
-            <NumberTicker value={product.stockValue} format={formatSum} />
+            <NumberTicker value={product.stockValue} format="sum" />
           </p>
           <p className="type-caption mt-1 text-muted">
             {product.unitCost === null

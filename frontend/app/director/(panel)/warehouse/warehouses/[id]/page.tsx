@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Boxes, PackageSearch, Wallet } from "lucide-react";
 import { BackendApiError } from "@/lib/api/backend-client";
 import { getWarehouse } from "@/lib/api/warehouse-repository";
-import { formatInteger, formatSum } from "@/lib/analytics/format";
 import { formatDate } from "@/lib/warehouse/format";
 import { PageHeader } from "@/components/admin/page-header";
 import { NumberTicker } from "@/components/director/number-ticker";
@@ -27,10 +26,10 @@ export default async function WarehouseDetailPage({
   }
 
   const summary = [
-    { label: "Turdagi mahsulot", value: warehouse.stockSummary.skuCount, format: formatInteger, icon: PackageSearch },
-    { label: "Umumiy qoldiq", value: warehouse.stockSummary.totalQuantity, format: formatInteger, icon: Boxes },
-    { label: "Qoldiq qiymati", value: warehouse.stockSummary.stockValue, format: formatSum, icon: Wallet },
-  ];
+    { label: "Turdagi mahsulot", value: warehouse.stockSummary.skuCount, format: "integer", icon: PackageSearch },
+    { label: "Umumiy qoldiq", value: warehouse.stockSummary.totalQuantity, format: "integer", icon: Boxes },
+    { label: "Qoldiq qiymati", value: warehouse.stockSummary.stockValue, format: "sum", icon: Wallet },
+  ] as const;
 
   return (
     <div>
