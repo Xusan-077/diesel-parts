@@ -269,6 +269,7 @@ model User {
   managedWarehouses     Warehouse[]       @relation("WarehouseManager")
   goodsReceiptsCreated  GoodsReceipt[]    @relation("GoodsReceiptCreatedBy")
   goodsReceiptsApproved GoodsReceipt[]    @relation("GoodsReceiptApprovedBy")
+  createdExpenses       Expense[]         @relation("CreatedExpenses")
 }
 
 model Inquiry {
@@ -330,6 +331,20 @@ enum AuditAction {
   REJECT
   IMPORT
   LOGIN
+  /// A staff-recorded payment against an order (finance module — debt tab).
+  PAYMENT
+}
+
+enum ExpenseCategory {
+  RENT
+  SALARY
+  UTILITIES // kommunal
+  LOGISTICS // yetkazib berish / transport
+  TAX // soliq
+  SUPPLIES // xo'jalik / kanstovarlar
+  MARKETING
+  BANK // bank xizmati / komissiya
+  OTHER
 }
 
 /// A buyer a seller works with repeatedly. Distinct from Inquiry, which records
@@ -665,6 +680,28 @@ model Payment {
   /// staff-recorded rows (provider/transactionId both null) are unaffected.
   @@unique([provider, transactionId])
   @@index([orderId])
+}
+
+/// A bookkeeping line for money that left the business — the "Xarajatlar" tab
+/// of the finance module. Hard-deleted when wrong (a mis-typed line is removed,
+/// not archived); every create/update/delete is audited.
+model Expense {
+  id          String          @id @default(cuid())
+  /// Short human title, e.g. "Sentyabr ijara".
+  title       String
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(14, 2)
+  /// The day the money left, not the day the row was entered. Stored at
+  /// Tashkent midnight (UTC+5) by the service.
+  spentAt     DateTime
+  note        String?
+  createdById String
+  createdBy   User            @relation("CreatedExpenses", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([spentAt])
+  @@index([category, spentAt])
 }
 
 model Invoice {

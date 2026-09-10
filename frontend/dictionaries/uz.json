@@ -804,5 +804,14 @@
     "showMore": "Yana {count} ta sharhni ko'rsatish",
     "loadError": "Sharhlarni yuklab bo'lmadi.",
     "retry": "Qayta urinish"
+  },
+  "mobileNav": {
+    "label": "Asosiy navigatsiya",
+    "searchAction": "Detal raqami bo'yicha qidirish",
+    "searchTitle": "Detal raqami bo'yicha qidiruv",
+    "searchHint": "Forsunka, nasos yoki istalgan detalning OEM raqamini kiriting.",
+    "searchPlaceholder": "Masalan, 0445120231",
+    "searchSubmit": "Qidirish",
+    "recentTitle": "Oxirgi qidiruvlar"
   }
 }

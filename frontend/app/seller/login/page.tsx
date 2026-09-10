@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { LoginForm } from "@/components/seller/login-form";
+import { AuthThemeToggle } from "@/components/auth-theme-toggle";
+import { LoginForm } from "@/components/login-form";
 import { safeSellerNext } from "@/lib/seller/safe-next";
 
 export const metadata: Metadata = {
-  title: "Kirish · Seller Panel",
+  title: "Kirish · Sotuvchi paneli",
   robots: { index: false, follow: false },
 };
 
@@ -14,27 +15,21 @@ export default async function SellerLoginPage({
 }) {
   const { next } = await searchParams;
 
+  /*
+   * The same centred shadcn card the director screen renders, and now the
+   * same behaviour: `auth-scene` is the standalone shadcn token scope
+   * (mirrored in app/seller-globals.css) carrying both a light and a dark
+   * set, and which one paints follows the `dark` class `ThemeProvider` (added
+   * to app/seller/layout.tsx for this page) puts on `<html>` — the same store
+   * the corner `AuthThemeToggle` writes to. The authenticated seller panel
+   * stays dark-only regardless; see the layout note.
+   */
   return (
-    <main className="relative isolate flex min-h-dvh items-center justify-center overflow-hidden px-4 py-12">
-      {/* A quiet accent bloom behind the card — the one piece of atmosphere
-          this always-dark panel gets, radial and low-opacity so it reads as
-          light in the room rather than as a shape of its own. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent opacity-[0.08] blur-3xl"
-      />
-
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <p className="seller-eyebrow text-accent">Diesel Parts</p>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground">Seller Panel</h1>
-          <p className="mt-1 text-sm text-muted">Hisobingizga kiring</p>
-        </div>
-
-        <div className="rounded-lg border border-border-strong bg-surface p-6 shadow-2xl sm:p-8">
-          <LoginForm next={safeSellerNext(next)} />
-        </div>
+    <main className="auth-scene relative flex min-h-dvh items-center justify-center bg-background px-4 py-12 text-foreground">
+      <div className="absolute right-4 top-4">
+        <AuthThemeToggle />
       </div>
+      <LoginForm role="seller" next={safeSellerNext(next)} />
     </main>
   );
 }

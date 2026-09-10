@@ -64,6 +64,7 @@ const CUSTOM_MESSAGES: Record<string, string> = {
   integer: "Butun son kiriting",
   min1: "Kamida 1 bo'lsin",
   min0: "Manfiy bo'lmasin",
+  positive: "0 dan katta bo'lsin",
   twoDecimals: "Ko'pi bilan 2 kasr belgisi",
 };
 

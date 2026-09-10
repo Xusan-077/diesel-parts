@@ -31,6 +31,7 @@ const uz = {
     label: "Panel bo'limlari",
     groups: {
       overview: "Umumiy",
+      finance: "Moliya",
       catalog: "Katalog",
       sales: "Savdo",
       management: "Boshqaruv",
@@ -180,6 +181,7 @@ const ru: PanelDictionary = {
     label: "Разделы панели",
     groups: {
       overview: "Обзор",
+      finance: "Финансы",
       catalog: "Каталог",
       sales: "Продажи",
       management: "Управление",
@@ -312,6 +314,7 @@ const en: PanelDictionary = {
     label: "Panel sections",
     groups: {
       overview: "Overview",
+      finance: "Finance",
       catalog: "Catalogue",
       sales: "Sales",
       management: "Management",
