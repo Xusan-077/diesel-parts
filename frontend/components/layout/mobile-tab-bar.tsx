@@ -51,9 +51,10 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
  * keeps its state across client navigations, and Next's scroll-to-top does
  * not reliably produce a scroll event it could read.
  *
- * It stays out of the way on `/cart` and `/checkout`, which pin their own
- * total-and-continue bar to the same edge — during checkout a jump to the
- * catalog is not what the thumb is reaching for anyway.
+ * It stays out of the way only on `/checkout` — a linear flow where a jump
+ * to the catalog is not what the thumb is reaching for. The cart keeps the
+ * bar (going back for one more part is a normal cart move); its own
+ * total-and-continue bar stacks above it via `--mobile-tabbar-clearance`.
  */
 
 interface MobileTabBarProps {
