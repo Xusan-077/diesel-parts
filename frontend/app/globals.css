@@ -943,6 +943,98 @@
   --color-panel-accent-foreground: var(--foreground);
   --color-panel-secondary: var(--surface-muted);
   --color-panel-secondary-foreground: var(--foreground);
+  /* `text-muted-foreground` — shadcn's own name for the description grey.
+     Nothing in the panel uses it (the panel says `text-muted`), so this only
+     ever feeds a stock shadcn component that has not been re-skinned, e.g.
+     `Field`'s description. Inlined, so it resolves `--muted` at the element
+     and stays correct in every theme and in the `.auth-scene` scope below. */
+  --color-muted-foreground: var(--muted);
+}
+
+/* ==========================================================================
+   STAFF SIGN-IN  —  standalone shadcn token scope  (app/{director,seller}/login)
+   --------------------------------------------------------------------------
+   The two sign-in screens render a plain shadcn card, deliberately outside the
+   panel's token ramp. This scope declares the STANDARD shadcn variable names,
+   then adapts them onto the source tokens the `@theme inline` bridge above
+   resolves against (`--surface`, `--accent`, `--border-color`, ...) so
+   `Field` / `Input` / `Button` / `InputGroup` pick the values up through the
+   utilities they already ship with — no component overrides.
+
+   The values ARE the MARKETING SITE PALETTE's (the `.site-root` ramp above):
+   cool near-white neutrals, white cards separated by a border, the site's red
+   accent — so the login screen reads as the front of the storefront rather
+   than as a third look. Copied as literals rather than inherited from
+   `.site-root` because neither login page carries that class (the director
+   login lives under `app/director`, the seller login under `app/seller`), and
+   the status family (`--danger`) is left to inherit, exactly as `.site-root`
+   itself leaves it alone.
+
+   Scoped to `.auth-scene` (a class on each login page's <main>). The base
+   block is the LIGHT palette; the `.dark .auth-scene, .auth-scene.dark` block
+   below swaps in the dark set. Both the director and the seller login inherit
+   `dark` from `<html>`, toggled by a `ThemeProvider` in their respective
+   layouts; the `.auth-scene.dark` half of the selector is a safety net for a
+   page that pins the class on the element itself. Nothing here reaches a
+   working panel or a marketing page.
+
+   The adapter vars (`--surface`, `--accent`, ...) are aliases of the standard
+   vars declared on the same element, so they re-resolve per theme without
+   being restated — only the literal `--surface-hover` is overridden below.
+   See the substitution note in the MARKETING SITE PALETTE block for why that
+   same-element placement matters.
+   ========================================================================== */
+
+.auth-scene {
+  color-scheme: light;
+
+  /* shadcn's registry names — light set, = the `.site-root` light ramp. */
+  --background: #ffffff;
+  --foreground: #151719;
+  --card: #ffffff;
+  --card-foreground: #151719;
+  --popover: #ffffff;
+  --popover-foreground: #151719;
+  --primary: #d90606;
+  --primary-foreground: #f8fafc;
+  --muted-foreground: #7a8086;
+  --border: #dde1e4;
+  --input: #c7ccd1;
+  --ring: #d90606;
+
+  /* Adapter onto the panel's source tokens. `--background` / `--foreground`
+     are source tokens already, so they feed the bridge directly and need no
+     alias. `ring-ring` resolves via `--color-ring: var(--accent)`, so `--ring`
+     is documentation — it and `--accent` are the same red here anyway. */
+  --surface: var(--card);
+  --surface-elevated: var(--popover);
+  --surface-hover: #f8f9fa;
+  --accent: var(--primary);
+  --accent-foreground: var(--primary-foreground);
+  --border-color: var(--border);
+  --border-strong: var(--input);
+  --muted: var(--muted-foreground);
+}
+
+.dark .auth-scene,
+.auth-scene.dark {
+  color-scheme: dark;
+
+  /* = the `.dark .site-root` ramp. */
+  --background: #0b0d0e;
+  --foreground: #f5f6f7;
+  --card: #151819;
+  --card-foreground: #f5f6f7;
+  --popover: #202426;
+  --popover-foreground: #f5f6f7;
+  --primary: #ff6b2c;
+  --primary-foreground: #0d0e0f;
+  --muted-foreground: #858c91;
+  --border: #292e31;
+  --input: #3a4145;
+  --ring: #ff6b2c;
+
+  --surface-hover: #1b1f21;
 }
 
 /* ==========================================================================

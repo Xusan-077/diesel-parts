@@ -214,6 +214,36 @@
   --color-field-border: var(--field-border);
   --color-brand-red: var(--brand-red);
 
+  /* --- shadcn CLI bridge -------------------------------------------------
+     Mirrors the block of the same name in app/globals.css. Components
+     fetched with `npx shadcn add` (components/ui/shadcn/*) are written
+     against a fixed slot vocabulary — primary, card, popover, destructive,
+     input, ring, plus muted/accent/secondary as generic surface names. The
+     first six have no other meaning in this file and alias straight onto the
+     tokens above. The last three already name TEXT / CTA roles here, so they
+     are aliased under a `panel-` prefix instead and the shadcn files are
+     rewritten after fetch to reference those. Nothing outside
+     components/ui/shadcn/ reads these. */
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface-elevated);
+  --color-popover-foreground: var(--foreground);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--accent-foreground);
+  --color-input: var(--border-strong);
+  --color-ring: var(--accent);
+  --color-panel-muted: var(--surface-muted);
+  --color-panel-muted-foreground: var(--muted);
+  --color-panel-accent: var(--surface-hover);
+  --color-panel-accent-foreground: var(--foreground);
+  --color-panel-secondary: var(--surface-muted);
+  --color-panel-secondary-foreground: var(--foreground);
+  /* shadcn's own name for the description grey — see the note in
+     app/globals.css. Only ever feeds a stock (un-re-skinned) shadcn part. */
+  --color-muted-foreground: var(--muted);
+
   --shadow-xs: var(--elevation-1);
   --shadow-sm: var(--elevation-1);
   --shadow-md: var(--elevation-2);
@@ -364,6 +394,72 @@
 .seller-root {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* ==========================================================================
+   STAFF SIGN-IN  —  standalone shadcn token scope
+   --------------------------------------------------------------------------
+   Byte-identical to the `.auth-scene` blocks in app/globals.css. The sign-in
+   card is shared between the director and seller panels
+   (components/login-form.tsx), so its palette is declared once per entry
+   point. The values are the MARKETING SITE PALETTE's (`.site-root` in
+   app/globals.css) — cool near-white neutrals, white cards, the site's red
+   accent — so the login screen reads as the front of the storefront.
+   Adapted onto the source tokens the `@theme inline` bridge above resolves
+   against. Scoped to `.auth-scene` on the login page's <main>; nothing here
+   touches the working seller panel.
+
+   The base block is the LIGHT set; `.dark .auth-scene, .auth-scene.dark`
+   swaps in dark. Both login pages now reach `dark` the same way — inherited
+   from `<html>`, toggled by a `ThemeProvider` (app/{director,seller}/
+   layout.tsx) — so the ancestor half of the selector is what fires; the
+   `.auth-scene.dark` half is kept as a safety net for any future page that
+   pins the class on the element itself.
+   ========================================================================== */
+.auth-scene {
+  color-scheme: light;
+
+  --background: #ffffff;
+  --foreground: #151719;
+  --card: #ffffff;
+  --card-foreground: #151719;
+  --popover: #ffffff;
+  --popover-foreground: #151719;
+  --primary: #d90606;
+  --primary-foreground: #f8fafc;
+  --muted-foreground: #7a8086;
+  --border: #dde1e4;
+  --input: #c7ccd1;
+  --ring: #d90606;
+
+  --surface: var(--card);
+  --surface-elevated: var(--popover);
+  --surface-hover: #f8f9fa;
+  --accent: var(--primary);
+  --accent-foreground: var(--primary-foreground);
+  --border-color: var(--border);
+  --border-strong: var(--input);
+  --muted: var(--muted-foreground);
+}
+
+.dark .auth-scene,
+.auth-scene.dark {
+  color-scheme: dark;
+
+  --background: #0b0d0e;
+  --foreground: #f5f6f7;
+  --card: #151819;
+  --card-foreground: #f5f6f7;
+  --popover: #202426;
+  --popover-foreground: #f5f6f7;
+  --primary: #ff6b2c;
+  --primary-foreground: #0d0e0f;
+  --muted-foreground: #858c91;
+  --border: #292e31;
+  --input: #3a4145;
+  --ring: #ff6b2c;
+
+  --surface-hover: #1b1f21;
 }
 
 /*
