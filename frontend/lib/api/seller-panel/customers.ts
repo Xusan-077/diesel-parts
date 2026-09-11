@@ -1,8 +1,17 @@
 import { sellerApiRequest } from "./client";
 import type { Customer, CustomerOrderRow, CustomersQuery, Paginated, PaginationParams } from "./types";
 
+export interface CreateCustomerInput {
+  name: string;
+  phone: string;
+}
+
 export function fetchCustomers(query: CustomersQuery): Promise<Paginated<Customer>> {
   return sellerApiRequest<Paginated<Customer>>("/seller/customers", { query });
+}
+
+export function createCustomer(dto: CreateCustomerInput): Promise<Customer> {
+  return sellerApiRequest<Customer>("/seller/customers", { method: "POST", body: dto });
 }
 
 export function fetchCustomer(id: string): Promise<Customer> {

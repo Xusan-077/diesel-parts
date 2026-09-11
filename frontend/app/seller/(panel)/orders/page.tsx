@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { useOrders } from "@/hooks/seller/queries/use-orders";
 import { OrdersTable } from "@/components/seller/orders-table";
 import { PageHeader } from "@/components/seller/page-header";
@@ -39,6 +41,15 @@ export default function SellerOrdersPage() {
       <PageHeader
         title="Buyurtmalar"
         description="Sizga biriktirilgan buyurtmalar, holati bo'yicha."
+        actions={
+          <Link
+            href="/seller/orders/new"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent-hover"
+          >
+            <Plus className="h-4 w-4" />
+            Yangi sotuv
+          </Link>
+        }
       />
 
       <div className="mt-8 space-y-4">
