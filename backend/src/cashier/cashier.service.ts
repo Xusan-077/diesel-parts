@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -23,15 +24,81 @@ export class CashierService {
     private readonly audit: AuditService,
   ) {}
 
-  current(actor: AuthenticatedUser) {
+  /**
+   * The open shift plus a live `expectedBalance`/`cashSales`/`cashRefunds`
+   * breakdown computed as-of now — the same formula `close()` commits, just
+   * not yet written to the row. Lets the dashboard show "what you'd expect to
+   * count" while the till is still open, without a separate endpoint.
+   */
+  async current(actor: AuthenticatedUser) {
+    const shift = await this.findOpenShift(actor);
+    if (!shift) return null;
+
+    const breakdown = await this.computeExpectedBalance(
+      actor,
+      shift,
+      new Date(),
+    );
+    return { ...shift, ...breakdown };
+  }
+
+  private findOpenShift(actor: AuthenticatedUser) {
     return this.prisma.cashierShift.findFirst({
       where: { sellerId: actor.id, status: CashierShiftStatus.OPEN },
       orderBy: { openedAt: 'desc' },
     });
   }
 
+  /** Last `limit` closed shifts for this seller, most recent first. */
+  history(actor: AuthenticatedUser, limit = 10) {
+    return this.prisma.cashierShift.findMany({
+      where: { sellerId: actor.id, status: CashierShiftStatus.CLOSED },
+      orderBy: { closedAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  private async computeExpectedBalance(
+    actor: AuthenticatedUser,
+    shift: { openingBalance: Prisma.Decimal; openedAt: Date },
+    asOf: Date,
+  ) {
+    const [cashSales, cashRefunds] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: {
+          method: PaymentMethod.CASH,
+          status: PaymentStatus.COMPLETED,
+          paidAt: { gte: shift.openedAt, lte: asOf },
+          order: { sellerId: actor.id },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.return.aggregate({
+        where: {
+          refundMethod: PaymentMethod.CASH,
+          sellerId: actor.id,
+          createdAt: { gte: shift.openedAt, lte: asOf },
+        },
+        _sum: { refundAmount: true },
+      }),
+    ]);
+
+    const cashSalesTotal = cashSales._sum.amount ?? new Prisma.Decimal(0);
+    const cashRefundsTotal =
+      cashRefunds._sum.refundAmount ?? new Prisma.Decimal(0);
+    const expectedBalance = shift.openingBalance
+      .add(cashSalesTotal)
+      .sub(cashRefundsTotal);
+
+    return {
+      cashSales: cashSalesTotal,
+      cashRefunds: cashRefundsTotal,
+      expectedBalance,
+    };
+  }
+
   async open(actor: AuthenticatedUser, dto: OpenShiftDto) {
-    const existing = await this.current(actor);
+    const existing = await this.findOpenShift(actor);
     if (existing) {
       throw new ConflictException({
         error: 'shift_already_open',
@@ -85,36 +152,15 @@ export class CashierService {
     }
 
     const closedAt = new Date();
-
-    const [cashSales, cashRefunds] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: {
-          method: PaymentMethod.CASH,
-          status: PaymentStatus.COMPLETED,
-          paidAt: { gte: shift.openedAt, lte: closedAt },
-          order: { sellerId: actor.id },
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.return.aggregate({
-        where: {
-          refundMethod: PaymentMethod.CASH,
-          sellerId: actor.id,
-          createdAt: { gte: shift.openedAt, lte: closedAt },
-        },
-        _sum: { refundAmount: true },
-      }),
-    ]);
-
-    const cashSalesTotal = cashSales._sum.amount ?? new Prisma.Decimal(0);
-    const cashRefundsTotal =
-      cashRefunds._sum.refundAmount ?? new Prisma.Decimal(0);
-
-    const expectedBalance = shift.openingBalance
-      .add(cashSalesTotal)
-      .sub(cashRefundsTotal);
+    const { expectedBalance } = shift;
     const actualBalance = new Prisma.Decimal(dto.closingBalanceActual);
     const difference = actualBalance.sub(expectedBalance);
+    if (!difference.isZero() && !dto.comment?.trim()) {
+      throw new BadRequestException({
+        error: 'shift_comment_required',
+        message: 'Farq uchun izoh kiriting',
+      });
+    }
 
     const updated = await this.prisma.cashierShift.update({
       where: { id: shift.id },

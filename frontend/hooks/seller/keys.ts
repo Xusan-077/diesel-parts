@@ -4,6 +4,7 @@ import type {
   MovementsQuery,
   OrdersQuery,
   ProductsQuery,
+  ReturnsQuery,
 } from "@/lib/api/seller-panel/types";
 
 /**
@@ -28,21 +29,27 @@ export const sellerKeys = {
   },
   products: {
     all: ["seller", "products"] as const,
-    list: (query: ProductsQuery) => ["seller", "products", "list", query] as const,
+    list: (query: ProductsQuery) =>
+      ["seller", "products", "list", query] as const,
     detail: (id: string) => ["seller", "products", "detail", id] as const,
     stock: (id: string) => ["seller", "products", "stock", id] as const,
   },
   customers: {
     all: ["seller", "customers"] as const,
-    list: (query: CustomersQuery) => ["seller", "customers", "list", query] as const,
+    list: (query: CustomersQuery) =>
+      ["seller", "customers", "list", query] as const,
     detail: (id: string) => ["seller", "customers", "detail", id] as const,
-    orders: (id: string, page: number) => ["seller", "customers", "orders", id, page] as const,
+    orders: (id: string, page: number) =>
+      ["seller", "customers", "orders", id, page] as const,
   },
   inventory: {
     all: ["seller", "inventory"] as const,
-    list: (query: InventoryQuery) => ["seller", "inventory", "list", query] as const,
-    lowStock: (query: InventoryQuery) => ["seller", "inventory", "low-stock", query] as const,
-    movements: (query: MovementsQuery) => ["seller", "inventory", "movements", query] as const,
+    list: (query: InventoryQuery) =>
+      ["seller", "inventory", "list", query] as const,
+    lowStock: (query: InventoryQuery) =>
+      ["seller", "inventory", "low-stock", query] as const,
+    movements: (query: MovementsQuery) =>
+      ["seller", "inventory", "movements", query] as const,
   },
   notifications: {
     all: ["seller", "notifications"] as const,
@@ -52,5 +59,17 @@ export const sellerKeys = {
     categories: () => ["seller", "catalog", "categories"] as const,
     brands: () => ["seller", "catalog", "brands"] as const,
     warehouses: () => ["seller", "catalog", "warehouses"] as const,
+  },
+  returns: {
+    all: ["seller", "returns"] as const,
+    list: (query: ReturnsQuery) =>
+      ["seller", "returns", "list", query] as const,
+    detail: (id: string) => ["seller", "returns", "detail", id] as const,
+  },
+  cashier: {
+    all: ["seller", "cashier"] as const,
+    current: () => ["seller", "cashier", "current"] as const,
+    history: (limit: number) =>
+      ["seller", "cashier", "history", limit] as const,
   },
 } as const;

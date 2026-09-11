@@ -110,6 +110,15 @@ export class OrdersService {
         ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
       };
     }
+    if (query.search) {
+      where.OR = [
+        { orderNumber: { contains: query.search, mode: 'insensitive' } },
+        {
+          customer: { name: { contains: query.search, mode: 'insensitive' } },
+        },
+        { customer: { phone: { contains: query.search } } },
+      ];
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.order.findMany({

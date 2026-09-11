@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { CashierService } from './cashier.service';
 import { OpenShiftDto } from './dto/open-shift.dto';
 import { CloseShiftDto } from './dto/close-shift.dto';
+import { QueryShiftHistoryDto } from './dto/query-shift-history.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -18,6 +19,14 @@ export class CashierController {
   @Get('shift/current')
   current(@CurrentUser() actor: AuthenticatedUser) {
     return this.cashier.current(actor);
+  }
+
+  @Get('shift/history')
+  history(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Query() query: QueryShiftHistoryDto,
+  ) {
+    return this.cashier.history(actor, query.limit);
   }
 
   @Post('shift/open')

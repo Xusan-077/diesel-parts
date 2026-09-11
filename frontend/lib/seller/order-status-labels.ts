@@ -6,12 +6,19 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   PREPARING: "Tayyorlanmoqda",
   COMPLETED: "Bajarildi",
   CANCELLED: "Bekor qilindi",
+  PARTIALLY_REFUNDED: "Qisman qaytarildi",
+  REFUNDED: "To'liq qaytarildi",
 };
 
-export const ORDER_STATUS_TONE: Record<OrderStatus, "neutral" | "accent" | "success" | "danger" | "info"> = {
+export const ORDER_STATUS_TONE: Record<
+  OrderStatus,
+  "neutral" | "accent" | "success" | "danger" | "info" | "warning"
+> = {
   NEW: "neutral",
   CONFIRMED: "info",
   PREPARING: "accent",
   COMPLETED: "success",
   CANCELLED: "danger",
+  PARTIALLY_REFUNDED: "warning",
+  REFUNDED: "warning",
 };

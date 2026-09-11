@@ -17,12 +17,19 @@ import {
   Prisma,
   Role,
   ReturnCondition,
+  ReturnRefundMethod,
 } from '../../generated/prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 const RETURN_INCLUDE = {
   order: {
-    select: { id: true, orderNumber: true, sellerId: true, customerId: true },
+    select: {
+      id: true,
+      orderNumber: true,
+      sellerId: true,
+      customerId: true,
+      customer: { select: { id: true, name: true, phone: true } },
+    },
   },
   seller: { select: { id: true, name: true } },
   items: {
@@ -45,6 +52,28 @@ export class ReturnsService {
     const where: Prisma.ReturnWhereInput = {};
     if (actor.role === Role.SELLER) where.sellerId = actor.id;
     if (query.orderId) where.orderId = query.orderId;
+    if (query.status) where.status = query.status;
+    if (query.dateFrom || query.dateTo) {
+      where.createdAt = {
+        ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+        ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
+      };
+    }
+    if (query.search) {
+      where.OR = [
+        { returnNumber: { contains: query.search, mode: 'insensitive' } },
+        {
+          order: {
+            orderNumber: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+        {
+          order: {
+            customer: { name: { contains: query.search, mode: 'insensitive' } },
+          },
+        },
+      ];
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.return.findMany({
@@ -81,7 +110,11 @@ export class ReturnsService {
   async create(actor: AuthenticatedUser, dto: CreateReturnDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: dto.orderId },
-      include: { items: true, returns: { include: { items: true } } },
+      include: {
+        items: true,
+        payments: true,
+        returns: { include: { items: true } },
+      },
     });
     if (!order) {
       throw new NotFoundException({
@@ -106,6 +139,25 @@ export class ReturnsService {
       );
     }
     const warehouseId = order.warehouseId;
+    let refundMethod: ReturnRefundMethod;
+    if (dto.refundMethod === 'ORIGINAL') {
+      const methods = [
+        ...new Set(
+          order.payments
+            .filter((p) => p.status === 'COMPLETED')
+            .map((p) => p.method),
+        ),
+      ];
+      if (methods.length !== 1 || methods[0] === 'SELLER_AGREEMENT') {
+        throw new BadRequestException({
+          error: 'original_payment_ambiguous',
+          message: 'Qaytarish usulini tanlang',
+        });
+      }
+      refundMethod = methods[0];
+    } else {
+      refundMethod = dto.refundMethod;
+    }
 
     const originalByProduct = new Map<
       string,
@@ -139,8 +191,16 @@ export class ReturnsService {
       condition: ReturnCondition;
     }[] = [];
     let refundAmount = new Prisma.Decimal(0);
+    const requestedProducts = new Set<string>();
 
     for (const requested of dto.items) {
+      if (requestedProducts.has(requested.productId)) {
+        throw new BadRequestException({
+          error: 'duplicate_return_item',
+          message: 'Mahsulot takrorlangan',
+        });
+      }
+      requestedProducts.add(requested.productId);
       const original = originalByProduct.get(requested.productId);
       if (!original) {
         throw new BadRequestException({
@@ -173,6 +233,17 @@ export class ReturnsService {
       });
     }
 
+    if (dto.refundAmount !== undefined) {
+      const requestedAmount = new Prisma.Decimal(dto.refundAmount);
+      if (requestedAmount.gt(refundAmount)) {
+        throw new BadRequestException({
+          error: 'refund_exceeds_total',
+          message: 'Qaytarish summasi mahsulotlar summasidan oshmasin',
+        });
+      }
+      refundAmount = requestedAmount;
+    }
+
     // Across every product line on the order, has every purchased unit now
     // been returned (this batch included)?
     const isFullyReturned = [...originalByProduct.entries()].every(
@@ -199,7 +270,7 @@ export class ReturnsService {
           returnNumber,
           orderId: order.id,
           sellerId: actor.id,
-          refundMethod: dto.refundMethod,
+          refundMethod,
           refundAmount,
           items: { create: linesToCreate },
         },
@@ -232,7 +303,7 @@ export class ReturnsService {
       after: {
         orderId: order.id,
         refundAmount: Number(refundAmount),
-        refundMethod: dto.refundMethod,
+        refundMethod,
         itemCount: linesToCreate.length,
         newOrderStatus: nextOrderStatus,
       },

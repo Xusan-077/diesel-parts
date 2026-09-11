@@ -4,12 +4,15 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsIn,
+  IsNumber,
+  IsOptional,
   IsString,
   Min,
   ValidateNested,
 } from 'class-validator';
 import {
-  PaymentMethod,
+  ReturnRefundMethod,
   ReturnCondition,
   ReturnReason,
 } from '../../../generated/prisma/client';
@@ -33,8 +36,13 @@ export class CreateReturnDto {
   @IsString()
   orderId: string;
 
-  @IsEnum(PaymentMethod)
-  refundMethod: PaymentMethod;
+  @IsIn([...Object.values(ReturnRefundMethod), 'ORIGINAL'])
+  refundMethod: ReturnRefundMethod | 'ORIGINAL';
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  refundAmount?: number;
 
   @IsArray()
   @ArrayMinSize(1)

@@ -79,6 +79,17 @@ enum PaymentMethod {
   SELLER_AGREEMENT
 }
 
+enum ReturnRefundMethod {
+  CASH
+  CARD
+  TRANSFER
+  ONLINE
+  SELLER_AGREEMENT
+  PAYME
+  CLICK
+  PAYNET
+}
+
 enum PaymentStatus {
   PENDING
   COMPLETED
@@ -755,9 +766,8 @@ model CashierShift {
 
 /// A customer returning some (or all) of a COMPLETED order's items. Only
 /// `GOOD`-condition lines go back on the shelf; the rest are recorded but
-/// never touch StockMovement. `refundAmount` is the sum of the returned
-/// lines' `lineTotal`, regardless of condition — a defective part is still
-/// refunded to the customer even though it cannot be resold.
+/// never touch StockMovement. `refundAmount` defaults to the returned lines'
+/// total; a seller may reduce it when agreeing an adjusted refund.
 model Return {
   id           String        @id @default(cuid())
   /// "RET-<N>", same gapless-sequence pattern as Order.orderNumber.
@@ -766,7 +776,7 @@ model Return {
   order        Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
   sellerId     String
   seller       User          @relation("SellerReturns", fields: [sellerId], references: [id], onDelete: Restrict)
-  refundMethod PaymentMethod
+  refundMethod ReturnRefundMethod
   refundAmount Decimal       @db.Decimal(14, 2)
   status       ReturnStatus  @default(COMPLETED)
   items        ReturnItem[]

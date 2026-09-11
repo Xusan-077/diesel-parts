@@ -2,13 +2,44 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardList, Package, Users, Boxes, User } from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Package,
+  Users,
+  Boxes,
+  User,
+  Undo2,
+  Banknote,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS: { href: string; label: string; icon: typeof LayoutDashboard; exact: boolean }[] = [
-  { href: "/seller", label: "Boshqaruv paneli", icon: LayoutDashboard, exact: true },
-  { href: "/seller/orders", label: "Buyurtmalar", icon: ClipboardList, exact: false },
-  { href: "/seller/products", label: "Mahsulotlar", icon: Package, exact: false },
+export const SELLER_NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+}[] = [
+  {
+    href: "/seller",
+    label: "Boshqaruv paneli",
+    icon: LayoutDashboard,
+    exact: true,
+  },
+  {
+    href: "/seller/orders",
+    label: "Buyurtmalar",
+    icon: ClipboardList,
+    exact: false,
+  },
+  { href: "/seller/returns", label: "Qaytarishlar", icon: Undo2, exact: false },
+  { href: "/seller/cashier", label: "Kassa", icon: Banknote, exact: false },
+  {
+    href: "/seller/products",
+    label: "Mahsulotlar",
+    icon: Package,
+    exact: false,
+  },
   { href: "/seller/customers", label: "Mijozlar", icon: Users, exact: false },
   { href: "/seller/inventory", label: "Ombor", icon: Boxes, exact: false },
   { href: "/seller/profile", label: "Profil", icon: User, exact: false },
@@ -23,8 +54,10 @@ export function Sidebar() {
         <p className="seller-eyebrow text-accent">Diesel Parts</p>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {NAV_ITEMS.map((item) => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+        {SELLER_NAV_ITEMS.map((item) => {
+          const active = item.exact
+            ? pathname === item.href
+            : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link
@@ -35,7 +68,7 @@ export function Sidebar() {
                 "flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors",
                 active
                   ? "nav-plate font-medium"
-                  : "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground"
+                  : "border border-transparent text-muted hover:bg-surface-hover hover:text-foreground",
               )}
             >
               <Icon className={cn("h-4 w-4", active ? "" : "text-muted")} />

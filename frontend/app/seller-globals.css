@@ -170,6 +170,22 @@
 }
 
 @theme inline {
+  /* shadcn primitives share the seller palette, including their portals. */
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface-elevated);
+  --color-popover-foreground: var(--foreground);
+  --color-input: var(--field-border);
+  --color-ring: var(--accent);
+  --color-destructive: var(--danger);
+  --color-panel-secondary: var(--surface-muted);
+  --color-panel-secondary-foreground: var(--foreground);
+  --color-panel-accent: var(--surface-hover);
+  --color-panel-accent-foreground: var(--foreground);
+  --color-panel-muted-foreground: var(--muted);
   --color-background: var(--background);
   --color-background-subtle: var(--background-subtle);
   --color-surface: var(--surface);

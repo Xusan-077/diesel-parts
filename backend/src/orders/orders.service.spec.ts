@@ -290,6 +290,24 @@ describe('OrdersService includes', () => {
   // old `seller: { select: { user: {...} } }`) compiled fine and only threw at
   // query time. This validates every selected column against the real `User`
   // columns from the generated client, catching that class of drift in `jest`.
+  it('findAll matches orderNumber or the customer name/phone when a search term is given', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const { prisma } = makePrisma({ order: { findMany, count } });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.findAll(seller, { search: 'Sardor' });
+
+    const { where } = firstArg<{ where: { OR?: unknown[] } }>(findMany);
+    expect(where.OR).toEqual([
+      { orderNumber: { contains: 'Sardor', mode: 'insensitive' } },
+      { customer: { name: { contains: 'Sardor', mode: 'insensitive' } } },
+      { customer: { phone: { contains: 'Sardor' } } },
+    ]);
+  });
+
   it('ORDER_INCLUDE.seller selects only real User columns', () => {
     const userColumns = new Set<string>(
       Object.values(Prisma.UserScalarFieldEnum),
