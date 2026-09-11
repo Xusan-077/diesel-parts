@@ -79,9 +79,11 @@ export interface OrderCustomer {
   phone: string;
 }
 
+/** `Order.seller` is a FK straight to `User` — no `Seller` indirection (see backend's orders.service.ts doc-comment). */
 export interface OrderSeller {
   id: string;
-  user: { id: string; phone: string };
+  name: string;
+  phone: string;
 }
 
 export interface OrderWarehouse {
@@ -89,14 +91,22 @@ export interface OrderWarehouse {
   name: string;
 }
 
+/**
+ * Mirrors backend's `OrderItem` model + `ORDER_INCLUDE`'s `items.product`
+ * select exactly (`{id, sku, nameEn}` — no other locale, no `total`/`price`/
+ * `quantity` aliases: those never existed on the wire, only `qty`/
+ * `unitPrice`/`productSku`/`productName` do). A line total is `qty *
+ * unitPrice`, computed at render time, not a field the API sends.
+ */
 export interface OrderItem {
   id: string;
   orderId: string;
   productId: string;
-  product: { id: string; sku: string; name: string };
-  quantity: number;
-  price: string;
-  total: string;
+  product: { id: string; sku: string; nameEn: string };
+  productSku: string;
+  productName: string;
+  qty: number;
+  unitPrice: string;
 }
 
 export interface Payment {
@@ -126,13 +136,13 @@ export interface Order {
   customer: OrderCustomer;
   sellerId: string;
   seller: OrderSeller;
-  warehouseId: string;
-  warehouse: OrderWarehouse;
+  warehouseId: string | null;
+  warehouse: OrderWarehouse | null;
   status: OrderStatus;
   subtotal: string;
   discount: string;
   deliveryFee: string;
-  total: string;
+  totalAmount: string;
   paymentStatus: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
@@ -148,19 +158,33 @@ export interface OrdersQuery extends PaginationParams {
   dateTo?: string;
 }
 
-/** No purchasePrice/supplier fields — ProductsService.toSellerView strips them before this ever serializes. */
+/**
+ * Mirrors the real `Product` row `ProductsService.findAllSeller`/
+ * `findOneSeller`/`findByBarcodeSeller` return — no `purchasePrice`
+ * (`toSellerView` strips it) and no flattened `name`/`sellingPrice`/`image`
+ * aliases: the backend never produces those, only the three locale columns,
+ * `price`, and `imageUrl`. The seller panel displays `nameEn` throughout for
+ * one consistent language, same as order-item/inventory rows (which only
+ * ever carry `nameEn` from the backend's own select).
+ */
 export interface SellerProduct {
   id: string;
   sku: string;
-  name: string;
+  barcode: string | null;
+  oemNumbers: string[];
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  descriptionEn: string;
   categoryId: string;
-  category: { id: string; name: string };
+  category: { id: string; nameUz: string; nameRu: string; nameEn: string };
   brandId: string;
   brand: { id: string; name: string };
-  description: string | null;
-  sellingPrice: string;
-  image: string | null;
+  price: string | null;
+  imageUrl: string | null;
+  stock: number;
   minStock: number;
+  unit: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -210,22 +234,23 @@ export interface CustomerOrderRow {
   orderNumber: string;
   customerId: string;
   sellerId: string;
-  warehouseId: string;
+  warehouseId: string | null;
   status: OrderStatus;
   subtotal: string;
   discount: string;
   deliveryFee: string;
-  total: string;
+  totalAmount: string;
   paymentStatus: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
 }
 
+/** Matches InventoryService's own `INCLUDE.product.select` — `nameEn` only, same as `OrderItem.product`. */
 export interface InventoryProduct {
   id: string;
   sku: string;
-  name: string;
+  nameEn: string;
   minStock: number;
 }
 

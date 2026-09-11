@@ -52,7 +52,7 @@ export default function SellerOrderDetailPage() {
         </div>
         <div className="panel">
           <p className="seller-eyebrow mb-2">Ombor</p>
-          <p className="text-sm text-foreground">{order.warehouse.name}</p>
+          <p className="text-sm text-foreground">{order.warehouse?.name ?? "—"}</p>
         </div>
       </div>
 
@@ -69,11 +69,13 @@ export default function SellerOrderDetailPage() {
         <TableBody>
           {order.items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell className="font-mono">{item.product.sku}</TableCell>
-              <TableCell>{item.product.name}</TableCell>
-              <TableCell className="text-right font-mono">{item.quantity}</TableCell>
-              <TableCell className="text-right font-mono">{formatMoney(item.price)}</TableCell>
-              <TableCell className="text-right font-mono">{formatMoney(item.total)}</TableCell>
+              <TableCell className="font-mono">{item.productSku}</TableCell>
+              <TableCell>{item.productName}</TableCell>
+              <TableCell className="text-right font-mono">{item.qty}</TableCell>
+              <TableCell className="text-right font-mono">{formatMoney(item.unitPrice)}</TableCell>
+              <TableCell className="text-right font-mono">
+                {formatMoney(Number(item.unitPrice) * item.qty)}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -94,7 +96,7 @@ export default function SellerOrderDetailPage() {
         </div>
         <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold text-foreground">
           <span>Jami</span>
-          <span className="font-mono">{formatMoney(order.total)}</span>
+          <span className="font-mono">{formatMoney(order.totalAmount)}</span>
         </div>
       </div>
     </div>

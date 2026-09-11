@@ -61,9 +61,9 @@ export function ProductTable({
                     {product.sku}
                   </Link>
                 </TableCell>
-                <TableCell>{product.name}</TableCell>
+                <TableCell>{product.nameEn}</TableCell>
                 <TableCell className="text-muted">{product.brand.name}</TableCell>
-                <TableCell className="text-right font-mono">{formatMoney(product.sellingPrice)}</TableCell>
+                <TableCell className="text-right font-mono">{formatMoney(product.price ?? 0)}</TableCell>
                 <TableCell className="text-right font-mono">{product.availableQuantity}</TableCell>
                 <TableCell>
                   <Badge tone={STOCK_STATUS_TONE[product.stockStatus]}>{STOCK_STATUS_LABEL[product.stockStatus]}</Badge>

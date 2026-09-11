@@ -36,7 +36,7 @@ export default function SellerProductDetailPage() {
             <span aria-hidden="true" className="h-3 w-0.5 shrink-0 bg-accent-strong" />
             {p.sku}
           </p>
-          <h1 className="type-page mt-1 text-foreground">{p.name}</h1>
+          <h1 className="type-page mt-1 text-foreground">{p.nameEn}</h1>
         </div>
         <Badge tone={STOCK_STATUS_TONE[p.stockStatus]}>{STOCK_STATUS_LABEL[p.stockStatus]}</Badge>
       </header>
@@ -44,11 +44,11 @@ export default function SellerProductDetailPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="panel">
           <p className="seller-eyebrow mb-1">Sotuv narxi</p>
-          <p className="font-mono text-lg text-foreground">{formatMoney(p.sellingPrice)}</p>
+          <p className="font-mono text-lg text-foreground">{formatMoney(p.price ?? 0)}</p>
         </div>
         <div className="panel">
           <p className="seller-eyebrow mb-1">Kategoriya</p>
-          <p className="text-sm text-foreground">{p.category.name}</p>
+          <p className="text-sm text-foreground">{p.category.nameEn}</p>
         </div>
         <div className="panel">
           <p className="seller-eyebrow mb-1">Brend</p>
@@ -56,7 +56,7 @@ export default function SellerProductDetailPage() {
         </div>
       </div>
 
-      {p.description ? <p className="type-body text-muted">{p.description}</p> : null}
+      {p.descriptionEn ? <p className="type-body text-muted">{p.descriptionEn}</p> : null}
 
       <div>
         <p className="type-title mb-3 text-foreground">Ombor bo&apos;yicha qoldiq</p>
