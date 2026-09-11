@@ -250,6 +250,45 @@ export class InventoryService {
   }
 
   /**
+   * Puts GOOD-condition returned units back on the shelf. Unlike
+   * `fulfillForOrder`'s decrement, this only ever adds — a returned line in
+   * any other condition never reaches this method (ReturnsService filters
+   * before calling in).
+   */
+  async restockForReturn(
+    tx: Tx,
+    warehouseId: string,
+    items: { productId: string; quantity: number }[],
+    userId: string,
+    referenceId: string,
+  ) {
+    for (const item of items) {
+      const inventory = await this.getOrCreateInventoryRow(
+        tx,
+        item.productId,
+        warehouseId,
+      );
+
+      await tx.inventory.update({
+        where: { id: inventory.id },
+        data: { quantity: { increment: item.quantity } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          inventoryId: inventory.id,
+          type: StockMovementType.IN,
+          quantity: item.quantity,
+          reason: 'Return',
+          referenceType: 'Return',
+          referenceId,
+          warehouseId,
+          createdById: userId,
+        },
+      });
+    }
+  }
+
+  /**
    * Atomically decrements on-hand stock, refusing to cross zero: the guard
    * lives in the `WHERE` so two concurrent callers cannot both pass a
    * read-then-write check. `count === 0` means either the row is gone or the

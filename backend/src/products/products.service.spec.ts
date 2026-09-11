@@ -303,6 +303,62 @@ function makePublicProduct(overrides: Record<string, unknown> = {}) {
   };
 }
 
+describe('ProductsService.findByBarcodeSeller', () => {
+  const { audit } = makeAudit();
+
+  it('looks up by barcode, not id', async () => {
+    const findUnique = jest.fn().mockResolvedValue(makePublicProduct());
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique } }),
+      audit,
+    );
+
+    await service.findByBarcodeSeller('4600000000001');
+
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { barcode: '4600000000001' } }),
+    );
+  });
+
+  it('404s when no product carries that barcode', async () => {
+    const findUnique = jest.fn().mockResolvedValue(null);
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique } }),
+      audit,
+    );
+
+    await expect(service.findByBarcodeSeller('nope')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('404s on a retired product, same as a missing one', async () => {
+    const findUnique = jest
+      .fn()
+      .mockResolvedValue(makePublicProduct({ isActive: false }));
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique } }),
+      audit,
+    );
+
+    await expect(
+      service.findByBarcodeSeller('4600000000001'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('never includes purchasePrice', async () => {
+    const findUnique = jest.fn().mockResolvedValue(makePublicProduct());
+    const service = new ProductsService(
+      makePrisma({ product: { findUnique } }),
+      audit,
+    );
+
+    const result = await service.findByBarcodeSeller('4600000000001');
+
+    expect(result).not.toHaveProperty('purchasePrice');
+  });
+});
+
 describe('ProductsService public reads', () => {
   const { audit } = makeAudit();
 

@@ -12,6 +12,7 @@ import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { QueryCustomerDto } from './dto/query-customer.dto';
+import { CreateDebtPaymentDto } from './dto/create-debt-payment.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -85,6 +86,15 @@ export class SellerCustomersController {
   @Post(':id/claim')
   claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.customers.claim(id, toActor(user));
+  }
+
+  @Post(':id/debt-payment')
+  recordDebtPayment(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: CreateDebtPaymentDto,
+  ) {
+    return this.customers.recordDebtPayment(id, dto, user.id, toActor(user));
   }
 }
 

@@ -49,4 +49,28 @@ describe('canTransition', () => {
       false,
     );
   });
+
+  it('allows a return to move a COMPLETED order to (partially) refunded', () => {
+    expect(
+      canTransition(OrderStatus.COMPLETED, OrderStatus.PARTIALLY_REFUNDED),
+    ).toBe(true);
+    expect(canTransition(OrderStatus.COMPLETED, OrderStatus.REFUNDED)).toBe(
+      true,
+    );
+    expect(
+      canTransition(OrderStatus.PARTIALLY_REFUNDED, OrderStatus.REFUNDED),
+    ).toBe(true);
+  });
+
+  it('rejects any transition out of REFUNDED, or back to an active state from PARTIALLY_REFUNDED', () => {
+    expect(canTransition(OrderStatus.REFUNDED, OrderStatus.COMPLETED)).toBe(
+      false,
+    );
+    expect(
+      canTransition(OrderStatus.PARTIALLY_REFUNDED, OrderStatus.COMPLETED),
+    ).toBe(false);
+    expect(
+      canTransition(OrderStatus.PARTIALLY_REFUNDED, OrderStatus.CANCELLED),
+    ).toBe(false);
+  });
 });

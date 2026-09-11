@@ -21,7 +21,12 @@ export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
     OrderStatus.CANCELLED,
   ],
   PREPARING: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-  COMPLETED: [],
+  // A return moves a settled order to one of these two — never back to an
+  // active state. ReturnsService drives this transition itself (it, not the
+  // caller, knows whether the return covered every line or only some).
+  COMPLETED: [OrderStatus.PARTIALLY_REFUNDED, OrderStatus.REFUNDED],
+  PARTIALLY_REFUNDED: [OrderStatus.REFUNDED],
+  REFUNDED: [],
   CANCELLED: [],
 };
 

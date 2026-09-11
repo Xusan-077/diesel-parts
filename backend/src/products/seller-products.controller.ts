@@ -18,6 +18,11 @@ export class SellerProductsController {
     return this.products.findAllSeller(query);
   }
 
+  @Get('barcode/:code')
+  findByBarcode(@Param('code') code: string) {
+    return this.products.findByBarcodeSeller(code);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.products.findOneSeller(id);

@@ -367,6 +367,21 @@ export class ProductsService {
     return this.toSellerView(product);
   }
 
+  /** POS barcode scan — an exact, unique match or a typed 404 the scanner UI can fall back on. */
+  async findByBarcodeSeller(barcode: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { barcode },
+      include: ADMIN_INCLUDE,
+    });
+    if (!product || !product.isActive) {
+      throw new NotFoundException({
+        error: 'product_not_found',
+        message: 'Mahsulot topilmadi',
+      });
+    }
+    return this.toSellerView(this.withStock(product));
+  }
+
   async stock(id: string) {
     await this.getWithStockOrThrow(id);
     const inventories = await this.prisma.inventory.findMany({

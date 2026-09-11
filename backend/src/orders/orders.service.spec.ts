@@ -86,6 +86,7 @@ function makeTx(
     order?: Record<string, unknown>;
     orderItem?: Record<string, unknown>;
     customer?: Record<string, unknown>;
+    payment?: Record<string, unknown>;
     notification?: Record<string, unknown>;
   } = {},
 ) {
@@ -112,7 +113,18 @@ function makeTx(
     },
     customer: {
       update: jest.fn().mockResolvedValue({}),
+      // Debt is opt-in (limit 0 by default in production); tests that don't
+      // care about the debt path get an effectively unlimited stand-in so a
+      // COMPLETED transition never trips it unexpectedly.
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        debt: new Prisma.Decimal(0),
+        debtLimit: new Prisma.Decimal(1_000_000_000),
+      }),
       ...overrides.customer,
+    },
+    payment: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
+      ...overrides.payment,
     },
     notification: {
       createMany: jest.fn().mockResolvedValue({}),
@@ -1045,7 +1057,12 @@ describe('OrdersService.updateStatus audit', () => {
       id: 'order-1',
       status: OrderStatus.CONFIRMED,
       sellerId: 'seller-user-1',
+      customerId: 'cus-1',
       warehouseId: 'w1',
+      // Paid in full — settleDebtOnComplete short-circuits before ever
+      // touching `customer`, so this test's tx need not mock it.
+      totalAmount: new Prisma.Decimal(0),
+      debtSettledAt: null,
       items: [],
     });
     const txOrderUpdate = jest
@@ -1053,7 +1070,12 @@ describe('OrdersService.updateStatus audit', () => {
       .mockResolvedValue({ id: 'order-1', status: OrderStatus.COMPLETED });
     const $transaction = jest.fn(
       async (cb: (tx: unknown) => Promise<unknown>) =>
-        cb({ order: { update: txOrderUpdate } }),
+        cb({
+          order: { update: txOrderUpdate },
+          payment: {
+            aggregate: jest.fn().mockResolvedValue({ _sum: { amount: null } }),
+          },
+        }),
     );
     const prisma = {
       order: { findUnique },
@@ -1073,5 +1095,154 @@ describe('OrdersService.updateStatus audit', () => {
       before: { status: OrderStatus.CONFIRMED },
       after: { status: OrderStatus.COMPLETED },
     });
+  });
+});
+
+describe('OrdersService.updateStatus debt settlement on COMPLETED', () => {
+  function completingOrder(
+    overrides: Partial<{
+      totalAmount: Prisma.Decimal;
+      debtSettledAt: Date | null;
+    }> = {},
+  ) {
+    return {
+      id: 'order-1',
+      status: OrderStatus.CONFIRMED,
+      sellerId: 'seller-user-1',
+      customerId: 'cus-1',
+      warehouseId: 'w1',
+      totalAmount: overrides.totalAmount ?? new Prisma.Decimal(180),
+      debtSettledAt:
+        'debtSettledAt' in overrides ? overrides.debtSettledAt! : null,
+      items: [],
+    };
+  }
+
+  it('adds the unpaid shortfall to the customer debt, within their limit', async () => {
+    const customerUpdate = jest.fn().mockResolvedValue({});
+    const orderUpdate = jest
+      .fn()
+      .mockResolvedValue({ id: 'order-1', status: OrderStatus.COMPLETED });
+    const tx = makeTx({
+      order: { update: orderUpdate },
+      payment: {
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { amount: new Prisma.Decimal(50) } }),
+      },
+      customer: {
+        update: customerUpdate,
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          debt: new Prisma.Decimal(0),
+          debtLimit: new Prisma.Decimal(200),
+        }),
+      },
+    });
+    const { prisma } = makePrisma({
+      order: { findUnique: jest.fn().mockResolvedValue(completingOrder()) },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.updateStatus(seller, 'order-1', OrderStatus.COMPLETED);
+
+    // totalAmount 180, paid 50 -> shortfall 130, within the 200 limit.
+    expect(
+      Number(firstArg<{ data: { debt: unknown } }>(customerUpdate).data.debt),
+    ).toBe(130);
+    expect(
+      firstArg<{ data: { debtSettledAt: unknown } }>(orderUpdate).data
+        .debtSettledAt,
+    ).toBeInstanceOf(Date);
+  });
+
+  it('refuses to complete a sale whose debt would cross the customer’s limit', async () => {
+    const customerUpdate = jest.fn();
+    const tx = makeTx({
+      payment: {
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { amount: new Prisma.Decimal(0) } }),
+      },
+      customer: {
+        update: customerUpdate,
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          debt: new Prisma.Decimal(50),
+          debtLimit: new Prisma.Decimal(100),
+        }),
+      },
+    });
+    const { prisma } = makePrisma({
+      order: { findUnique: jest.fn().mockResolvedValue(completingOrder()) },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    // totalAmount 180 unpaid -> debt would become 50 + 180 = 230, over the 100 limit.
+    const error = await catchError(
+      service.updateStatus(seller, 'order-1', OrderStatus.COMPLETED),
+    );
+    expect(error).toBeInstanceOf(ForbiddenException);
+    expect((error as ForbiddenException).getResponse()).toMatchObject({
+      error: 'debt_limit_exceeded',
+      approvalRequired: true,
+    });
+    expect(customerUpdate).not.toHaveBeenCalled();
+  });
+
+  it('never re-settles debt on an order that already ran through this once', async () => {
+    const findUniqueOrThrow = jest.fn();
+    const orderUpdate = jest
+      .fn()
+      .mockResolvedValue({ id: 'order-1', status: OrderStatus.COMPLETED });
+    const tx = makeTx({
+      order: { update: orderUpdate },
+      customer: { findUniqueOrThrow },
+    });
+    const { prisma } = makePrisma({
+      order: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(completingOrder({ debtSettledAt: new Date() })),
+      },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.updateStatus(seller, 'order-1', OrderStatus.COMPLETED);
+
+    expect(findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(
+      firstArg<{ data: Record<string, unknown> }>(orderUpdate).data,
+    ).not.toHaveProperty('debtSettledAt');
+  });
+
+  it('leaves the customer untouched when the sale was paid in full', async () => {
+    const customerUpdate = jest.fn();
+    const tx = makeTx({
+      payment: {
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _sum: { amount: new Prisma.Decimal(180) } }),
+      },
+      customer: { update: customerUpdate },
+    });
+    const { prisma } = makePrisma({
+      order: { findUnique: jest.fn().mockResolvedValue(completingOrder()) },
+      tx,
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    await service.updateStatus(seller, 'order-1', OrderStatus.COMPLETED);
+
+    expect(customerUpdate).not.toHaveBeenCalled();
   });
 });

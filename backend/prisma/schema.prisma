@@ -192,6 +192,7 @@ model Product {
   inventories       Inventory[]
   cartItems         CartItem[]
   goodsReceiptItems GoodsReceiptItem[]
+  returnItems       ReturnItem[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -243,33 +244,36 @@ model Review {
 }
 
 model User {
-  id                    String            @id @default(cuid())
+  id                    String                @id @default(cuid())
   name                  String
-  email                 String            @unique
-  phone                 String?           @unique
+  email                 String                @unique
+  phone                 String?               @unique
   passwordHash          String
   role                  Role
-  isActive              Boolean           @default(true)
+  isActive              Boolean               @default(true)
   /// Percent a SELLER may discount without director approval.
-  discountLimit         Int               @default(5)
-  createdAt             DateTime          @default(now())
+  discountLimit         Int                   @default(5)
+  createdAt             DateTime              @default(now())
   /// Added after the table was populated, so it carries a DB default; Prisma
   /// still stamps it on every write via @updatedAt.
-  updatedAt             DateTime          @default(now()) @updatedAt
-  inquiries             Inquiry[]         @relation("AssignedInquiries")
-  assignedCustomers     Customer[]        @relation("AssignedCustomers")
-  orders                Order[]           @relation("SellerOrders")
-  requestedDiscounts    DiscountRequest[] @relation("RequestedDiscounts")
-  reviewedDiscounts     DiscountRequest[] @relation("ReviewedDiscounts")
+  updatedAt             DateTime              @default(now()) @updatedAt
+  inquiries             Inquiry[]             @relation("AssignedInquiries")
+  assignedCustomers     Customer[]            @relation("AssignedCustomers")
+  orders                Order[]               @relation("SellerOrders")
+  requestedDiscounts    DiscountRequest[]     @relation("RequestedDiscounts")
+  reviewedDiscounts     DiscountRequest[]     @relation("ReviewedDiscounts")
   notifications         Notification[]
   auditLogs             AuditLog[]
   seller                Seller?
   refreshTokens         RefreshToken[]
   stockMovementsMade    StockMovement[]
-  managedWarehouses     Warehouse[]       @relation("WarehouseManager")
-  goodsReceiptsCreated  GoodsReceipt[]    @relation("GoodsReceiptCreatedBy")
-  goodsReceiptsApproved GoodsReceipt[]    @relation("GoodsReceiptApprovedBy")
-  createdExpenses       Expense[]         @relation("CreatedExpenses")
+  managedWarehouses     Warehouse[]           @relation("WarehouseManager")
+  goodsReceiptsCreated  GoodsReceipt[]        @relation("GoodsReceiptCreatedBy")
+  goodsReceiptsApproved GoodsReceipt[]        @relation("GoodsReceiptApprovedBy")
+  createdExpenses       Expense[]             @relation("CreatedExpenses")
+  cashierShifts         CashierShift[]
+  returnsHandled        Return[]              @relation("SellerReturns")
+  debtPaymentsRecorded  CustomerDebtPayment[] @relation("DebtPaymentsRecorded")
 }
 
 model Inquiry {
@@ -305,6 +309,35 @@ enum OrderStatus {
   PENDING
   CONFIRMED
   PREPARING
+  COMPLETED
+  CANCELLED
+  /// A return left some of the order's value refunded, some kept.
+  PARTIALLY_REFUNDED
+  /// Every returnable line has been returned; the sale is fully reversed.
+  REFUNDED
+}
+
+enum CashierShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum ReturnReason {
+  WRONG_PRODUCT
+  DEFECTIVE
+  CHANGED_MIND
+  DAMAGED
+  OTHER
+}
+
+enum ReturnCondition {
+  GOOD
+  DAMAGED
+  USED
+  DEFECTIVE
+}
+
+enum ReturnStatus {
   COMPLETED
   CANCELLED
 }
@@ -350,7 +383,7 @@ enum ExpenseCategory {
 /// A buyer a seller works with repeatedly. Distinct from Inquiry, which records
 /// one anonymous approach from the public site and may never become a Customer.
 model Customer {
-  id               String   @id @default(cuid())
+  id               String                @id @default(cuid())
   name             String
   /// Not unique: a company's switchboard number is shared by several contacts.
   phone            String
@@ -362,13 +395,18 @@ model Customer {
   notes            String?
   /// Running balance owed by this buyer (warehouse/POS side). Non-null, starts
   /// at 0 — the checkout and payment flows adjust it.
-  debt             Decimal  @default(0) @db.Decimal(14, 2)
+  debt             Decimal               @default(0) @db.Decimal(14, 2)
+  /// Ceiling on `debt`. 0 (the default) means the customer is not allowed to
+  /// carry any debt at all — a sale that would leave them owing anything is
+  /// refused unless a director raises this first.
+  debtLimit        Decimal               @default(0) @db.Decimal(14, 2)
   /// Null means unassigned — visible to directors, claimable by any seller.
   assignedSellerId String?
-  assignedSeller   User?    @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
+  assignedSeller   User?                 @relation("AssignedCustomers", fields: [assignedSellerId], references: [id], onDelete: SetNull)
   orders           Order[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  debtPayments     CustomerDebtPayment[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([assignedSellerId])
   @@index([phone])
@@ -432,6 +470,11 @@ model Order {
   discountRequests         DiscountRequest[]
   payments                 Payment[]
   invoice                  Invoice?
+  returns                  Return[]
+  /// Set once, the first time a COMPLETED order is left with an outstanding
+  /// balance and that balance is added to `Customer.debt`. Guards that accrual
+  /// from ever running twice on the same order (e.g. a retried request).
+  debtSettledAt            DateTime?
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
 
@@ -535,6 +578,7 @@ model Warehouse {
   orders         Order[]
   stockMovements StockMovement[]
   goodsReceipts  GoodsReceipt[]
+  cashierShifts  CashierShift[]
 
   @@index([managerId])
 }
@@ -680,6 +724,96 @@ model Payment {
   /// staff-recorded rows (provider/transactionId both null) are unaffected.
   @@unique([provider, transactionId])
   @@index([orderId])
+}
+
+/// A cashier's session at the till — opened with a counted float, closed with
+/// a counted actual, the gap between actual and expected surfacing as
+/// `difference`. One seller has at most one OPEN shift at a time (enforced in
+/// CashierService, not the schema).
+model CashierShift {
+  id                   String             @id @default(cuid())
+  sellerId             String
+  seller               User               @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  warehouseId          String?
+  warehouse            Warehouse?         @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  status               CashierShiftStatus @default(OPEN)
+  openingBalance       Decimal            @db.Decimal(14, 2)
+  /// The counted cash the seller reports at close time.
+  closingBalanceActual Decimal?           @db.Decimal(14, 2)
+  /// openingBalance + cash sales - cash refunds over the shift window,
+  /// computed and stored at close time.
+  expectedBalance      Decimal?           @db.Decimal(14, 2)
+  /// closingBalanceActual - expectedBalance. Positive: a cash surplus.
+  difference           Decimal?           @db.Decimal(14, 2)
+  comment              String?
+  openedAt             DateTime           @default(now())
+  closedAt             DateTime?
+
+  @@index([sellerId, status])
+  @@index([openedAt])
+}
+
+/// A customer returning some (or all) of a COMPLETED order's items. Only
+/// `GOOD`-condition lines go back on the shelf; the rest are recorded but
+/// never touch StockMovement. `refundAmount` is the sum of the returned
+/// lines' `lineTotal`, regardless of condition — a defective part is still
+/// refunded to the customer even though it cannot be resold.
+model Return {
+  id           String        @id @default(cuid())
+  /// "RET-<N>", same gapless-sequence pattern as Order.orderNumber.
+  returnNumber String        @unique
+  orderId      String
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  sellerId     String
+  seller       User          @relation("SellerReturns", fields: [sellerId], references: [id], onDelete: Restrict)
+  refundMethod PaymentMethod
+  refundAmount Decimal       @db.Decimal(14, 2)
+  status       ReturnStatus  @default(COMPLETED)
+  items        ReturnItem[]
+  createdAt    DateTime      @default(now())
+
+  @@index([orderId])
+  @@index([sellerId, createdAt])
+}
+
+model ReturnItem {
+  id        String          @id @default(cuid())
+  returnId  String
+  return    Return          @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  qty       Int
+  unitPrice Decimal         @db.Decimal(14, 2)
+  /// qty * unitPrice.
+  lineTotal Decimal         @db.Decimal(14, 2)
+  reason    ReturnReason
+  condition ReturnCondition
+
+  @@index([returnId])
+  @@index([productId])
+}
+
+/// A customer paying down their running `Customer.debt` balance — not tied to
+/// any one order, unlike `Payment`. Purely additive bookkeeping: the balance
+/// itself lives on `Customer.debt` and is decremented when this is created.
+model CustomerDebtPayment {
+  id         String        @id @default(cuid())
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  amount     Decimal       @db.Decimal(14, 2)
+  method     PaymentMethod
+  comment    String?
+  sellerId   String
+  seller     User          @relation("DebtPaymentsRecorded", fields: [sellerId], references: [id], onDelete: Restrict)
+  createdAt  DateTime      @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+/// Single-row counter for gapless return numbering — same pattern as OrderSequence.
+model ReturnSequence {
+  id         Int @id @default(1)
+  lastNumber Int @default(0)
 }
 
 /// A bookkeeping line for money that left the business — the "Xarajatlar" tab
