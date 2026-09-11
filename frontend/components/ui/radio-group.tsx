@@ -68,9 +68,14 @@ export function RadioGroupItem({ value, label, description, icon, disabled, clas
     <label
       htmlFor={id}
       className={cn(
-        "flex items-start gap-3 rounded-lg border p-4 transition-colors",
+        "flex items-start gap-3 rounded-lg border p-4 transition-[color,background-color,border-color,box-shadow]",
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-        checked ? "border-accent-edge bg-accent-subtle" : "border-border bg-surface hover:bg-surface-hover",
+        // Selected reads as a lit card: accent edge doubled by an inset ring so
+        // the choice is unmistakable across a stack of them. Unselected answers
+        // the pointer with a firmer edge, not just a wash.
+        checked
+          ? "border-accent-edge bg-accent-subtle shadow-[inset_0_0_0_1px_var(--accent-edge)]"
+          : "border-border bg-surface hover:border-border-strong hover:bg-surface-hover",
         className,
       )}
     >

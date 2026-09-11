@@ -10,6 +10,10 @@ export interface ProductImageProps {
   /** Sizes the fallback glyph to the tile it sits in — a 44px search row wants
    *  a smaller mark than a full-width card photo. */
   fallbackIconSize?: IconSize;
+  /** Blurs and desaturates the photo — the catalog's "this part is gone" cue.
+   *  Left off the missing-photo fallback, where an already-muted glyph gains
+   *  nothing from it. */
+  dimmed?: boolean;
   className?: string;
 }
 
@@ -31,6 +35,7 @@ export function ProductImage({
   src,
   alt,
   fallbackIconSize = "lg",
+  dimmed = false,
   className,
 }: ProductImageProps) {
   if (!src) {
@@ -52,7 +57,7 @@ export function ProductImage({
       src={src}
       alt={alt}
       loading="lazy"
-      className={cn("object-cover", className)}
+      className={cn("object-cover", dimmed && "blur-[3px] saturate-50", className)}
     />
   );
 }

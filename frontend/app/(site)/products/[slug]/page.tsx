@@ -173,6 +173,8 @@ export default async function ProductDetailPage({
           galleryAlt={product.name[lang]}
           zoomLabel={dict.product.zoomLabel}
           closeLabel={dict.product.zoomCloseLabel}
+          soldOut={product.stockStatus === "out_of_stock"}
+          soldOutLabel={dict.common.stock.outOfStock}
         />
 
         <div>

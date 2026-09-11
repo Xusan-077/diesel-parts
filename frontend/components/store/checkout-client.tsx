@@ -245,6 +245,7 @@ export function CheckoutClient({ lang, dict, cartDict, footerDict, phone }: Chec
 
         <CheckoutDetailsForm
           formId={formId}
+          lang={lang}
           dict={dict}
           footerDict={footerDict}
           profile={profile}

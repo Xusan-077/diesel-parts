@@ -80,6 +80,10 @@
   --chrome-muted: var(--muted);
   --chrome-accent: var(--accent-strong);
   --chrome-accent-halo: color-mix(in srgb, var(--chrome-accent) 26%, transparent);
+  /* "Online" / "operational" inside the frame. The panel's chrome is an
+     ordinary page surface, so it takes the page's own --success; only the
+     site's permanently-dark chrome pins a literal (see the .site-root copy). */
+  --chrome-success: var(--success);
   /* See the `header-plate` utility. The panel has no marketing header, so
      this resolves to the container the frame already is. */
   --header-plate: var(--surface);
@@ -612,6 +616,12 @@
   --chrome-secondary: #b5babe;
   --chrome-muted: #858c91;
   --chrome-accent: #ff8a5c;
+  /* The "online" dot on the floating support widget, which is a permanently
+     dark plate in both themes. `--success` re-steps per theme and its light
+     value all but vanishes here, so this is `--success`'s dark-theme value
+     pinned as a literal — the one status colour the frame needs and the same
+     reason `--chrome-foreground` is a literal rather than `var(--foreground)`. */
+  --chrome-success: #7cd591;
   /* The search field's focus ring on this material: a solid 2px line plus a
      soft bloom around it, the same two-layer shape `--field-halo` gives every
      other field on the site (see the note on it below) — a hard ring alone
@@ -860,6 +870,7 @@
   --color-chrome-secondary: var(--chrome-secondary);
   --color-chrome-muted: var(--chrome-muted);
   --color-chrome-accent: var(--chrome-accent);
+  --color-chrome-success: var(--chrome-success);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   /* `text-secondary` / `text-disabled` rather than `text-text-secondary`. */

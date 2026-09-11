@@ -19,6 +19,7 @@ export function ZoomableProductImage({
   fallbackIconSize = "xl",
   zoomLabel,
   closeLabel,
+  dimmed = false,
   className,
 }: {
   src: string | null;
@@ -26,6 +27,9 @@ export function ZoomableProductImage({
   fallbackIconSize?: IconSize;
   zoomLabel: string;
   closeLabel: string;
+  /** Blurs and desaturates the frame — the product page's out-of-stock cue,
+   *  matching the catalog card. The full-screen lightbox stays sharp. */
+  dimmed?: boolean;
   className?: string;
 }) {
   const [origin, setOrigin] = useState("50% 50%");
@@ -72,7 +76,10 @@ export function ZoomableProductImage({
             alt={alt}
             loading="eager"
             fetchPriority="high"
-            className="h-full w-full object-cover transition-transform duration-200 ease-out"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-200 ease-out",
+              dimmed && "blur-[3px] saturate-50",
+            )}
             style={{
               transformOrigin: origin,
               transform: magnified ? "scale(2)" : "scale(1)",

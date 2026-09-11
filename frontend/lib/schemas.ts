@@ -41,11 +41,6 @@ function optionalTrimmedString(max: number) {
   );
 }
 
-const optionalEmail = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-  z.string().trim().max(160, "tooLong").email("invalidEmail").optional(),
-);
-
 /**
  * Every failure message here is a *code* (`"required"`, `"tooLong"`, ...),
  * looked up by lib/store/checkout-error-text.ts — same split
@@ -72,9 +67,6 @@ export const checkoutRequestSchema = z
       .trim()
       .min(1, "required")
       .refine((value) => isValidPhone(value), "invalidPhone"),
-    email: optionalEmail,
-    companyName: optionalTrimmedString(160),
-    taxId: optionalTrimmedString(32),
     deliveryMethod: checkoutDeliveryMethodSchema,
     // A region slug from lib/data/uz-regions.ts — "viloyat / shahar" in the UI.
     region: optionalTrimmedString(60),
