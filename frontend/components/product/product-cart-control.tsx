@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { toast } from "sonner";
 import { motion } from "motion/react";
-import { MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { MessageCircle, Minus, PackageX, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-store";
 import { useSnapshotStore } from "@/lib/store/stores";
@@ -60,6 +60,30 @@ export function ProductCartControl({
   const productId = product.id;
   const quantity = cart.quantityOf(productId);
   const inCart = quantity > 0;
+
+  /*
+   * A part with no stock owes the visitor no decision — not "how many", and
+   * not "add it" — so the slot becomes an inert marker in the same fixed `h-9`
+   * box the other two states fill. It takes priority over the price-on-request
+   * branch below: a part that is both unpriced and gone is still, first, gone.
+   * The catalog card keeps its own corner `StockBadge` ("Tugagan", danger); the
+   * detail page keeps its `InquiryDialog`, so a visitor can still ask after it.
+   */
+  if (product.stockStatus === "out_of_stock") {
+    return (
+      <div className={cn(className)}>
+        <div className="flex h-9 items-center">
+          <span
+            aria-disabled
+            className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-surface-muted px-3 text-sm font-medium text-muted"
+          >
+            <Icon icon={PackageX} size="xs" className="hidden @[9rem]:block" />
+            <span className="truncate">{dict.outOfStock}</span>
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   if (product.price === null) {
     /*

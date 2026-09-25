@@ -139,4 +139,13 @@ describe("ProductActions cart control", () => {
     expect(screen.queryByRole("button", { name: dict.addToCart })).toBeNull();
     expect(screen.getByRole("link", { name: requestPriceLabel })).toBeDefined();
   });
+
+  it("disables the cart control for an out-of-stock part but keeps wishlist and compare", () => {
+    renderActions("p-1", { stockStatus: "out_of_stock" });
+
+    expect(screen.queryByRole("button", { name: dict.addToCart })).toBeNull();
+    expect(screen.getByText(dict.outOfStock)).toBeDefined();
+    expect(screen.getByRole("button", { name: dict.addToWishlist })).toBeEnabled();
+    expect(screen.getByRole("button", { name: dict.addToCompare })).toBeEnabled();
+  });
 });

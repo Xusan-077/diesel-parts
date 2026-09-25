@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { QueryCustomerDto } from './dto/query-customer.dto';
+import { CreateDebtPaymentDto } from './dto/create-debt-payment.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
 import {
   extractNationalDigits,
@@ -482,6 +483,58 @@ export class CustomersService {
       id: c.id,
       name: c.name,
     }));
+  }
+
+  /**
+   * A customer paying down their running `debt` balance — not tied to any
+   * one order (see the `CustomerDebtPayment` schema doc-comment). The
+   * balance never goes negative: an over-payment (a typo, or the customer
+   * rounding up) simply clears it to zero rather than putting the shop in
+   * the customer's debt.
+   */
+  async recordDebtPayment(
+    id: string,
+    dto: CreateDebtPaymentDto,
+    actorId: string,
+    actor: ScopeActor,
+  ) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, ...customerWriteScope(actor) },
+    });
+    if (!customer) throw new NotFoundException('Customer not found');
+
+    const amount = new Prisma.Decimal(dto.amount);
+    const newDebt = Prisma.Decimal.max(
+      customer.debt.sub(amount),
+      new Prisma.Decimal(0),
+    );
+
+    const [payment] = await this.prisma.$transaction([
+      this.prisma.customerDebtPayment.create({
+        data: {
+          customerId: id,
+          amount,
+          method: dto.method,
+          comment: dto.comment?.trim() || null,
+          sellerId: actorId,
+        },
+      }),
+      this.prisma.customer.update({
+        where: { id },
+        data: { debt: newDebt },
+      }),
+    ]);
+
+    await this.audit.record({
+      userId: actorId,
+      action: AuditAction.PAYMENT,
+      entityType: 'CustomerDebtPayment',
+      entityId: payment.id,
+      before: { debt: Number(customer.debt) },
+      after: { debt: Number(newDebt), amount: dto.amount, method: dto.method },
+    });
+
+    return payment;
   }
 
   async remove(id: string, actorId: string) {

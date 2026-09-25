@@ -26,7 +26,7 @@ export function WorkshopBackdrop() {
         the opacity and the mask instead.
       */}
       <svg
-        className="absolute inset-0 h-full w-full text-[#f77d2a] opacity-[0.09] [mask-image:radial-gradient(70%_60%_at_50%_45%,#000,transparent)]"
+        className="absolute inset-0 h-full w-full text-accent opacity-[0.09] [mask-image:radial-gradient(70%_60%_at_50%_45%,#000,transparent)]"
         viewBox="0 0 1200 700"
         fill="none"
         preserveAspectRatio="xMidYMid slice"

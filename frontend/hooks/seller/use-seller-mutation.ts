@@ -1,8 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient, type QueryKey, type UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type QueryKey,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
-import { SellerApiError } from "@/lib/api/seller-panel/client";
+import { actionErrorMessage } from "@/lib/seller/action-errors";
 
 /** Mirrors hooks/admin/use-panel-mutation.ts for the seller panel's own query keys. */
 export interface SellerMutationOptions<TVariables, TData> {
@@ -14,10 +19,7 @@ export interface SellerMutationOptions<TVariables, TData> {
 }
 
 export function sellerErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof SellerApiError && error.message) {
-    return error.message;
-  }
-  return fallback;
+  return actionErrorMessage(error, fallback);
 }
 
 export function useSellerMutation<TVariables = void, TData = unknown>({
@@ -26,7 +28,11 @@ export function useSellerMutation<TVariables = void, TData = unknown>({
   success,
   failure,
   onDone,
-}: SellerMutationOptions<TVariables, TData>): UseMutationResult<TData, unknown, TVariables> {
+}: SellerMutationOptions<TVariables, TData>): UseMutationResult<
+  TData,
+  unknown,
+  TVariables
+> {
   const queryClient = useQueryClient();
 
   return useMutation<TData, unknown, TVariables>({
@@ -37,7 +43,9 @@ export function useSellerMutation<TVariables = void, TData = unknown>({
       }
       onDone?.(data, variables);
       if (success !== undefined) {
-        toast.success(typeof success === "function" ? success(variables, data) : success);
+        toast.success(
+          typeof success === "function" ? success(variables, data) : success,
+        );
       }
     },
     onError: (error) => {

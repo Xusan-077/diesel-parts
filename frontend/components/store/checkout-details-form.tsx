@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -10,9 +10,12 @@ import { checkoutFieldError } from "@/lib/store/checkout-error-text";
 import { formatNationalDigits } from "@/lib/auth/phone";
 import { UZ_REGIONS } from "@/lib/data/uz-regions";
 import { SITE_LOCATION } from "@/lib/site-config";
-import { yandexMapsUrl } from "@/lib/map-links";
+import { yandexEmbedUrl, yandexMapsUrl } from "@/lib/map-links";
 import { cn } from "@/lib/utils";
+import { DeliveryMap } from "@/components/store/delivery-map";
+import type { ResolvedAddress } from "@/lib/yandex-maps/geocode";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/locales";
 import type { Profile } from "@/lib/account/profile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
@@ -28,6 +31,7 @@ import { FlagIcon } from "@/components/layout/flag-icon";
 
 export interface CheckoutDetailsFormProps {
   formId: string;
+  lang: Locale;
   dict: Dictionary["checkout"];
   footerDict: Dictionary["footer"];
   profile: Profile;
@@ -76,6 +80,7 @@ function SectionTitle({ step, children }: { step: number; children: React.ReactN
  */
 export function CheckoutDetailsForm({
   formId,
+  lang,
   dict,
   footerDict,
   profile,
@@ -145,6 +150,29 @@ export function CheckoutDetailsForm({
   const showCustomerFields = !startedWithProfile || editingCustomer;
 
   const [provider, setProvider] = useState<string>("PAYME");
+
+  // The delivery map fills the address fields from a dropped pin — street,
+  // house and district only. Region stays the shopper's to pick: it drives a
+  // `<select>` of slugs, not a free string, and a courier zone is a decision
+  // the geocoder's "locality" does not always make correctly. Every write is
+  // `shouldValidate` so a resolved address clears its own "required" error, and
+  // the fields stay editable — the pin is a starting point, not a lock.
+  const handlePointResolved = useCallback(
+    ({ address }: { point: [number, number]; address: ResolvedAddress | null }) => {
+      if (!address) {
+        return;
+      }
+      const fill = (field: "street" | "house" | "district", value: string | undefined) => {
+        if (value) {
+          setValue(field, value, { shouldValidate: true, shouldDirty: true });
+        }
+      };
+      fill("street", address.street);
+      fill("house", address.house);
+      fill("district", address.district);
+    },
+    [setValue],
+  );
 
   const paymentMethodError = checkoutFieldError(dict, errors.paymentMethod?.message);
 
@@ -236,15 +264,6 @@ export function CheckoutDetailsForm({
                 </FormField>
               )}
             />
-            <FormField label={dict.emailLabel} error={checkoutFieldError(dict, errors.email?.message)}>
-              <Input type="email" autoComplete="email" {...register("email")} />
-            </FormField>
-            <FormField label={dict.companyNameLabel} hint={dict.companyOptionalHint}>
-              <Input autoComplete="organization" {...register("companyName")} />
-            </FormField>
-            <FormField label={dict.taxIdLabel}>
-              <Input {...register("taxId")} />
-            </FormField>
           </CardContent>
         ) : (
           <CardContent>
@@ -295,6 +314,17 @@ export function CheckoutDetailsForm({
 
           {isDelivery ? (
             <div className="grid gap-5 sm:grid-cols-2">
+              <DeliveryMap
+                lang={lang}
+                onPointResolved={handlePointResolved}
+                labels={{
+                  hint: dict.deliveryMapHint,
+                  loading: dict.deliveryMapLoading,
+                  error: dict.deliveryMapError,
+                  pin: dict.deliveryMapPin,
+                }}
+                className="sm:col-span-2"
+              />
               <FormField
                 label={dict.regionLabel}
                 required
@@ -468,7 +498,13 @@ function CustomerSummary({
   );
 }
 
-/** The pickup panel: where the counter is, when it is open, and a way to it. */
+/** Where the counter is, when it is open, and a fixed map of it.
+ *
+ * The map is the keyless `map-widget` embed, not the interactive JS map the
+ * delivery step uses: pickup is one address the shopper does not choose, so a
+ * static picture with a marker on it is the whole requirement — and it keeps
+ * working with no API key configured. If the iframe is blocked, the address
+ * and hours above it are still the useful part of the panel. */
 function PickupInfo({
   dict,
   footerDict,
@@ -477,7 +513,7 @@ function PickupInfo({
   footerDict: Dictionary["footer"];
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-muted p-4">
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-muted p-4">
       <div className="flex gap-3">
         <Icon icon={MapPin} size="md" className="mt-0.5 text-accent-strong" />
         <div className="flex flex-col gap-1">
@@ -497,6 +533,16 @@ function PickupInfo({
             <Icon icon={ExternalLink} size="xs" />
           </a>
         </div>
+      </div>
+
+      <div className="h-56 overflow-hidden rounded-lg border border-border bg-surface md:h-64">
+        <iframe
+          src={yandexEmbedUrl(SITE_LOCATION)}
+          title={dict.pickupMapAlt}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="h-full w-full border-0"
+        />
       </div>
     </div>
   );

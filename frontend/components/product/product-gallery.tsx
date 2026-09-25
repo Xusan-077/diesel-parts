@@ -15,6 +15,8 @@ export function ProductGallery({
   galleryAlt,
   zoomLabel,
   closeLabel,
+  soldOut = false,
+  soldOutLabel,
 }: {
   imageUrl: string | null;
   /** The part's own name — this is the page's single most important image,
@@ -27,15 +29,29 @@ export function ProductGallery({
   zoomLabel: string;
   /** Names the full-screen view's dismiss control. */
   closeLabel: string;
+  /** Blurs the frame and drops a marker over it — the same "this part is gone"
+   *  treatment the catalog card gets. */
+  soldOut?: boolean;
+  soldOutLabel?: string;
 }) {
   return (
-    <ZoomableProductImage
-      src={imageUrl}
-      alt={galleryAlt}
-      fallbackIconSize="xl"
-      zoomLabel={zoomLabel}
-      closeLabel={closeLabel}
-      className="aspect-4/3 w-full rounded-lg border border-border"
-    />
+    <div className="relative">
+      <ZoomableProductImage
+        src={imageUrl}
+        alt={galleryAlt}
+        fallbackIconSize="xl"
+        zoomLabel={zoomLabel}
+        closeLabel={closeLabel}
+        dimmed={soldOut}
+        className="aspect-4/3 w-full rounded-lg border border-border"
+      />
+      {soldOut && soldOutLabel ? (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+          <span className="rounded-md border border-border bg-background/85 px-4 py-2 type-eyebrow text-danger shadow-sm backdrop-blur-sm">
+            {soldOutLabel}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 }

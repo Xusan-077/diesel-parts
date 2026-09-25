@@ -1,7 +1,20 @@
 "use client";
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from "@/components/ui/shadcn/sheet";
+import { Button } from "@/components/seller/ui/button";
+import { SELLER_NAV_ITEMS } from "./sidebar";
 import { useSellerAuthStore } from "@/lib/store/seller-auth-store";
 import { useNotifications } from "@/hooks/seller/queries/use-notifications";
 import { useMarkNotificationRead } from "@/hooks/seller/mutations/use-mark-notification-read";
@@ -11,6 +24,7 @@ import { formatDateTime } from "@/lib/seller/format";
 import { cn } from "@/lib/utils";
 
 export function Header() {
+  const pathname = usePathname();
   const user = useSellerAuthStore((s) => s.user);
   const { data: notifications } = useNotifications();
   const markRead = useMarkNotificationRead();
@@ -20,9 +34,57 @@ export function Header() {
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-4 md:px-6">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">{user?.phone}</p>
-        {user ? <p className="seller-eyebrow">{ROLE_LABEL[user.role]}</p> : null}
+      <div className="flex min-w-0 items-center gap-3">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              aria-label="Navigatsiyani ochish"
+            >
+              <Menu className="size-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="bg-surface text-foreground">
+            <SheetHeader>
+              <SheetTitle>Diesel Parts</SheetTitle>
+              <SheetDescription className="text-muted">
+                Sotuvchi paneli
+              </SheetDescription>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 px-3">
+              {SELLER_NAV_ITEMS.map((item) => (
+                <SheetClose key={item.href} asChild>
+                  <Link
+                    href={item.href}
+                    aria-current={
+                      (
+                        item.exact
+                          ? pathname === item.href
+                          : pathname.startsWith(item.href)
+                      )
+                        ? "page"
+                        : undefined
+                    }
+                    className="flex items-center gap-3 rounded-md p-3 hover:bg-surface-hover aria-[current=page]:bg-surface-muted"
+                  >
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Link>
+                </SheetClose>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
+        <div>
+          <p className="truncate text-sm font-medium text-foreground">
+            {user?.phone}
+          </p>
+          {user ? (
+            <p className="seller-eyebrow">{ROLE_LABEL[user.role]}</p>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -48,25 +110,34 @@ export function Header() {
               className="z-100 max-h-96 w-80 overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-2xl"
             >
               {!notifications || notifications.length === 0 ? (
-                <p className="px-3 py-6 text-center text-xs text-muted">Bildirishnoma yo&apos;q</p>
+                <p className="px-3 py-6 text-center text-xs text-muted">
+                  Bildirishnoma yo&apos;q
+                </p>
               ) : (
                 notifications.map((notification) => (
                   <DropdownMenu.Item
                     key={notification.id}
                     onSelect={() => {
-                      if (!notification.isRead) markRead.mutate({ id: notification.id });
+                      if (!notification.isRead)
+                        markRead.mutate({ id: notification.id });
                     }}
                     className={cn(
                       "flex cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2 text-sm outline-none transition-colors hover:bg-surface-hover",
-                      !notification.isRead && "bg-accent-subtle/40"
+                      !notification.isRead && "bg-accent-subtle/40",
                     )}
                   >
                     <span className="flex items-center gap-2 font-medium text-foreground">
-                      {!notification.isRead ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /> : null}
+                      {!notification.isRead ? (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                      ) : null}
                       {notification.title}
                     </span>
-                    <span className="text-xs text-muted">{notification.body}</span>
-                    <span className="text-[11px] text-disabled">{formatDateTime(notification.createdAt)}</span>
+                    <span className="text-xs text-muted">
+                      {notification.body}
+                    </span>
+                    <span className="text-[11px] text-disabled">
+                      {formatDateTime(notification.createdAt)}
+                    </span>
                   </DropdownMenu.Item>
                 ))
               )}

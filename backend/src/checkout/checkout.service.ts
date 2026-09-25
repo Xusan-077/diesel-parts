@@ -11,7 +11,11 @@ import { OrdersService } from '../orders/orders.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { getOrCreateHouseSeller } from './house-seller';
 import { buildPaymeCheckoutUrl, toTiyin } from '../payme/payme-money';
-import { extractNationalDigits, toCanonicalPhone } from '../common/phone';
+import {
+  extractNationalDigits,
+  phoneTail,
+  toCanonicalPhone,
+} from '../common/phone';
 import {
   Prisma,
   PaymentMethod,
@@ -27,6 +31,9 @@ const PAYMENT_METHOD_BY_CHOICE: Record<
   CASH: PaymentMethod.CASH,
   SELLER_AGREEMENT: PaymentMethod.SELLER_AGREEMENT,
 };
+
+/** How many of a shopper's most recent orders the account page lists. */
+export const ACCOUNT_ORDERS_LIMIT = 50;
 
 interface OrderLine {
   productId: string;
@@ -202,5 +209,74 @@ export class CheckoutService {
       paymentStatus: order.paymentStatus,
       latestPaymentStatus: latestPayment?.status ?? null,
     };
+  }
+
+  /**
+   * The storefront account's order history: every order placed under the
+   * verified phone, newest first.
+   *
+   * Ownership is the same canonical-digits rule `getOrderStatus` uses, applied
+   * to every `Customer` row carrying the number — `Customer.phone` is not
+   * unique (a seller may have created a second record for the same buyer), and
+   * an order a seller rang up for this number belongs to its owner just as
+   * much as one placed through checkout.
+   *
+   * Amounts go out as numbers rather than `Decimal` strings: UZS totals fit a
+   * double exactly, and the storefront's price formatter takes a number.
+   */
+  async listOrders(phone: string) {
+    const national = extractNationalDigits(phone);
+    const candidates = await this.prisma.customer.findMany({
+      where: { phone: { contains: phoneTail(national) } },
+      select: { id: true, phone: true },
+      take: 1000,
+    });
+    const customerIds = candidates
+      .filter((customer) => extractNationalDigits(customer.phone) === national)
+      .map((customer) => customer.id);
+
+    if (customerIds.length === 0) {
+      return [];
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: { customerId: { in: customerIds } },
+      orderBy: { createdAt: 'desc' },
+      take: ACCOUNT_ORDERS_LIMIT,
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                slug: true,
+                nameUz: true,
+                nameRu: true,
+                nameEn: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return orders.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      deliveryMethod: order.deliveryMethod,
+      currency: order.currency,
+      totalAmount: Number(order.totalAmount),
+      createdAt: order.createdAt.toISOString(),
+      items: order.items.map((item) => ({
+        productId: item.productId,
+        productSku: item.productSku,
+        productName: item.productName,
+        qty: item.qty,
+        unitPrice: Number(item.unitPrice),
+        product: item.product,
+      })),
+    }));
   }
 }

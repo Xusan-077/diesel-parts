@@ -21,6 +21,7 @@ import { LanguageSync } from "@/components/providers/language-sync";
 import { MotionProvider } from "@/components/providers/motion-provider";
 import { Toaster } from "@/components/providers/toaster";
 import { FloatingContactWidget } from "@/components/layout/floating-contact-widget";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 
 /*
  * Only the sans face is loaded. Geist Mono was declared alongside it but no
@@ -172,6 +173,17 @@ export default async function RootLayout({
                 phone={dict.contact.phone}
               />
               <FloatingContactWidget support={dict.support} closeLabel={dict.common.close} />
+              {/*
+                Phone-only bottom navigation. Rendered after the footer so its
+                in-flow spacer reserves room below everything; the bar itself is
+                fixed. Hidden at `lg`, where the header's own nav row appears.
+              */}
+              <MobileTabBar
+                nav={dict.nav}
+                header={dict.header}
+                mobileNav={dict.mobileNav}
+                closeLabel={dict.common.close}
+              />
               <Toaster />
             </QueryProvider>
           </MotionProvider>

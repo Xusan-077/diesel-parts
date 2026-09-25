@@ -312,6 +312,7 @@
     "compareFull": "Taqqoslash ro'yxati to'lgan",
     "addToCart": "Savatga qo'shish",
     "inCart": "Savatda",
+    "outOfStock": "Tugagan",
     "contact": "Aloqa",
     "toastCartAdded": "Savatga qo'shildi",
     "toastWishlistAdded": "Saralanganlarga qo'shildi",
@@ -385,15 +386,16 @@
     "firstNameLabel": "Ism",
     "lastNameLabel": "Familiya",
     "phoneLabel": "Telefon",
-    "emailLabel": "Email (ixtiyoriy)",
-    "companyNameLabel": "Kompaniya nomi",
-    "companyOptionalHint": "Yuridik shaxslar uchun, ixtiyoriy",
-    "taxIdLabel": "STIR (INN)",
     "deliveryTitle": "Yetkazib berish usuli",
     "deliveryPickupLabel": "O'zi olib ketish",
     "deliveryPickupDescription": "Do'kondan bepul olib ketish",
     "deliveryDeliveryLabel": "Yetkazib berish",
     "deliveryDeliveryDescription": "Ko'rsatgan manzilingizga yetkazib beramiz",
+    "deliveryMapHint": "Belgini xaritada aniq manzilingizga suring yoki kerakli joyni bosing",
+    "deliveryMapLoading": "Xarita yuklanmoqda…",
+    "deliveryMapError": "Xaritani yuklab bo'lmadi. Manzilni quyida qo'lda kiriting.",
+    "deliveryMapPin": "Yetkazib berish nuqtasi",
+    "pickupMapAlt": "Do'kon joylashuvi xaritada",
     "cityLabel": "Shahar",
     "districtLabel": "Tuman",
     "streetLabel": "Ko'cha",
@@ -498,6 +500,31 @@
     "ordersTitle": "Buyurtmalar tarixi",
     "ordersEmpty": "Hozircha buyurtmalaringiz yo'q.",
     "ordersEmptyCta": "Katalogga o'tish",
+    "orderHistory": {
+      "orderLabel": "Buyurtma",
+      "placedOn": "Sana",
+      "total": "Jami",
+      "itemCount": "{count} ta mahsulot",
+      "pickup": "Olib ketish",
+      "delivery": "Yetkazib berish",
+      "loadError": "Buyurtmalarni yuklab bo'lmadi. Birozdan so'ng qayta urinib ko'ring.",
+      "status": {
+        "DRAFT": "Qabul qilindi",
+        "NEW": "Qabul qilindi",
+        "PENDING": "Ko'rib chiqilmoqda",
+        "CONFIRMED": "Tasdiqlandi",
+        "PREPARING": "Tayyorlanmoqda",
+        "COMPLETED": "Yakunlandi",
+        "CANCELLED": "Bekor qilindi",
+        "PARTIALLY_REFUNDED": "Qisman qaytarildi",
+        "REFUNDED": "Qaytarildi"
+      },
+      "payment": {
+        "UNPAID": "To'lanmagan",
+        "PARTIAL": "Qisman to'langan",
+        "PAID": "To'langan"
+      }
+    },
     "logout": "Chiqish",
     "toastSignedIn": "Tizimga kirdingiz",
     "toastSignedOut": "Tizimdan chiqdingiz",
@@ -804,5 +831,14 @@
     "showMore": "Yana {count} ta sharhni ko'rsatish",
     "loadError": "Sharhlarni yuklab bo'lmadi.",
     "retry": "Qayta urinish"
+  },
+  "mobileNav": {
+    "label": "Asosiy navigatsiya",
+    "searchAction": "Detal raqami bo'yicha qidirish",
+    "searchTitle": "Detal raqami bo'yicha qidiruv",
+    "searchHint": "Forsunka, nasos yoki istalgan detalning OEM raqamini kiriting.",
+    "searchPlaceholder": "Masalan, 0445120231",
+    "searchSubmit": "Qidirish",
+    "recentTitle": "Oxirgi qidiruvlar"
   }
 }

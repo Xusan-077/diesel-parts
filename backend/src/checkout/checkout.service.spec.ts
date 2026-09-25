@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CheckoutService } from './checkout.service';
+import { ACCOUNT_ORDERS_LIMIT, CheckoutService } from './checkout.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CartsService } from '../carts/carts.service';
 import { CustomersService } from '../customers/customers.service';
@@ -521,5 +521,118 @@ describe('CheckoutService.getOrderStatus', () => {
     await expect(
       service.getOrderStatus('998901234567', 'ord-1'),
     ).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('CheckoutService.listOrders', () => {
+  function setup() {
+    const { cartsService, customersService, ordersService } = makeDeps();
+    const customerFindMany = jest.fn();
+    const orderFindMany = jest.fn();
+    const prisma = {
+      customer: { findMany: customerFindMany },
+      order: { findMany: orderFindMany },
+    } as unknown as PrismaService;
+    const service = new CheckoutService(
+      prisma,
+      cartsService,
+      customersService,
+      ordersService,
+    );
+    return { service, customerFindMany, orderFindMany };
+  }
+
+  it('returns [] without querying orders when no customer has the phone', async () => {
+    const { service, customerFindMany, orderFindMany } = setup();
+    customerFindMany.mockResolvedValue([]);
+
+    await expect(service.listOrders('998901234567')).resolves.toEqual([]);
+    expect(orderFindMany).not.toHaveBeenCalled();
+  });
+
+  it('collects orders from every customer row whose phone canonicalizes to the caller, and none other', async () => {
+    const { service, customerFindMany, orderFindMany } = setup();
+    customerFindMany.mockResolvedValue([
+      { id: 'cus-1', phone: '998901234567' },
+      { id: 'cus-2', phone: '+998 90 123-45-67' },
+      // Same last two digits, different number: the prefilter lets it
+      // through, the canonical comparison must not.
+      { id: 'cus-3', phone: '998911111167' },
+    ]);
+    orderFindMany.mockResolvedValue([]);
+
+    await service.listOrders('998901234567');
+
+    expect(customerFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { phone: { contains: '67' } } }),
+    );
+    expect(orderFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { customerId: { in: ['cus-1', 'cus-2'] } },
+        orderBy: { createdAt: 'desc' },
+        take: ACCOUNT_ORDERS_LIMIT,
+      }),
+    );
+  });
+
+  it('serializes amounts as numbers and dates as ISO strings', async () => {
+    const { service, customerFindMany, orderFindMany } = setup();
+    customerFindMany.mockResolvedValue([
+      { id: 'cus-1', phone: '998901234567' },
+    ]);
+    const product = {
+      slug: 'fuel-filter',
+      nameUz: 'Yoqilg‘i filtri',
+      nameRu: 'Топливный фильтр',
+      nameEn: 'Fuel filter',
+      imageUrl: null,
+    };
+    orderFindMany.mockResolvedValue([
+      {
+        id: 'ord-1',
+        orderNumber: 'DP-1001',
+        status: 'NEW',
+        paymentStatus: 'UNPAID',
+        deliveryMethod: 'PICKUP',
+        currency: 'UZS',
+        totalAmount: new Prisma.Decimal('250000.00'),
+        createdAt: new Date('2026-09-20T10:00:00.000Z'),
+        items: [
+          {
+            productId: 'p1',
+            productSku: 'SKU-1',
+            productName: 'Fuel filter',
+            qty: 2,
+            unitPrice: new Prisma.Decimal('125000.00'),
+            product,
+          },
+        ],
+      },
+    ]);
+
+    const result = await service.listOrders('998901234567');
+
+    expect(result).toEqual([
+      {
+        id: 'ord-1',
+        orderNumber: 'DP-1001',
+        status: 'NEW',
+        paymentStatus: 'UNPAID',
+        deliveryMethod: 'PICKUP',
+        currency: 'UZS',
+        totalAmount: 250000,
+        createdAt: '2026-09-20T10:00:00.000Z',
+        items: [
+          {
+            productId: 'p1',
+            productSku: 'SKU-1',
+            productName: 'Fuel filter',
+            qty: 2,
+            unitPrice: 125000,
+            product,
+          },
+        ],
+      },
+    ]);
   });
 });

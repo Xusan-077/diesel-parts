@@ -18,4 +18,9 @@ export class QueryOrderDto extends PaginationDto {
   @IsOptional()
   @IsISO8601()
   dateTo?: string;
+
+  /** Matches orderNumber or the customer's name/phone — the POS return flow's "find this sale" search box. */
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

@@ -62,7 +62,7 @@ export function OrdersTable({
                 <TableCell>
                   <Badge tone={ORDER_STATUS_TONE[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono">{formatMoney(order.total)}</TableCell>
+                <TableCell className="text-right font-mono">{formatMoney(order.totalAmount)}</TableCell>
                 <TableCell className="text-right">
                   <Link href={`/seller/orders/${order.id}`} className="text-xs font-medium text-accent-strong hover:underline">
                     Ko&apos;rish

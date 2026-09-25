@@ -28,7 +28,7 @@ export function LowStockAlert() {
               href={`/seller/products/${row.productId}`}
               className="min-w-0 truncate text-foreground hover:text-accent-strong"
             >
-              {row.product.name}
+              {row.product.nameEn}
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               <span className="font-mono text-xs text-muted">{row.availableQuantity} ta</span>

@@ -32,6 +32,7 @@ import {
   DiscountStatus,
   NotificationType,
   OrderStatus,
+  PaymentStatus,
   Prisma,
   Role,
 } from '../../generated/prisma/client';
@@ -108,6 +109,15 @@ export class OrdersService {
         ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
         ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
       };
+    }
+    if (query.search) {
+      where.OR = [
+        { orderNumber: { contains: query.search, mode: 'insensitive' } },
+        {
+          customer: { name: { contains: query.search, mode: 'insensitive' } },
+        },
+        { customer: { phone: { contains: query.search } } },
+      ];
     }
 
     const [data, total] = await this.prisma.$transaction([
@@ -503,6 +513,8 @@ export class OrdersService {
     const previousStatus = order.status;
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      let debtSettledAt: Date | null = null;
+
       if (target === OrderStatus.CONFIRMED) {
         await this.inventory.reserveForOrder(
           tx,
@@ -523,6 +535,7 @@ export class OrdersService {
           })),
           actor.id,
         );
+        debtSettledAt = await this.settleDebtOnComplete(tx, order);
       } else if (
         target === OrderStatus.CANCELLED &&
         this.wasReserved(order.status)
@@ -541,7 +554,10 @@ export class OrdersService {
 
       return tx.order.update({
         where: { id },
-        data: { status: target },
+        data: {
+          status: target,
+          ...(debtSettledAt ? { debtSettledAt } : {}),
+        },
         include: ORDER_INCLUDE,
       });
     });
@@ -560,6 +576,55 @@ export class OrdersService {
 
   cancel(actor: AuthenticatedUser, id: string) {
     return this.updateStatus(actor, id, OrderStatus.CANCELLED);
+  }
+
+  /**
+   * A completed sale that was not paid in full becomes debt: the shortfall
+   * is added to `Customer.debt`, refused above `Customer.debtLimit` (0 by
+   * default — a director opts a customer into carrying debt by raising it).
+   * Guarded by `order.debtSettledAt` so a completed order is only ever
+   * charged to the customer's account once. Runs inside the same
+   * transaction as the stock fulfilment above: a refusal here rolls back
+   * that fulfilment too, so a blocked completion leaves no partial trace.
+   */
+  private async settleDebtOnComplete(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      customerId: string;
+      totalAmount: Prisma.Decimal;
+      debtSettledAt: Date | null;
+    },
+  ): Promise<Date | null> {
+    if (order.debtSettledAt) return null;
+
+    const paid = await tx.payment.aggregate({
+      where: { orderId: order.id, status: PaymentStatus.COMPLETED },
+      _sum: { amount: true },
+    });
+    const totalPaid = paid._sum.amount ?? new Prisma.Decimal(0);
+    const shortfall = order.totalAmount.sub(totalPaid);
+    if (shortfall.lte(0)) return null;
+
+    const customer = await tx.customer.findUniqueOrThrow({
+      where: { id: order.customerId },
+      select: { debt: true, debtLimit: true },
+    });
+    const newDebt = customer.debt.add(shortfall);
+    if (newDebt.gt(customer.debtLimit)) {
+      throw new ForbiddenException({
+        error: 'debt_limit_exceeded',
+        approvalRequired: true,
+        message: `Mijozning qarz limiti (${customer.debtLimit.toString()}) dan oshib ketadi`,
+      });
+    }
+
+    await tx.customer.update({
+      where: { id: order.customerId },
+      data: { debt: newDebt },
+    });
+
+    return new Date();
   }
 
   /**

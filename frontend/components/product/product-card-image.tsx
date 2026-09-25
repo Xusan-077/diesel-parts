@@ -20,19 +20,22 @@ export function ProductCardImage({
   alt,
   zoomLabel,
   closeLabel,
+  dimmed,
   className,
 }: {
   src: string | null;
   alt: string;
   zoomLabel: string;
   closeLabel: string;
+  /** Blurs the photo — passed through on an out-of-stock card. */
+  dimmed?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <ProductImage src={src} alt={alt} fallbackIconSize="xl" className={className} />
+      <ProductImage src={src} alt={alt} fallbackIconSize="xl" dimmed={dimmed} className={className} />
 
       {src ? (
         <>

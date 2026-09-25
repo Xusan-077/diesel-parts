@@ -90,7 +90,7 @@ export default function SellerInventoryPage() {
                 : data.data.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-mono">{row.product.sku}</TableCell>
-                      <TableCell>{row.product.name}</TableCell>
+                      <TableCell>{row.product.nameEn}</TableCell>
                       <TableCell className="text-muted">{row.warehouse.name}</TableCell>
                       <TableCell className="text-right font-mono">{row.quantity}</TableCell>
                       <TableCell className="text-right font-mono">{row.reservedQuantity}</TableCell>

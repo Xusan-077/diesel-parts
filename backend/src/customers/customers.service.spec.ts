@@ -2,13 +2,19 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { AuditAction, Role } from '../../generated/prisma/client';
+import {
+  AuditAction,
+  PaymentMethod,
+  Prisma,
+  Role,
+} from '../../generated/prisma/client';
 import type { ScopeActor } from '../common/scope';
 
 function makePrisma(
   overrides: {
     customer?: Record<string, unknown>;
     order?: Record<string, unknown>;
+    customerDebtPayment?: Record<string, unknown>;
   } = {},
 ) {
   return {
@@ -27,6 +33,10 @@ function makePrisma(
       groupBy: jest.fn().mockResolvedValue([]),
       ...overrides.order,
     },
+    customerDebtPayment: {
+      create: jest.fn().mockResolvedValue({ id: 'debt-payment-1' }),
+      ...overrides.customerDebtPayment,
+    },
     $transaction: jest.fn(async (queries: Array<Promise<unknown>>) =>
       Promise.all(queries),
     ),
@@ -40,6 +50,17 @@ function makeAudit() {
 
 const seller: ScopeActor = { id: 'seller-1', role: Role.SELLER };
 const director: ScopeActor = { id: 'director-1', role: Role.DIRECTOR };
+
+/** The `debt` field of a `customer.update` mock's first call's `data`. */
+function updateDebt(update: jest.Mock): unknown {
+  const calls = update.mock.calls as [{ data: Record<string, unknown> }][];
+  return calls[0][0].data.debt;
+}
+
+function firstArg<T>(mock: jest.Mock): T {
+  const calls = mock.mock.calls as unknown[][];
+  return calls[0][0] as T;
+}
 
 describe('CustomersService.findOrCreateByPhone', () => {
   it('creates a new customer with every detail given', async () => {
@@ -749,5 +770,80 @@ describe('CustomersService.findByPhone', () => {
 
     expect(result).toEqual([]);
     expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('CustomersService.recordDebtPayment', () => {
+  it('decrements the customer debt by the paid amount and records the ledger row', async () => {
+    const update = jest.fn().mockResolvedValue({});
+    const create = jest.fn().mockResolvedValue({ id: 'debt-payment-1' });
+    const { audit, record } = makeAudit();
+    const prisma = makePrisma({
+      customer: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'cus-1',
+          debt: new Prisma.Decimal(100_000),
+        }),
+        update,
+      },
+      customerDebtPayment: { create },
+    });
+    const service = new CustomersService(prisma, audit);
+
+    await service.recordDebtPayment(
+      'cus-1',
+      { amount: 30_000, method: PaymentMethod.CASH },
+      'seller-1',
+      seller,
+    );
+
+    const { data } = firstArg<{ data: Record<string, unknown> }>(create);
+    expect(data).toMatchObject({
+      customerId: 'cus-1',
+      sellerId: 'seller-1',
+      method: PaymentMethod.CASH,
+    });
+    expect(Number(updateDebt(update))).toBe(70_000);
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: AuditAction.PAYMENT }),
+    );
+  });
+
+  it('never lets an over-payment push the debt below zero', async () => {
+    const update = jest.fn().mockResolvedValue({});
+    const prisma = makePrisma({
+      customer: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: 'cus-1', debt: new Prisma.Decimal(20_000) }),
+        update,
+      },
+    });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await service.recordDebtPayment(
+      'cus-1',
+      { amount: 50_000, method: PaymentMethod.CASH },
+      'seller-1',
+      seller,
+    );
+
+    expect(Number(updateDebt(update))).toBe(0);
+  });
+
+  it('404s when the customer is outside the actor’s write scope', async () => {
+    const prisma = makePrisma({
+      customer: { findFirst: jest.fn().mockResolvedValue(null) },
+    });
+    const service = new CustomersService(prisma, makeAudit().audit);
+
+    await expect(
+      service.recordDebtPayment(
+        'cus-1',
+        { amount: 10_000, method: PaymentMethod.CASH },
+        'seller-1',
+        seller,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

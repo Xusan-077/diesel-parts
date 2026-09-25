@@ -312,6 +312,7 @@
     "compareFull": "Список сравнения заполнен",
     "addToCart": "Добавить в корзину",
     "inCart": "В корзине",
+    "outOfStock": "Нет в наличии",
     "contact": "Связаться",
     "toastCartAdded": "Добавлено в корзину",
     "toastWishlistAdded": "Добавлено в избранное",
@@ -385,15 +386,16 @@
     "firstNameLabel": "Имя",
     "lastNameLabel": "Фамилия",
     "phoneLabel": "Телефон",
-    "emailLabel": "Email (необязательно)",
-    "companyNameLabel": "Название компании",
-    "companyOptionalHint": "Для юридических лиц, необязательно",
-    "taxIdLabel": "ИНН",
     "deliveryTitle": "Способ доставки",
     "deliveryPickupLabel": "Самовывоз",
     "deliveryPickupDescription": "Бесплатно, забрать из магазина",
     "deliveryDeliveryLabel": "Доставка",
     "deliveryDeliveryDescription": "Доставим по указанному адресу",
+    "deliveryMapHint": "Перетащите метку на карте к нужному адресу или нажмите на нужное место",
+    "deliveryMapLoading": "Карта загружается…",
+    "deliveryMapError": "Не удалось загрузить карту. Укажите адрес вручную ниже.",
+    "deliveryMapPin": "Точка доставки",
+    "pickupMapAlt": "Расположение магазина на карте",
     "cityLabel": "Город",
     "districtLabel": "Район",
     "streetLabel": "Улица",
@@ -498,6 +500,31 @@
     "ordersTitle": "История заказов",
     "ordersEmpty": "У вас пока нет заказов.",
     "ordersEmptyCta": "Перейти в каталог",
+    "orderHistory": {
+      "orderLabel": "Заказ",
+      "placedOn": "Дата",
+      "total": "Итого",
+      "itemCount": "Товаров: {count}",
+      "pickup": "Самовывоз",
+      "delivery": "Доставка",
+      "loadError": "Не удалось загрузить заказы. Попробуйте немного позже.",
+      "status": {
+        "DRAFT": "Принят",
+        "NEW": "Принят",
+        "PENDING": "На рассмотрении",
+        "CONFIRMED": "Подтверждён",
+        "PREPARING": "Собирается",
+        "COMPLETED": "Выполнен",
+        "CANCELLED": "Отменён",
+        "PARTIALLY_REFUNDED": "Частичный возврат",
+        "REFUNDED": "Возвращён"
+      },
+      "payment": {
+        "UNPAID": "Не оплачен",
+        "PARTIAL": "Оплачен частично",
+        "PAID": "Оплачен"
+      }
+    },
     "logout": "Выйти",
     "toastSignedIn": "Вы вошли в систему",
     "toastSignedOut": "Вы вышли из системы",
@@ -804,5 +831,14 @@
     "showMore": "Показать ещё {count}",
     "loadError": "Не удалось загрузить отзывы.",
     "retry": "Повторить"
+  },
+  "mobileNav": {
+    "label": "Основная навигация",
+    "searchAction": "Поиск по номеру детали",
+    "searchTitle": "Поиск по номеру детали",
+    "searchHint": "Введите OEM-номер форсунки, насоса или любой другой детали.",
+    "searchPlaceholder": "Например, 0445120231",
+    "searchSubmit": "Найти",
+    "recentTitle": "Недавние запросы"
   }
 }

@@ -46,7 +46,21 @@ export interface PaginationParams {
   limit?: number;
 }
 
-export type OrderStatus = "NEW" | "CONFIRMED" | "PREPARING" | "COMPLETED" | "CANCELLED";
+/**
+ * `PARTIALLY_REFUNDED`/`REFUNDED` are reachable only from `COMPLETED`, and
+ * only by ReturnsService creating a return — never by the generic
+ * PATCH /status the stepper drives, so they carry no forward edges in
+ * `ORDER_STATUS_TRANSITIONS` below. Listed here so existing order rows don't
+ * render a blank status badge once a return has been made against them.
+ */
+export type OrderStatus =
+  | "NEW"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "PARTIALLY_REFUNDED"
+  | "REFUNDED";
 export type OrderPaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 export type PaymentMethod = "CASH" | "CARD" | "TRANSFER" | "ONLINE";
 export type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
@@ -60,6 +74,8 @@ export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PREPARING: ["COMPLETED", "CANCELLED"],
   COMPLETED: [],
   CANCELLED: [],
+  PARTIALLY_REFUNDED: [],
+  REFUNDED: [],
 };
 
 export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
@@ -69,7 +85,10 @@ export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   "COMPLETED",
 ];
 
-export function canTransitionOrderStatus(from: OrderStatus, to: OrderStatus): boolean {
+export function canTransitionOrderStatus(
+  from: OrderStatus,
+  to: OrderStatus,
+): boolean {
   return ORDER_STATUS_TRANSITIONS[from].includes(to);
 }
 
@@ -79,9 +98,11 @@ export interface OrderCustomer {
   phone: string;
 }
 
+/** `Order.seller` is a FK straight to `User` — no `Seller` indirection (see backend's orders.service.ts doc-comment). */
 export interface OrderSeller {
   id: string;
-  user: { id: string; phone: string };
+  name: string;
+  phone: string;
 }
 
 export interface OrderWarehouse {
@@ -89,14 +110,22 @@ export interface OrderWarehouse {
   name: string;
 }
 
+/**
+ * Mirrors backend's `OrderItem` model + `ORDER_INCLUDE`'s `items.product`
+ * select exactly (`{id, sku, nameEn}` — no other locale, no `total`/`price`/
+ * `quantity` aliases: those never existed on the wire, only `qty`/
+ * `unitPrice`/`productSku`/`productName` do). A line total is `qty *
+ * unitPrice`, computed at render time, not a field the API sends.
+ */
 export interface OrderItem {
   id: string;
   orderId: string;
   productId: string;
-  product: { id: string; sku: string; name: string };
-  quantity: number;
-  price: string;
-  total: string;
+  product: { id: string; sku: string; nameEn: string };
+  productSku: string;
+  productName: string;
+  qty: number;
+  unitPrice: string;
 }
 
 export interface Payment {
@@ -126,13 +155,13 @@ export interface Order {
   customer: OrderCustomer;
   sellerId: string;
   seller: OrderSeller;
-  warehouseId: string;
-  warehouse: OrderWarehouse;
+  warehouseId: string | null;
+  warehouse: OrderWarehouse | null;
   status: OrderStatus;
   subtotal: string;
   discount: string;
   deliveryFee: string;
-  total: string;
+  totalAmount: string;
   paymentStatus: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
@@ -146,21 +175,36 @@ export interface OrdersQuery extends PaginationParams {
   customerId?: string;
   dateFrom?: string;
   dateTo?: string;
+  search?: string;
 }
 
-/** No purchasePrice/supplier fields — ProductsService.toSellerView strips them before this ever serializes. */
+/**
+ * Mirrors the real `Product` row `ProductsService.findAllSeller`/
+ * `findOneSeller`/`findByBarcodeSeller` return — no `purchasePrice`
+ * (`toSellerView` strips it) and no flattened `name`/`sellingPrice`/`image`
+ * aliases: the backend never produces those, only the three locale columns,
+ * `price`, and `imageUrl`. The seller panel displays `nameEn` throughout for
+ * one consistent language, same as order-item/inventory rows (which only
+ * ever carry `nameEn` from the backend's own select).
+ */
 export interface SellerProduct {
   id: string;
   sku: string;
-  name: string;
+  barcode: string | null;
+  oemNumbers: string[];
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  descriptionEn: string;
   categoryId: string;
-  category: { id: string; name: string };
+  category: { id: string; nameUz: string; nameRu: string; nameEn: string };
   brandId: string;
   brand: { id: string; name: string };
-  description: string | null;
-  sellingPrice: string;
-  image: string | null;
+  price: string | null;
+  imageUrl: string | null;
+  stock: number;
   minStock: number;
+  unit: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -187,7 +231,11 @@ export interface ProductStockByWarehouse {
 
 export interface ProductStock {
   byWarehouse: ProductStockByWarehouse[];
-  totals: { quantity: number; reservedQuantity: number; availableQuantity: number };
+  totals: {
+    quantity: number;
+    reservedQuantity: number;
+    availableQuantity: number;
+  };
 }
 
 export interface Customer {
@@ -210,22 +258,23 @@ export interface CustomerOrderRow {
   orderNumber: string;
   customerId: string;
   sellerId: string;
-  warehouseId: string;
+  warehouseId: string | null;
   status: OrderStatus;
   subtotal: string;
   discount: string;
   deliveryFee: string;
-  total: string;
+  totalAmount: string;
   paymentStatus: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
 }
 
+/** Matches InventoryService's own `INCLUDE.product.select` — `nameEn` only, same as `OrderItem.product`. */
 export interface InventoryProduct {
   id: string;
   sku: string;
-  name: string;
+  nameEn: string;
   minStock: number;
 }
 
@@ -310,6 +359,118 @@ export interface Warehouse {
 export interface Brand {
   id: string;
   name: string;
+}
+
+export type ReturnReason =
+  "WRONG_PRODUCT" | "DEFECTIVE" | "CHANGED_MIND" | "DAMAGED" | "OTHER";
+export type ReturnCondition = "GOOD" | "DAMAGED" | "USED" | "DEFECTIVE";
+export type ReturnStatus = "COMPLETED" | "CANCELLED";
+export type CashierShiftStatus = "OPEN" | "CLOSED";
+export type ReturnRefundMethod = PaymentMethod | "PAYME" | "CLICK" | "PAYNET";
+
+export interface ReturnOrderRef {
+  id: string;
+  orderNumber: string;
+  sellerId: string;
+  customerId: string;
+  customer: { id: string; name: string; phone: string };
+}
+
+export interface ReturnSeller {
+  id: string;
+  name: string;
+}
+
+/** Mirrors ReturnsService's `RETURN_INCLUDE.items.include.product.select` — id/sku/nameEn only, same narrowing as OrderItem.product. */
+export interface ReturnItemProduct {
+  id: string;
+  sku: string;
+  nameEn: string;
+}
+
+export interface ReturnItem {
+  id: string;
+  returnId: string;
+  productId: string;
+  product: ReturnItemProduct;
+  qty: number;
+  unitPrice: string;
+  lineTotal: string;
+  reason: ReturnReason;
+  condition: ReturnCondition;
+}
+
+export interface Return {
+  id: string;
+  returnNumber: string;
+  orderId: string;
+  order: ReturnOrderRef;
+  sellerId: string;
+  seller: ReturnSeller;
+  refundMethod: ReturnRefundMethod;
+  refundAmount: string;
+  status: ReturnStatus;
+  items: ReturnItem[];
+  createdAt: string;
+}
+
+export interface ReturnsQuery extends PaginationParams {
+  orderId?: string;
+  status?: ReturnStatus;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+}
+
+export interface CreateReturnItemInput {
+  productId: string;
+  qty: number;
+  reason: ReturnReason;
+  condition: ReturnCondition;
+}
+
+/** Refund overrides cannot exceed the selected items' total. */
+export interface CreateReturnInput {
+  orderId: string;
+  refundMethod: ReturnRefundMethod | "ORIGINAL";
+  refundAmount?: number;
+  items: CreateReturnItemInput[];
+}
+
+/** Mirrors the `CashierShift` row. Decimal columns are `null` until the shift is closed, except on the live `current` response — see `CurrentCashierShift`. */
+export interface CashierShift {
+  id: string;
+  sellerId: string;
+  warehouseId: string | null;
+  status: CashierShiftStatus;
+  openingBalance: string;
+  closingBalanceActual: string | null;
+  expectedBalance: string | null;
+  difference: string | null;
+  comment: string | null;
+  openedAt: string;
+  closedAt: string | null;
+}
+
+/**
+ * `GET /seller/cashier/shift/current` computes `expectedBalance` live (never
+ * null here, unlike the stored column) and adds `cashSales`/`cashRefunds`,
+ * the two terms that make it up — see CashierService.current.
+ */
+export interface CurrentCashierShift extends CashierShift {
+  expectedBalance: string;
+  cashSales: string;
+  cashRefunds: string;
+}
+
+export interface OpenShiftInput {
+  openingBalance: number;
+  warehouseId?: string;
+}
+
+export interface CloseShiftInput {
+  closingBalanceActual: number;
+  comment?: string;
 }
 
 export interface AppNotification {

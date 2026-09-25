@@ -14,6 +14,11 @@ export class CheckoutController {
     return this.checkout.createOrder(phone, dto);
   }
 
+  @Get('orders')
+  list(@VerifiedPhone() phone: string) {
+    return this.checkout.listOrders(phone);
+  }
+
   @Get('orders/:id')
   getStatus(@VerifiedPhone() phone: string, @Param('id') id: string) {
     return this.checkout.getOrderStatus(phone, id);

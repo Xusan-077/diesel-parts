@@ -30,10 +30,10 @@ export const ACCOUNT_SECTIONS = [
 export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
 
 /**
- * The sections that have nothing behind them yet and show a placeholder.
- * `details` and `wishlist` are the two that render real content, and the
- * dictionary's `profilePanel.empty` carries a line for exactly the rest — the
- * type is what keeps those two lists in step.
+ * The sections that can show the empty placeholder. `details` and `wishlist`
+ * never do; `orders` renders its real history and falls back to this only
+ * when there is none. The dictionary's `profilePanel.empty` carries a line for
+ * exactly these — the type is what keeps those two lists in step.
  */
 export type AccountPlaceholderSection = Exclude<AccountSection, "details" | "wishlist">;
 
