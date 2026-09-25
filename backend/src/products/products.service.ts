@@ -12,13 +12,14 @@ import {
   AuditAction,
   OrderStatus,
   Prisma,
+  StockStatus as DbStockStatus,
 } from '../../generated/prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, type NameLocale } from './dto/query-product.dto';
 import { ImportProductRowDto } from './dto/import-products.dto';
 import { paginationMeta } from '../common/dto/pagination.dto';
-import { deriveStockStatus } from './stock-status';
+import { deriveStockStatus, StockStatus } from './stock-status';
 import {
   readProductCsv,
   toCsv,
@@ -58,6 +59,22 @@ export interface ProductDeleteCheck {
   /** Human-readable blockers, e.g. "12 ta buyurtmada bor". Empty when `canDelete`. */
   reasons: string[];
 }
+
+/**
+ * `Product.stockStatus`'s DB enum (`available`/`limited`/`out_of_stock`, see
+ * `prisma/schema.prisma`) is not this file's own `StockStatus`
+ * (`IN_STOCK`/`LOW_STOCK`/`OUT_OF_STOCK`, `stock-status.ts`) — two
+ * independently named enums for the same idea, from two different eras of
+ * this schema. The DB column is legacy: every *read* recomputes stock status
+ * fresh from Inventory (`withStock()`) and nothing downstream ever looks the
+ * column back up, but it is still `NOT NULL` with no `@default`, so an
+ * INSERT has to supply a legal value or Prisma refuses it outright.
+ */
+const DB_STOCK_STATUS: Record<StockStatus, DbStockStatus> = {
+  [StockStatus.IN_STOCK]: DbStockStatus.available,
+  [StockStatus.LOW_STOCK]: DbStockStatus.limited,
+  [StockStatus.OUT_OF_STOCK]: DbStockStatus.out_of_stock,
+};
 
 const ADMIN_INCLUDE = {
   category: { select: { id: true, nameUz: true, nameRu: true, nameEn: true } },
@@ -434,8 +451,25 @@ export class ProductsService {
     });
     if (existing) throw new ConflictException('SKU already exists');
     const { stock, ...write } = dto;
+    // Product.id has no @default (D1, docs/deploy-checklist.md): prod ids
+    // are slugs and frontend URLs depend on that, exactly like
+    // CategoriesService.create/BrandsService.create's `id: dto.slug`. Never
+    // wired up here, so every create through this route 500'd on Prisma's
+    // "Argument `id` is missing" instead of ever reaching the DB.
+    //
+    // `stockStatus` is likewise a required column with no @default. No
+    // Inventory row exists yet at this instant (`setCatalogStock` below
+    // creates it), so it is derived against 0 — see DB_STOCK_STATUS's own
+    // comment for why this is legacy write-only data nothing reads back.
     const created = await this.prisma.product
-      .create({ data: write as Prisma.ProductUncheckedCreateInput })
+      .create({
+        data: {
+          ...write,
+          id: write.slug,
+          stockStatus:
+            DB_STOCK_STATUS[deriveStockStatus(0, write.minStock ?? 0)],
+        } as Prisma.ProductUncheckedCreateInput,
+      })
       .catch((error: unknown) => translateWriteError(error));
     if (stock !== undefined) {
       await this.setCatalogStock(

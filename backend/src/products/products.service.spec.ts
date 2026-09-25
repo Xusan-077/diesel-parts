@@ -96,6 +96,55 @@ const snapshot = {
   isActive: true,
 };
 
+describe('ProductsService.create', () => {
+  it('passes the slug as the id (D1) and a derived stockStatus — both required columns Prisma would otherwise reject as missing', async () => {
+    const create = jest
+      .fn()
+      .mockResolvedValue({ ...row, id: 'cat-fuel-injector-3126' });
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await service.create(
+      { sku: 'DP-1', slug: 'cat-fuel-injector-3126' } as never,
+      'actor-1',
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        sku: 'DP-1',
+        slug: 'cat-fuel-injector-3126',
+        id: 'cat-fuel-injector-3126',
+        // No Inventory row exists yet at this instant (setCatalogStock runs
+        // after) and no minStock was given, so 0 available <= 0 minStock.
+        stockStatus: 'out_of_stock',
+      },
+    });
+  });
+
+  it('translates a duplicate slug/id into a 409, not a 500', async () => {
+    const create = jest.fn().mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('duplicate', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['id'] },
+      }),
+    );
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await expect(
+      service.create(
+        { sku: 'DP-1', slug: 'cat-fuel-injector-3126' } as never,
+        'actor-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
 describe('ProductsService audit', () => {
   it('records a CREATE with an after snapshot', async () => {
     const create = jest.fn().mockResolvedValue(row);
@@ -305,7 +354,7 @@ describe('ProductsController role gates', () => {
   const reflector = new Reflector();
   // Looked up by name rather than `proto.hardDelete`, which would detach an
   // unbound method (only its decorator metadata is read here).
-  const rolesOf = (name: 'hardDelete' | 'deleteCheck' | 'archive') =>
+  const rolesOf = (name: 'hardDelete' | 'deleteCheck' | 'archive' | 'create') =>
     reflector.getAllAndOverride<string[]>(ROLES_KEY, [
       Object.getOwnPropertyDescriptor(ProductsController.prototype, name)!
         .value as () => unknown,
@@ -322,6 +371,11 @@ describe('ProductsController role gates', () => {
   it('keeps archive at MANAGER_UP', () => {
     expect(rolesOf('archive')).toEqual(MANAGER_UP);
   });
+
+  it('leaves create at the class-level MANAGER_UP — no SELLER, no per-method override', () => {
+    expect(rolesOf('create')).toEqual(MANAGER_UP);
+    expect(rolesOf('create')).not.toContain('SELLER');
+  });
 });
 
 describe('ProductsService stock on create/update', () => {
@@ -336,7 +390,9 @@ describe('ProductsService stock on create/update', () => {
 
     await service.create({ sku: 'DP-1', stock: 9 } as never, 'actor-1');
 
-    expect(create).toHaveBeenCalledWith({ data: { sku: 'DP-1' } });
+    expect(create).toHaveBeenCalledWith({
+      data: { sku: 'DP-1', stockStatus: 'out_of_stock' },
+    });
     expect(upsert).toHaveBeenCalledWith({
       where: {
         productId_warehouseId: { productId: 'p1', warehouseId: 'wh-catalog' },
