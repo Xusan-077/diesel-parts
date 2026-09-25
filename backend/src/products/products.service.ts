@@ -40,6 +40,25 @@ export interface ImportProductsResult {
   errors: CsvRowError[];
 }
 
+export const PRODUCT_HAS_HISTORY_MESSAGE =
+  "Bu mahsulot bo'yicha savdo/ombor tarixi bor. Hisobotlar buzilmasligi uchun o'chirib bo'lmaydi, arxivlang.";
+
+export interface ProductDeleteCheck {
+  canDelete: boolean;
+  product: { id: string; sku: string; name: string; oemNumbers: string[] };
+  counts: {
+    orders: number;
+    invoices: number;
+    goodsReceipts: number;
+    stockMovements: number;
+    returns: number;
+    /** On-hand plus reserved units across every warehouse. */
+    stockOnHand: number;
+  };
+  /** Human-readable blockers, e.g. "12 ta buyurtmada bor". Empty when `canDelete`. */
+  reasons: string[];
+}
+
 const ADMIN_INCLUDE = {
   category: { select: { id: true, nameUz: true, nameRu: true, nameEn: true } },
   brand: { select: { id: true, name: true } },
@@ -458,7 +477,152 @@ export class ProductsService {
     return after;
   }
 
-  async remove(id: string, actorId: string) {
+  /**
+   * Whether `id` can be hard-deleted, and if not, why — the dialog behind the
+   * director's "O'chirish" button shows `reasons` verbatim. Read-only; the
+   * same check is re-run under a row lock inside `hardDelete`, so this answer
+   * is advisory and never what the delete itself trusts.
+   */
+  async deleteCheck(id: string): Promise<ProductDeleteCheck> {
+    return this.prisma.$transaction((tx) => this.readDeleteCheck(tx, id));
+  }
+
+  /**
+   * Permanent removal, for a product created by mistake that has never been
+   * sold, received, moved or returned. Anything with history is refused with
+   * a 409 and has to be archived instead: OrderItem/GoodsReceiptItem/
+   * ReturnItem/StockMovement rows are what every report is built from.
+   *
+   * The check and the delete share one transaction, and the product row is
+   * locked `FOR UPDATE` first. A concurrent order/receipt/return insert takes
+   * `FOR KEY SHARE` on the same row through its foreign key, so it either
+   * commits before the lock (and the check sees it) or waits until this
+   * transaction is done (and then fails its FK against a missing row). The
+   * FK itself is the last line: a Restrict violation still maps to the 409.
+   *
+   * Returns the image URL so the caller holding the Blob token (the Next.js
+   * route) can remove the file once the row is gone.
+   */
+  async hardDelete(
+    id: string,
+    actorId: string,
+  ): Promise<{ success: true; id: string; imageUrl: string | null }> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id" = ${id} FOR UPDATE`;
+        const check = await this.readDeleteCheck(tx, id);
+        if (!check.canDelete) {
+          throw new ConflictException({
+            error: 'product_has_history',
+            message: PRODUCT_HAS_HISTORY_MESSAGE,
+            reasons: check.reasons,
+            counts: check.counts,
+          });
+        }
+
+        const product = await tx.product.findUniqueOrThrow({ where: { id } });
+        await tx.cartItem.deleteMany({ where: { productId: id } });
+        await tx.review.deleteMany({ where: { productId: id } });
+        // Only zero rows are left by now — readDeleteCheck refuses any stock.
+        await tx.inventory.deleteMany({ where: { productId: id } });
+        await tx.product.delete({ where: { id } });
+        // Written in the same transaction, unlike AuditService.record: a
+        // permanent delete with no trail of what was deleted is worse than
+        // no delete. The snapshot carries name/SKU/OEM because the row it
+        // points at no longer exists to be looked up.
+        await tx.auditLog.create({
+          data: {
+            userId: actorId,
+            action: AuditAction.DELETE,
+            entityType: 'Product',
+            entityId: id,
+            before: {
+              ...auditSnapshot(product),
+              oemNumbers: product.oemNumbers,
+              hardDelete: true,
+            },
+          },
+        });
+        return { success: true as const, id, imageUrl: product.imageUrl };
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException({
+          error: 'product_has_history',
+          message: PRODUCT_HAS_HISTORY_MESSAGE,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async readDeleteCheck(
+    tx: Prisma.TransactionClient,
+    id: string,
+  ): Promise<ProductDeleteCheck> {
+    const product = await tx.product.findUnique({
+      where: { id },
+      select: { id: true, sku: true, nameUz: true, oemNumbers: true },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const [
+      orders,
+      goodsReceipts,
+      stockMovements,
+      returns,
+      invoices,
+      inventory,
+    ] = await Promise.all([
+      tx.order.count({ where: { items: { some: { productId: id } } } }),
+      tx.goodsReceipt.count({ where: { items: { some: { productId: id } } } }),
+      tx.stockMovement.count({ where: { inventory: { productId: id } } }),
+      tx.return.count({ where: { items: { some: { productId: id } } } }),
+      tx.invoice.count({
+        where: { order: { items: { some: { productId: id } } } },
+      }),
+      tx.inventory.aggregate({
+        where: { productId: id },
+        _sum: { quantity: true, reservedQuantity: true },
+      }),
+    ]);
+    const stockOnHand =
+      (inventory._sum.quantity ?? 0) + (inventory._sum.reservedQuantity ?? 0);
+
+    const reasons: string[] = [];
+    if (orders > 0) reasons.push(`${orders} ta buyurtmada bor`);
+    if (invoices > 0) reasons.push(`${invoices} ta hisob-fakturada bor`);
+    if (goodsReceipts > 0) reasons.push(`${goodsReceipts} ta kirimda bor`);
+    if (stockMovements > 0)
+      reasons.push(`${stockMovements} ta ombor harakati bor`);
+    if (returns > 0) reasons.push(`${returns} ta qaytarishda bor`);
+    if (stockOnHand > 0) reasons.push(`Omborda ${stockOnHand} dona qoldiq bor`);
+
+    return {
+      canDelete: reasons.length === 0,
+      product: {
+        id: product.id,
+        sku: product.sku,
+        name: product.nameUz,
+        oemNumbers: product.oemNumbers,
+      },
+      counts: {
+        orders,
+        invoices,
+        goodsReceipts,
+        stockMovements,
+        returns,
+        stockOnHand,
+      },
+      reasons,
+    };
+  }
+
+  /** Retirement (soft delete): hidden from the catalog, kept for history. */
+  async archive(id: string, actorId: string) {
     const before = await this.getOrThrow(id);
     const after = await this.prisma.product.update({
       where: { id },

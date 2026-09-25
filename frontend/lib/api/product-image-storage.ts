@@ -86,7 +86,7 @@ export async function saveProductImage(file: File): Promise<string> {
 /**
  * Best-effort cleanup of a replaced or archived product's old photo.
  *
- * Silent on any failure, including "already gone": deleting the blob is a
+ * Never throws, including on "already gone" (a failure is logged): deleting the blob is a
  * storage-space nicety, never something a write should fail over. Scoped to
  * this project's Blob store on purpose, so a URL pointing anywhere else — a
  * seed photo under `/seed-images`, or a pre-migration relative
@@ -100,7 +100,13 @@ export async function deleteProductImage(imageUrl: string | null | undefined): P
 
   try {
     await del(imageUrl);
-  } catch {
-    // Already gone, or never existed — nothing to do.
+  } catch (error) {
+    // `del()` is already a no-op for a blob that is gone, so reaching here is
+    // a real failure (token, network) — logged so the orphaned file can be
+    // found, never rethrown.
+    console.error(
+      "product image cleanup failed url=" + imageUrl + " error=" +
+        (error instanceof Error ? error.message : String(error)),
+    );
   }
 }

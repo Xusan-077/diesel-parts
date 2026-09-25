@@ -6,18 +6,18 @@ import { toast } from "sonner";
 import { adminKeys } from "@/lib/api/admin/keys";
 import { requestErrorMessage } from "@/lib/api/request-error";
 import {
-  aiFillProduct,
-  aiGenerateProductImage,
   archiveProduct,
   createProduct,
+  deleteProduct,
   fetchAdminProducts,
+  fetchProductDeleteCheck,
   fetchProductForEdit,
   replaceProductImage,
   restoreProduct,
   updateProduct,
 } from "@/lib/api/admin/resources";
 import type { AdminProductPage, ProductEditRecord } from "@/lib/api/product-write-repository";
-import type { AdminProductListQuery, AiFillResult, ProductWriteInput } from "@/lib/schemas";
+import type { AdminProductListQuery, ProductWriteInput } from "@/lib/schemas";
 import { PANEL_STALE_MS, usePanelMutation } from "./use-panel-mutation";
 
 /**
@@ -116,27 +116,6 @@ export function useReplaceProductImage() {
 }
 
 /**
- * "OEM raqam bilan (AI)" — looks a part up and returns a write payload for
- * the create dialog to pre-fill. No cache to invalidate (nothing is written)
- * and no toast: the dialog shows the result itself, and a refusal has to
- * stay next to the OEM input it belongs to, exactly like `useCreateProduct`.
- */
-export function useAiFillProduct() {
-  return usePanelMutation<{ oemNumber: string; category?: string }, AiFillResult>({
-    run: ({ oemNumber, category }) => aiFillProduct(oemNumber, category),
-    invalidates: [],
-  });
-}
-
-/** Generates a studio photo for the AI-filled form. Same no-toast reasoning as `useAiFillProduct`. */
-export function useAiGenerateProductImage() {
-  return usePanelMutation<{ productName: string; oemNumber?: string }, { base64: string; mimeType: string }>({
-    run: ({ productName, oemNumber }) => aiGenerateProductImage(productName, oemNumber),
-    invalidates: [],
-  });
-}
-
-/**
  * Archive and restore are one mutation with a flag rather than two hooks: they
  * are the same button in the same column, and a caller that had to pick
  * between two hooks before it knew which way the row was going would end up
@@ -150,6 +129,33 @@ export function useSetProductActive(onDone?: () => void) {
       active ? "Mahsulot katalogga qaytarildi" : "Mahsulot arxivga olindi",
     // No failure toast: the confirm dialog stays open on a refusal and prints
     // the message inside itself, which is where the director is still looking.
+    onDone,
+  });
+}
+
+/**
+ * The delete dialog's pre-check. `staleTime: 0` and no retry: the answer has
+ * to describe the product as it is when the dialog opens (an order placed a
+ * minute ago must show up), and a 403/404 is not worth asking again. The
+ * delete itself re-checks on the server, so this is guidance, not a gate.
+ */
+export function useProductDeleteCheck(id: string | null) {
+  return useQuery({
+    queryKey: adminKeys.products.deleteCheck(id ?? ""),
+    queryFn: () => fetchProductDeleteCheck(id as string),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+}
+
+/** Permanent delete. Same no-failure-toast rule as archive: the dialog prints the refusal. */
+export function useDeleteProduct(onDone?: () => void) {
+  return usePanelMutation<{ id: string }, void>({
+    run: ({ id }) => deleteProduct(id),
+    invalidates: [adminKeys.products.all, adminKeys.audit.all],
+    success: "Mahsulot butunlay o'chirildi",
     onDone,
   });
 }

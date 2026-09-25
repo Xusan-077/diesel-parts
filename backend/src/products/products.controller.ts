@@ -23,7 +23,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { ALL_ROLES, MANAGER_UP } from '../common/roles';
+import { ALL_ROLES, DIRECTOR_UP, MANAGER_UP } from '../common/roles';
 
 /**
  * Full admin view (includes purchase_price). Restricted to MANAGER_UP so a
@@ -75,6 +75,13 @@ export class ProductsController {
     return this.products.findOneAdmin(id);
   }
 
+  /** Whether DELETE would succeed, and the blockers if not. Same role gate as DELETE. */
+  @Get(':id/delete-check')
+  @Roles(...DIRECTOR_UP)
+  deleteCheck(@Param('id') id: string) {
+    return this.products.deleteCheck(id);
+  }
+
   @Get(':id/stock')
   stock(@Param('id') id: string) {
     return this.products.stock(id);
@@ -94,9 +101,25 @@ export class ProductsController {
     return this.products.update(id, dto, actorId);
   }
 
+  /**
+   * Permanent delete — DIRECTOR_UP only, narrower than the class's MANAGER_UP,
+   * so a MANAGER/SELLER gets 403 from RolesGuard before the service runs.
+   * Refused with 409 when the product has sales/warehouse history.
+   */
   @Delete(':id')
-  remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
-    return this.products.remove(id, actorId);
+  @Roles(...DIRECTOR_UP)
+  hardDelete(@CurrentUser('id') actorId: string, @Param('id') id: string) {
+    return this.products.hardDelete(id, actorId);
+  }
+
+  /**
+   * Soft delete (isActive=false). This was DELETE /products/:id's behaviour
+   * before that route became a hard delete; kept here so the retire action
+   * stays reachable for MANAGER_UP.
+   */
+  @Patch(':id/archive')
+  archive(@CurrentUser('id') actorId: string, @Param('id') id: string) {
+    return this.products.archive(id, actorId);
   }
 
   @Patch(':id/image')

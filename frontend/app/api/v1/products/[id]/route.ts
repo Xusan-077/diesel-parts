@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { authenticateDirector, apiError } from "@/lib/api/route-auth";
 import {
+  deleteProduct,
   getProductForEdit,
-  setProductActive,
   updateProduct,
 } from "@/lib/api/product-write-repository";
+import { deleteProductImage } from "@/lib/api/product-image-storage";
 import { productWriteSchema } from "@/lib/schemas";
 
 /**
@@ -75,8 +76,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 /**
- * Retires the product rather than deleting the row: OrderItem references it with
- * Restrict, and an order has to keep meaning something after a part is dropped.
+ * Permanent delete — DIRECTOR only here, and backend/ gates the same call to
+ * DIRECTOR_UP on its own, so a MANAGER/SELLER token is refused twice over.
+ * A product with any sales/warehouse history answers 409 with the reasons;
+ * archiving lives at `POST /products/[id]/archive`.
+ *
+ * The photo is removed from Blob only after the row is gone: a failed file
+ * delete is logged inside `deleteProductImage` and never fails the request.
  */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const guard = await authenticateDirector();
@@ -85,11 +91,19 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   }
 
   const { id } = await params;
-  const result = await setProductActive(id, false, guard.user.id);
+  const result = await deleteProduct(id);
 
   if (!result.ok) {
-    return apiError(404, "Mahsulot topilmadi.");
+    if (result.reason === "not_found") {
+      return apiError(404, "Mahsulot topilmadi.");
+    }
+    return NextResponse.json(
+      { success: false, errors: { _root: [result.message] }, reasons: result.reasons },
+      { status: 409 },
+    );
   }
+
+  await deleteProductImage(result.imageUrl);
 
   return NextResponse.json({ success: true, id });
 }

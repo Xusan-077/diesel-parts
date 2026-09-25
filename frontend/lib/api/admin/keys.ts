@@ -33,6 +33,8 @@ export const adminKeys = {
     list: (query: AdminProductListQuery) => ["admin", "products", "list", query] as const,
     /** The write payload behind one row, fetched when its edit dialog opens. */
     edit: (id: string) => ["admin", "products", "edit", id] as const,
+    /** Whether a permanent delete would go through, fetched when its dialog opens. */
+    deleteCheck: (id: string) => ["admin", "products", "delete-check", id] as const,
   },
   categories: {
     all: ["admin", "categories"] as const,

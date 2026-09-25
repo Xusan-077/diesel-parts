@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { listProductsForAdmin } from "@/lib/api/product-write-repository";
 import { listBrands, listCategories } from "@/lib/api/product-repository";
 import { safeRead } from "@/lib/api/safe-read";
+import { getStaffUser } from "@/lib/auth/dal";
 import type { AdminProductListQuery } from "@/lib/schemas";
 import { CatalogTransfer } from "@/components/admin/catalog-transfer";
 import { PageHeader } from "@/components/admin/page-header";
@@ -57,7 +58,8 @@ export default async function DirectorProductsPage({
    * own error, and the dialog opens with an empty combobox rather than not at
    * all.
    */
-  const [result, categories, brands] = await Promise.all([
+  const [user, result, categories, brands] = await Promise.all([
+    getStaffUser(),
     safeRead("admin product list", () =>
       listProductsForAdmin({ search, page, includeInactive, sort }), undefined),
     safeRead("admin category options", listCategories, []),
@@ -151,6 +153,7 @@ export default async function DirectorProductsPage({
           initialData={result.data}
           categories={categories.data.map((c) => ({ id: c.id, label: c.name.uz }))}
           brands={brands.data.map((b) => ({ id: b.id, label: b.name }))}
+          canDelete={user?.role === "DIRECTOR"}
         />
       </div>
 

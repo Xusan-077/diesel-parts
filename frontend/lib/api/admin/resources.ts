@@ -1,4 +1,8 @@
-import type { AdminProductPage, ProductEditRecord } from "@/lib/api/product-write-repository";
+import type {
+  AdminProductPage,
+  ProductDeleteCheck,
+  ProductEditRecord,
+} from "@/lib/api/product-write-repository";
 import type { AuditEntryView, DiscountRequestView } from "@/lib/api/discount-repository";
 import type { CatalogAdminRow } from "@/lib/api/catalog-repository";
 import type { CustomerPage, CustomerRow } from "@/lib/api/customer-repository";
@@ -8,7 +12,6 @@ import type { ModeratedReview } from "@/lib/api/review-repository";
 import type { StaffRow } from "@/lib/api/user-repository";
 import type {
   AdminProductListQuery,
-  AiFillResult,
   AuditListQuery,
   CategoryWriteInput,
   CustomerCreateInput,
@@ -101,6 +104,19 @@ export async function replaceProductImage(id: string, image: File): Promise<{ im
  * and an order has to keep meaning something after a part leaves the catalogue.
  */
 export async function archiveProduct(id: string): Promise<void> {
+  await panelClient.post("/products/" + id + "/archive");
+}
+
+/** Whether a permanent delete would be accepted, and the blockers if not. */
+export async function fetchProductDeleteCheck(id: string): Promise<ProductDeleteCheck> {
+  const { data } = await panelClient.get<ProductDeleteCheck & Envelope>(
+    "/products/" + id + "/delete-check",
+  );
+  return data;
+}
+
+/** Permanent delete — refused with 409 when the product has any history. */
+export async function deleteProduct(id: string): Promise<void> {
   await panelClient.delete("/products/" + id);
 }
 
@@ -112,32 +128,6 @@ export async function archiveProduct(id: string): Promise<void> {
 export async function restoreProduct(id: string): Promise<void> {
   const current = await fetchProductForEdit(id);
   await panelClient.patch("/products/" + id, { ...current, isActive: true });
-}
-
-/**
- * Looks a part up by its OEM number ("OEM raqam bilan (AI)"). Returns a
- * pre-filled write payload for the create dialog to show — nothing is saved
- * until the director presses "Tasdiqlash va qo'shish", which goes through
- * `createProduct` exactly like a manually-filled form.
- */
-export async function aiFillProduct(oemNumber: string, category?: string): Promise<AiFillResult> {
-  const { data } = await panelClient.post<{ result: AiFillResult } & Envelope>("/products/ai-fill", {
-    oemNumber,
-    category,
-  });
-  return data.result;
-}
-
-/** Generates a studio photo and hands back its bytes — see the route's own doc comment. */
-export async function aiGenerateProductImage(
-  productName: string,
-  oemNumber?: string,
-): Promise<{ base64: string; mimeType: string }> {
-  const { data } = await panelClient.post<{ base64: string; mimeType: string } & Envelope>(
-    "/products/ai-generate-image",
-    { productName, oemNumber },
-  );
-  return { base64: data.base64, mimeType: data.mimeType };
 }
 
 /* ── Categories ───────────────────────────────────────────────────────────── */
