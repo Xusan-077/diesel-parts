@@ -500,6 +500,31 @@
     "ordersTitle": "История заказов",
     "ordersEmpty": "У вас пока нет заказов.",
     "ordersEmptyCta": "Перейти в каталог",
+    "orderHistory": {
+      "orderLabel": "Заказ",
+      "placedOn": "Дата",
+      "total": "Итого",
+      "itemCount": "Товаров: {count}",
+      "pickup": "Самовывоз",
+      "delivery": "Доставка",
+      "loadError": "Не удалось загрузить заказы. Попробуйте немного позже.",
+      "status": {
+        "DRAFT": "Принят",
+        "NEW": "Принят",
+        "PENDING": "На рассмотрении",
+        "CONFIRMED": "Подтверждён",
+        "PREPARING": "Собирается",
+        "COMPLETED": "Выполнен",
+        "CANCELLED": "Отменён",
+        "PARTIALLY_REFUNDED": "Частичный возврат",
+        "REFUNDED": "Возвращён"
+      },
+      "payment": {
+        "UNPAID": "Не оплачен",
+        "PARTIAL": "Оплачен частично",
+        "PAID": "Оплачен"
+      }
+    },
     "logout": "Выйти",
     "toastSignedIn": "Вы вошли в систему",
     "toastSignedOut": "Вы вышли из системы",

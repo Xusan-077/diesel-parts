@@ -500,6 +500,31 @@
     "ordersTitle": "Buyurtmalar tarixi",
     "ordersEmpty": "Hozircha buyurtmalaringiz yo'q.",
     "ordersEmptyCta": "Katalogga o'tish",
+    "orderHistory": {
+      "orderLabel": "Buyurtma",
+      "placedOn": "Sana",
+      "total": "Jami",
+      "itemCount": "{count} ta mahsulot",
+      "pickup": "Olib ketish",
+      "delivery": "Yetkazib berish",
+      "loadError": "Buyurtmalarni yuklab bo'lmadi. Birozdan so'ng qayta urinib ko'ring.",
+      "status": {
+        "DRAFT": "Qabul qilindi",
+        "NEW": "Qabul qilindi",
+        "PENDING": "Ko'rib chiqilmoqda",
+        "CONFIRMED": "Tasdiqlandi",
+        "PREPARING": "Tayyorlanmoqda",
+        "COMPLETED": "Yakunlandi",
+        "CANCELLED": "Bekor qilindi",
+        "PARTIALLY_REFUNDED": "Qisman qaytarildi",
+        "REFUNDED": "Qaytarildi"
+      },
+      "payment": {
+        "UNPAID": "To'lanmagan",
+        "PARTIAL": "Qisman to'langan",
+        "PAID": "To'langan"
+      }
+    },
     "logout": "Chiqish",
     "toastSignedIn": "Tizimga kirdingiz",
     "toastSignedOut": "Tizimdan chiqdingiz",

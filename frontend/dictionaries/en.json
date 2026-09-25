@@ -500,6 +500,31 @@
     "ordersTitle": "Order history",
     "ordersEmpty": "You have no orders yet.",
     "ordersEmptyCta": "Browse the catalog",
+    "orderHistory": {
+      "orderLabel": "Order",
+      "placedOn": "Date",
+      "total": "Total",
+      "itemCount": "{count} items",
+      "pickup": "Pickup",
+      "delivery": "Delivery",
+      "loadError": "We couldn't load your orders. Please try again shortly.",
+      "status": {
+        "DRAFT": "Received",
+        "NEW": "Received",
+        "PENDING": "Under review",
+        "CONFIRMED": "Confirmed",
+        "PREPARING": "Being prepared",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled",
+        "PARTIALLY_REFUNDED": "Partially refunded",
+        "REFUNDED": "Refunded"
+      },
+      "payment": {
+        "UNPAID": "Unpaid",
+        "PARTIAL": "Partially paid",
+        "PAID": "Paid"
+      }
+    },
     "logout": "Sign out",
     "toastSignedIn": "You are signed in",
     "toastSignedOut": "You are signed out",
