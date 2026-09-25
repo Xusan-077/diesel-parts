@@ -185,14 +185,22 @@ export function AuditLog({
         <ul className="mt-8 divide-y divide-border">
           {result.items.map((entry) => {
             const { before, after } = diff(entry.before, entry.after);
+            // A hard delete also writes AuditAction.DELETE (the same action
+            // archiving uses), but it is irreversible and has to read that
+            // way — `hardDelete: true` is the flag ProductsService.hardDelete
+            // stamps into `before` for exactly this.
+            const isHardDelete = asRecord(entry.before)?.hardDelete === true;
+            const actionLabel = isHardDelete
+              ? "butunlay o'chirdi"
+              : (ACTION_LABEL[entry.action] ?? entry.action.toLowerCase());
 
             return (
               <li key={entry.id} className="py-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
                   <p className="text-sm text-foreground">
                     <span className="font-medium">{entry.actorName ?? "O'chirilgan hisob"}</span>{" "}
-                    <span className="text-muted">
-                      {entry.entityType} {ACTION_LABEL[entry.action] ?? entry.action.toLowerCase()}
+                    <span className={isHardDelete ? "text-danger" : "text-muted"}>
+                      {entry.entityType} {actionLabel}
                     </span>
                   </p>
                   {/* Parsed here rather than server-side: the timestamp reaches
