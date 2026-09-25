@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Archive, ImageOff, MoreHorizontal, PackageSearch, Pencil, Plus, RotateCcw } from "lucide-react";
+import {
+  Archive,
+  ImageOff,
+  MoreHorizontal,
+  PackageSearch,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import {
   useAdminProducts,
   useProductEditLoader,
@@ -24,6 +33,7 @@ import {
   type ReferenceOption,
 } from "@/components/admin/product-form-modal";
 import { ExportButton } from "@/components/admin/export-button";
+import { ProductDeleteDialog } from "@/components/admin/product-delete-dialog";
 import { EmptyState } from "@/components/director/empty-state";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
@@ -66,6 +76,7 @@ type Dialog =
   | { kind: "edit"; row: AdminProductRow; values: ProductEditRecord }
   | { kind: "archive"; row: AdminProductRow }
   | { kind: "restore"; row: AdminProductRow }
+  | { kind: "delete"; row: AdminProductRow }
   | null;
 
 export interface ProductCatalogProps {
@@ -78,6 +89,11 @@ export interface ProductCatalogProps {
   initialData?: AdminProductPage;
   categories: readonly ReferenceOption[];
   brands: readonly ReferenceOption[];
+  /**
+   * Shows the permanent "O'chirish" action. Only a DIRECTOR's page passes
+   * true; the route and backend/ refuse everyone else regardless.
+   */
+  canDelete?: boolean;
 }
 
 /** The current page's rows, for the toolbar's export button — the same rule
@@ -91,7 +107,13 @@ const EXPORT_COLUMNS: readonly CsvColumn<AdminProductRow>[] = [
   { header: "Holat", value: (row) => (row.isActive ? "faol" : "arxiv") },
 ];
 
-export function ProductCatalog({ query, initialData, categories, brands }: ProductCatalogProps) {
+export function ProductCatalog({
+  query,
+  initialData,
+  categories,
+  brands,
+  canDelete = false,
+}: ProductCatalogProps) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const showingArchived = query.all;
@@ -339,6 +361,15 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
                               Katalogga qaytarish
                             </DropdownMenuItem>
                           )}
+                          {canDelete ? (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setDialog({ kind: "delete", row: product })}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              O&apos;chirish
+                            </DropdownMenuItem>
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -393,6 +424,17 @@ export function ProductCatalog({ query, initialData, categories, brands }: Produ
           }
         }}
       />
+
+      {canDelete ? (
+        <ProductDeleteDialog
+          row={dialog?.kind === "delete" ? dialog.row : null}
+          onClose={() => setDialog(null)}
+          onArchive={(row) => {
+            setActive.reset();
+            setDialog({ kind: "archive", row });
+          }}
+        />
+      ) : null}
 
       <ConfirmModal
         open={dialog?.kind === "restore"}

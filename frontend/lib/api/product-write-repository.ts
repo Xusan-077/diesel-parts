@@ -122,6 +122,70 @@ export async function setProductActive(
   }
 }
 
+/** `GET /products/:id/delete-check`'s answer — see backend `ProductDeleteCheck`. */
+export interface ProductDeleteCheck {
+  canDelete: boolean;
+  product: { id: string; sku: string; name: string; oemNumbers: string[] };
+  counts: {
+    orders: number;
+    invoices: number;
+    goodsReceipts: number;
+    stockMovements: number;
+    returns: number;
+    stockOnHand: number;
+  };
+  reasons: string[];
+}
+
+export async function checkProductDelete(id: string): Promise<ProductDeleteCheck | null> {
+  try {
+    return await backendRequest<ProductDeleteCheck>(`/products/${id}/delete-check`, {
+      accessToken: await accessToken(),
+    });
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export type DeleteProductResult =
+  | { ok: true; imageUrl: string | null }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "has_history"; message: string; reasons: string[] };
+
+/**
+ * Permanent delete. The backend refuses (409) anything with sales/warehouse
+ * history and re-checks under a row lock, so nothing here needs to pre-check.
+ * Hands back the photo URL for the caller to remove from Blob afterwards.
+ */
+export async function deleteProduct(id: string): Promise<DeleteProductResult> {
+  try {
+    const result = await backendRequest<{ imageUrl: string | null }>(`/products/${id}`, {
+      method: "DELETE",
+      accessToken: await accessToken(),
+    });
+    return { ok: true, imageUrl: result.imageUrl };
+  } catch (error) {
+    if (error instanceof BackendApiError && error.status === 404) {
+      return { ok: false, reason: "not_found" };
+    }
+    if (error instanceof BackendApiError && error.status === 409) {
+      const body = error.body as { reasons?: unknown } | undefined;
+      return {
+        ok: false,
+        reason: "has_history",
+        message: error.message,
+        reasons: Array.isArray(body?.reasons)
+          ? body.reasons.filter((r): r is string => typeof r === "string")
+          : [],
+      };
+    }
+    throw error;
+  }
+}
+
 export interface AdminProductRow {
   id: string;
   sku: string;

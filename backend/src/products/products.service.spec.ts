@@ -8,6 +8,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction, Prisma } from '../../generated/prisma/client';
 import { toCsv, type ProductCsvRow } from './product-csv';
+import { Reflector } from '@nestjs/core';
+import { ProductsController } from './products.controller';
+import { ROLES_KEY } from '../common/decorators/roles.decorator';
+import { DIRECTOR_UP, MANAGER_UP } from '../common/roles';
 
 function makePrisma(
   overrides: {
@@ -138,7 +142,7 @@ describe('ProductsService audit', () => {
     const { audit, record } = makeAudit();
     const service = new ProductsService(prisma, audit);
 
-    await service.remove('p1', 'actor-1');
+    await service.archive('p1', 'actor-1');
 
     expect(record).toHaveBeenCalledWith({
       userId: 'actor-1',
@@ -148,6 +152,175 @@ describe('ProductsService audit', () => {
       before: snapshot,
       after: { ...snapshot, isActive: false },
     });
+  });
+});
+
+describe('ProductsService hard delete', () => {
+  function makeTx(
+    counts: Partial<{
+      orders: number;
+      invoices: number;
+      goodsReceipts: number;
+      stockMovements: number;
+      returns: number;
+      quantity: number;
+      reserved: number;
+    }> = {},
+  ) {
+    const product = {
+      ...row,
+      oemNumbers: ['OEM-1'],
+      imageUrl: 'https://x.public.blob.vercel-storage.com/products/a.jpg',
+    };
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'p1' }]),
+      product: {
+        findUnique: jest.fn().mockResolvedValue(product),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(product),
+        delete: jest.fn().mockResolvedValue(product),
+      },
+      order: { count: jest.fn().mockResolvedValue(counts.orders ?? 0) },
+      invoice: { count: jest.fn().mockResolvedValue(counts.invoices ?? 0) },
+      goodsReceipt: {
+        count: jest.fn().mockResolvedValue(counts.goodsReceipts ?? 0),
+      },
+      stockMovement: {
+        count: jest.fn().mockResolvedValue(counts.stockMovements ?? 0),
+      },
+      return: { count: jest.fn().mockResolvedValue(counts.returns ?? 0) },
+      inventory: {
+        aggregate: jest.fn().mockResolvedValue({
+          _sum: {
+            quantity: counts.quantity ?? 0,
+            reservedQuantity: counts.reserved ?? 0,
+          },
+        }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      cartItem: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      review: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
+    } as unknown as PrismaService;
+    return { tx, prisma };
+  }
+
+  it('deleteCheck reports every blocker with its count', async () => {
+    const { prisma } = makeTx({
+      orders: 12,
+      goodsReceipts: 1,
+      stockMovements: 3,
+      returns: 2,
+      invoices: 4,
+      quantity: 5,
+    });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    const check = await service.deleteCheck('p1');
+
+    expect(check.canDelete).toBe(false);
+    expect(check.reasons).toEqual([
+      '12 ta buyurtmada bor',
+      '4 ta hisob-fakturada bor',
+      '1 ta kirimda bor',
+      '3 ta ombor harakati bor',
+      '2 ta qaytarishda bor',
+      'Omborda 5 dona qoldiq bor',
+    ]);
+  });
+
+  it('deleteCheck 404s on an unknown product', async () => {
+    const { tx, prisma } = makeTx();
+    tx.product.findUnique.mockResolvedValue(null);
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await expect(service.deleteCheck('nope')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('deletes a history-free product and its dependants in one transaction, with an audit row', async () => {
+    const { tx, prisma } = makeTx();
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    const result = await service.hardDelete('p1', 'actor-1');
+
+    expect(result).toEqual({
+      success: true,
+      id: 'p1',
+      imageUrl: 'https://x.public.blob.vercel-storage.com/products/a.jpg',
+    });
+    expect(tx.$queryRaw).toHaveBeenCalled();
+    expect(tx.cartItem.deleteMany).toHaveBeenCalledWith({
+      where: { productId: 'p1' },
+    });
+    expect(tx.review.deleteMany).toHaveBeenCalledWith({
+      where: { productId: 'p1' },
+    });
+    expect(tx.inventory.deleteMany).toHaveBeenCalledWith({
+      where: { productId: 'p1' },
+    });
+    expect(tx.product.delete).toHaveBeenCalledWith({ where: { id: 'p1' } });
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'actor-1',
+        action: AuditAction.DELETE,
+        entityType: 'Product',
+        entityId: 'p1',
+        before: { ...snapshot, oemNumbers: ['OEM-1'], hardDelete: true },
+      },
+    });
+  });
+
+  it('refuses with 409 and deletes nothing when history exists', async () => {
+    const { tx, prisma } = makeTx({ orders: 1 });
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await expect(service.hardDelete('p1', 'actor-1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(tx.product.delete).not.toHaveBeenCalled();
+    expect(tx.cartItem.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('maps a foreign-key race (P2003) to the same 409', async () => {
+    const { tx, prisma } = makeTx();
+    tx.product.delete.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('fk', {
+        code: 'P2003',
+        clientVersion: 'test',
+      }),
+    );
+    const service = new ProductsService(prisma, makeAudit().audit);
+
+    await expect(service.hardDelete('p1', 'actor-1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+  });
+});
+
+describe('ProductsController role gates', () => {
+  const reflector = new Reflector();
+  // Looked up by name rather than `proto.hardDelete`, which would detach an
+  // unbound method (only its decorator metadata is read here).
+  const rolesOf = (name: 'hardDelete' | 'deleteCheck' | 'archive') =>
+    reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      Object.getOwnPropertyDescriptor(ProductsController.prototype, name)!
+        .value as () => unknown,
+      ProductsController,
+    ]);
+
+  it('limits DELETE and delete-check to DIRECTOR_UP', () => {
+    expect(rolesOf('hardDelete')).toEqual(DIRECTOR_UP);
+    expect(rolesOf('deleteCheck')).toEqual(DIRECTOR_UP);
+    expect(rolesOf('hardDelete')).not.toContain('MANAGER');
+    expect(rolesOf('hardDelete')).not.toContain('SELLER');
+  });
+
+  it('keeps archive at MANAGER_UP', () => {
+    expect(rolesOf('archive')).toEqual(MANAGER_UP);
   });
 });
 

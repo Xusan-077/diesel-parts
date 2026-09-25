@@ -24,7 +24,6 @@ import { AuditModule } from './audit/audit.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
 import { DiscountRequestsModule } from './discount-requests/discount-requests.module';
-import { AiModule } from './ai/ai.module';
 import { CartsModule } from './carts/carts.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { PaymeModule } from './payme/payme.module';
@@ -59,7 +58,6 @@ import { CashierModule } from './cashier/cashier.module';
     ReviewsModule,
     InquiriesModule,
     DiscountRequestsModule,
-    AiModule,
     CartsModule,
     CheckoutModule,
     PaymeModule,
