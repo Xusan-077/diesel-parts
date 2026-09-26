@@ -12,6 +12,19 @@ export type DiscountClassification =
 /** A director is bound by no ceiling: they are the approval path. */
 export const DIRECTOR_DISCOUNT_LIMIT = 100;
 
+/**
+ * The hard ceiling on what a SELLER may ever request, director-approval or
+ * not — distinct from `User.discountLimit`, which only decides whether a
+ * request auto-applies (see `classifyDiscount`). Config-overridable; read
+ * live rather than cached at module-load so an ops env-var change (or a
+ * test) doesn't need a process restart to take effect.
+ */
+export function sellerMaxDiscountPercent(): number {
+  const raw = process.env.SELLER_MAX_DISCOUNT_PERCENT;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) ? parsed : 20;
+}
+
 export function classifyDiscount(
   requestedPercent: number,
   sellerLimit: number,

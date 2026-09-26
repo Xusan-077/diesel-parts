@@ -1008,6 +1008,57 @@ describe('OrdersService.requestDiscount', () => {
     expect(result).toEqual({ kind: 'needs_approval', requestId: 'req-1' });
   });
 
+  it('rejects a SELLER request above the 20% hard cap even when discountLimit is higher', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      sellerId: 'seller-user-1',
+      subtotal: new Prisma.Decimal(1000),
+      discountRequestedPercent: new Prisma.Decimal(0),
+      discountApprovedPercent: new Prisma.Decimal(0),
+      totalAmount: new Prisma.Decimal(1000),
+    });
+    const { prisma, $transaction } = makePrisma({
+      order: { findUnique },
+      user: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ discountLimit: 50 }),
+      },
+    });
+    const { products } = makeProducts();
+    const { audit, record } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    const error = await catchError(
+      service.requestDiscount(seller, 'order-1', { percent: 25 }),
+    );
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect($transaction).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('lets a DIRECTOR request above the 20% cap (the cap only binds SELLER)', async () => {
+    const findUnique = jest.fn().mockResolvedValue({
+      id: 'order-1',
+      sellerId: 'seller-user-1',
+      subtotal: new Prisma.Decimal(1000),
+      discountRequestedPercent: new Prisma.Decimal(0),
+      discountApprovedPercent: new Prisma.Decimal(0),
+      totalAmount: new Prisma.Decimal(1000),
+    });
+    const orderUpdate = jest.fn().mockResolvedValue({});
+    const { prisma } = makePrisma({
+      order: { findUnique, update: orderUpdate },
+    });
+    const { products } = makeProducts();
+    const { audit } = makeAudit();
+    const service = new OrdersService(prisma, makeInventory(), products, audit);
+
+    const result = await service.requestDiscount(director, 'order-1', {
+      percent: 40,
+    });
+
+    expect(result).toEqual({ kind: 'immediate', totalAmount: 600 });
+  });
+
   it('refuses a second concurrent pending request (pending_exists)', async () => {
     const findUnique = jest.fn().mockResolvedValue({
       id: 'order-1',

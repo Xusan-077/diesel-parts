@@ -26,6 +26,7 @@ import { applyDiscount } from '../discount-requests/order-money';
 import {
   DIRECTOR_DISCOUNT_LIMIT,
   classifyDiscount,
+  sellerMaxDiscountPercent,
 } from '../discount-requests/discount-policy';
 import {
   AuditAction,
@@ -670,6 +671,17 @@ export class OrdersService {
     }
 
     const percent = dto.percent;
+
+    // A hard ceiling on the request itself, separate from `discountLimit`
+    // below (which only decides whether it auto-applies vs. queues for a
+    // director). A seller may never even ask for more than this, approval
+    // or not.
+    if (!isDirector(actor) && percent > sellerMaxDiscountPercent()) {
+      throw new BadRequestException(
+        `Chegirma ${sellerMaxDiscountPercent()}% dan oshmasligi kerak`,
+      );
+    }
+
     const limit = isDirector(actor)
       ? DIRECTOR_DISCOUNT_LIMIT
       : (

@@ -1,4 +1,8 @@
-import { classifyDiscount, DIRECTOR_DISCOUNT_LIMIT } from './discount-policy';
+import {
+  classifyDiscount,
+  DIRECTOR_DISCOUNT_LIMIT,
+  sellerMaxDiscountPercent,
+} from './discount-policy';
 
 describe('classifyDiscount', () => {
   it('is immediate when the requested percent is below the seller limit', () => {
@@ -26,5 +30,29 @@ describe('classifyDiscount', () => {
   it('treats a zero seller limit as no self-serve discount', () => {
     expect(classifyDiscount(0, 0)).toEqual({ kind: 'immediate' });
     expect(classifyDiscount(1, 0)).toEqual({ kind: 'needs_approval' });
+  });
+});
+
+describe('sellerMaxDiscountPercent', () => {
+  const original = process.env.SELLER_MAX_DISCOUNT_PERCENT;
+
+  afterEach(() => {
+    if (original === undefined) delete process.env.SELLER_MAX_DISCOUNT_PERCENT;
+    else process.env.SELLER_MAX_DISCOUNT_PERCENT = original;
+  });
+
+  it('defaults to 20', () => {
+    delete process.env.SELLER_MAX_DISCOUNT_PERCENT;
+    expect(sellerMaxDiscountPercent()).toBe(20);
+  });
+
+  it('is overridable via env', () => {
+    process.env.SELLER_MAX_DISCOUNT_PERCENT = '15';
+    expect(sellerMaxDiscountPercent()).toBe(15);
+  });
+
+  it('ignores a non-numeric override and falls back to the default', () => {
+    process.env.SELLER_MAX_DISCOUNT_PERCENT = 'not-a-number';
+    expect(sellerMaxDiscountPercent()).toBe(20);
   });
 });
