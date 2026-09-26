@@ -9,11 +9,8 @@ datasource db {
 }
 
 enum Role {
-  SUPER_ADMIN
   DIRECTOR
-  MANAGER
   SELLER
-  VIEWER
 }
 
 enum InquiryStatus {
