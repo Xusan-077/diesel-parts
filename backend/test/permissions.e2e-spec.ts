@@ -16,7 +16,9 @@ import type { AuthenticatedUser } from '../src/auth/auth.types';
 function actorGuard(actor: AuthenticatedUser) {
   return {
     canActivate: (context: ExecutionContext) => {
-      const request = context.switchToHttp().getRequest<{ user?: AuthenticatedUser }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<{ user?: AuthenticatedUser }>();
       request.user = actor;
       return true;
     },
@@ -66,20 +68,24 @@ describe('permission boundaries (e2e)', () => {
     await directorApp.close();
   });
 
-  it.each(['/finance/summary', '/analytics/dashboard-counts', '/users', '/audit'])(
-    '403s a SELLER on %s',
-    async (path) => {
-      await request(sellerApp.getHttpServer()).get(path).expect(403);
-    },
-  );
+  it.each([
+    '/finance/summary',
+    '/analytics/dashboard-counts',
+    '/users',
+    '/audit',
+  ])('403s a SELLER on %s', async (path) => {
+    await request(sellerApp.getHttpServer()).get(path).expect(403);
+  });
 
-  it.each(['/finance/summary', '/analytics/dashboard-counts', '/users', '/audit'])(
-    'lets a DIRECTOR through %s',
-    async (path) => {
-      const res = await request(directorApp.getHttpServer()).get(path);
-      expect(res.status).not.toBe(403);
-    },
-  );
+  it.each([
+    '/finance/summary',
+    '/analytics/dashboard-counts',
+    '/users',
+    '/audit',
+  ])('lets a DIRECTOR through %s', async (path) => {
+    const res = await request(directorApp.getHttpServer()).get(path);
+    expect(res.status).not.toBe(403);
+  });
 
   it('grants SELLER products:read on the global /products surface, widened by this migration', async () => {
     const res = await request(sellerApp.getHttpServer()).get('/products');
@@ -87,6 +93,8 @@ describe('permission boundaries (e2e)', () => {
   });
 
   it('still 403s a SELLER on the products hard-delete route', async () => {
-    await request(sellerApp.getHttpServer()).delete('/products/nonexistent-id').expect(403);
+    await request(sellerApp.getHttpServer())
+      .delete('/products/nonexistent-id')
+      .expect(403);
   });
 });
