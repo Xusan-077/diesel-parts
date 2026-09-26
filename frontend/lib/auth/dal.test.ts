@@ -7,6 +7,7 @@ vi.mock("@/lib/api/backend-client", async () => {
   return { ...actual, backendRequest: vi.fn() };
 });
 vi.mock("./staff-session", () => ({ getStaffSession: vi.fn() }));
+vi.mock("next/navigation", () => ({ forbidden: vi.fn(), redirect: vi.fn() }));
 
 import { BackendApiError, backendRequest } from "@/lib/api/backend-client";
 // `getStaffUser` is `cache()`-wrapped (zero-arg, so every call within one
@@ -15,6 +16,7 @@ import { BackendApiError, backendRequest } from "@/lib/api/backend-client";
 // memoized result.
 import { loadStaffUser as getStaffUser } from "./dal";
 import { getStaffSession } from "./staff-session";
+import { forbidden } from "next/navigation";
 
 const SESSION = {
   role: "DIRECTOR" as const,
@@ -93,5 +95,64 @@ describe("getStaffUser", () => {
     vi.mocked(backendRequest).mockRejectedValue(new BackendApiError("Down", 503, "unavailable"));
 
     await expect(getStaffUser()).rejects.toThrow("Down");
+  });
+});
+
+describe("requirePermission", () => {
+  // Unlike the block above, this goes through `requireStaff()`, which reads
+  // the *cached* `getStaffUser` — a fresh module per test, same reason
+  // `loadStaffUser` above is tested uncached instead.
+  async function freshRequirePermission() {
+    vi.resetModules();
+    vi.mocked(forbidden).mockClear();
+    return (await import("./dal")).requirePermission;
+  }
+
+  it("calls Next's forbidden() when the signed-in role lacks the permission", async () => {
+    vi.mocked(getStaffSession).mockResolvedValue(SESSION);
+    vi.mocked(backendRequest).mockResolvedValue({
+      id: "u2",
+      name: "Sotuvchi",
+      email: "s@d.uz",
+      role: "SELLER",
+      discountLimit: 5,
+      isActive: true,
+    });
+
+    await (await freshRequirePermission())("finance:read");
+
+    expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not call forbidden() when the role holds the permission", async () => {
+    vi.mocked(getStaffSession).mockResolvedValue(SESSION);
+    vi.mocked(backendRequest).mockResolvedValue({
+      id: "u1",
+      name: "Direktor",
+      email: "d@d.uz",
+      role: "DIRECTOR",
+      discountLimit: 100,
+      isActive: true,
+    });
+
+    await (await freshRequirePermission())("finance:read");
+
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("does not call forbidden() for a SELLER-granted permission", async () => {
+    vi.mocked(getStaffSession).mockResolvedValue(SESSION);
+    vi.mocked(backendRequest).mockResolvedValue({
+      id: "u2",
+      name: "Sotuvchi",
+      email: "s@d.uz",
+      role: "SELLER",
+      discountLimit: 5,
+      isActive: true,
+    });
+
+    await (await freshRequirePermission())("orders:read");
+
+    expect(forbidden).not.toHaveBeenCalled();
   });
 });
