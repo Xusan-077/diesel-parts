@@ -3,15 +3,14 @@ import { ReportsService } from './reports.service';
 import { DateRangeDto } from '../dashboard/dto/date-range.dto';
 import { TopProductsQueryDto } from './dto/top-products-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 @Controller('seller/reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('orders:read')
 export class SellerReportsController {
   constructor(private readonly reports: ReportsService) {}
 

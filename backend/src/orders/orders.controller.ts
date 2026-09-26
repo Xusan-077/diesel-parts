@@ -15,19 +15,18 @@ import { QueryOrderDto } from './dto/query-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { RequestDiscountDto } from './dto/request-discount.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 @Controller('seller/orders')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
+  @RequirePermission('orders:read')
   findAll(
     @CurrentUser() actor: AuthenticatedUser,
     @Query() query: QueryOrderDto,
@@ -36,16 +35,19 @@ export class OrdersController {
   }
 
   @Get(':id')
+  @RequirePermission('orders:read')
   findOne(@CurrentUser() actor: AuthenticatedUser, @Param('id') id: string) {
     return this.orders.findOne(actor, id);
   }
 
   @Post()
+  @RequirePermission('orders:create')
   create(@CurrentUser() actor: AuthenticatedUser, @Body() dto: CreateOrderDto) {
     return this.orders.create(actor, dto);
   }
 
   @Patch(':id/status')
+  @RequirePermission('orders:update')
   updateStatus(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
@@ -55,6 +57,7 @@ export class OrdersController {
   }
 
   @Patch(':id')
+  @RequirePermission('orders:update')
   update(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
@@ -64,11 +67,13 @@ export class OrdersController {
   }
 
   @Post(':id/cancel')
+  @RequirePermission('orders:update')
   cancel(@CurrentUser() actor: AuthenticatedUser, @Param('id') id: string) {
     return this.orders.cancel(actor, id);
   }
 
   @Post(':id/discount-request')
+  @RequirePermission('discounts:create')
   requestDiscount(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,

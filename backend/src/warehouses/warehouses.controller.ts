@@ -14,41 +14,40 @@ import { CreateWarehouseDto } from './dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from './dto/update-warehouse.dto';
 import { QueryWarehousesDto } from './dto/query-warehouses.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { ALL_ROLES, MANAGER_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 @Controller('warehouses')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WarehousesController {
   constructor(private readonly warehouses: WarehousesService) {}
 
   @Get()
-  @Roles(...ALL_ROLES)
+  @RequirePermission('warehouse:read')
   findAll(@Query() query: QueryWarehousesDto) {
     return this.warehouses.findAll(query);
   }
 
   @Get(':id')
-  @Roles(...ALL_ROLES)
+  @RequirePermission('warehouse:read')
   findOne(@Param('id') id: string) {
     return this.warehouses.findOne(id);
   }
 
   @Post()
-  @Roles(...MANAGER_UP)
+  @RequirePermission('warehouse:create')
   create(@Body() dto: CreateWarehouseDto) {
     return this.warehouses.create(dto);
   }
 
   @Patch(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('warehouse:update')
   update(@Param('id') id: string, @Body() dto: UpdateWarehouseDto) {
     return this.warehouses.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('warehouse:delete')
   remove(@Param('id') id: string) {
     return this.warehouses.remove(id);
   }

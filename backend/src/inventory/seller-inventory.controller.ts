@@ -3,13 +3,12 @@ import { InventoryService } from './inventory.service';
 import { QueryInventoryDto } from './dto/query-inventory.dto';
 import { QueryMovementsDto } from './dto/query-movements.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { SELLER_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 @Controller('seller/inventory')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('warehouse:read')
 export class SellerInventoryController {
   constructor(private readonly inventory: InventoryService) {}
 

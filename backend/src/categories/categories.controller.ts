@@ -12,36 +12,35 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { ALL_ROLES, MANAGER_UP } from '../common/roles';
 
 @Controller('categories')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CategoriesController {
   constructor(private readonly categories: CategoriesService) {}
 
   @Get()
-  @Roles(...ALL_ROLES)
+  @RequirePermission('categories:read')
   findAll() {
     return this.categories.findAll();
   }
 
   @Get(':id')
-  @Roles(...ALL_ROLES)
+  @RequirePermission('categories:read')
   findOne(@Param('id') id: string) {
     return this.categories.findOne(id);
   }
 
   @Post()
-  @Roles(...MANAGER_UP)
+  @RequirePermission('categories:create')
   create(@CurrentUser('id') actorId: string, @Body() dto: CreateCategoryDto) {
     return this.categories.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('categories:update')
   update(
     @CurrentUser('id') actorId: string,
     @Param('id') id: string,
@@ -51,7 +50,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('categories:delete')
   remove(@CurrentUser('id') actorId: string, @Param('id') id: string) {
     return this.categories.remove(id, actorId);
   }

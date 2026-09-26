@@ -15,22 +15,21 @@ import { QueryCustomerDto } from './dto/query-customer.dto';
 import { CreateDebtPaymentDto } from './dto/create-debt-payment.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { ScopeActor } from '../common/scope';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 @Controller('seller/customers')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SellerCustomersController {
   constructor(private readonly customers: CustomersService) {}
 
   // Registered before `:id` — Nest/Express match routes in registration
   // order, and `:id` would otherwise swallow this as `id = "by-phone"`.
   @Get('by-phone')
+  @RequirePermission('customers:read')
   findByPhone(
     @Query('phones') phones: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -42,6 +41,7 @@ export class SellerCustomersController {
   }
 
   @Get()
+  @RequirePermission('customers:read')
   findAll(
     @Query() query: QueryCustomerDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -50,11 +50,13 @@ export class SellerCustomersController {
   }
 
   @Get(':id')
+  @RequirePermission('customers:read')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.customers.findOne(id, toActor(user));
   }
 
   @Get(':id/orders')
+  @RequirePermission('orders:read')
   findOrders(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
@@ -67,6 +69,7 @@ export class SellerCustomersController {
   }
 
   @Post()
+  @RequirePermission('customers:create')
   create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateCustomerDto,
@@ -75,6 +78,7 @@ export class SellerCustomersController {
   }
 
   @Patch(':id')
+  @RequirePermission('customers:update')
   update(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -84,11 +88,13 @@ export class SellerCustomersController {
   }
 
   @Post(':id/claim')
+  @RequirePermission('customers:update')
   claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.customers.claim(id, toActor(user));
   }
 
   @Post(':id/debt-payment')
+  @RequirePermission('customers:update')
   recordDebtPayment(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,

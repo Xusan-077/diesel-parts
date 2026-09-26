@@ -2,19 +2,18 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 @Controller('invoices')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class InvoicesController {
   constructor(private readonly invoices: InvoicesService) {}
 
   @Get('order/:orderId')
+  @RequirePermission('orders:read')
   findByOrder(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('orderId') orderId: string,
@@ -23,6 +22,7 @@ export class InvoicesController {
   }
 
   @Post()
+  @RequirePermission('orders:create')
   create(
     @CurrentUser() actor: AuthenticatedUser,
     @Body() dto: CreateInvoiceDto,

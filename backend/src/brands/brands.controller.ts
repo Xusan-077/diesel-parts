@@ -12,41 +12,40 @@ import { BrandsService } from './brands.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { ALL_ROLES, MANAGER_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 @Controller('brands')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BrandsController {
   constructor(private readonly brands: BrandsService) {}
 
   @Get()
-  @Roles(...ALL_ROLES)
+  @RequirePermission('products:read')
   findAll() {
     return this.brands.findAll();
   }
 
   @Get(':id')
-  @Roles(...ALL_ROLES)
+  @RequirePermission('products:read')
   findOne(@Param('id') id: string) {
     return this.brands.findOne(id);
   }
 
   @Post()
-  @Roles(...MANAGER_UP)
+  @RequirePermission('products:create')
   create(@Body() dto: CreateBrandDto) {
     return this.brands.create(dto);
   }
 
   @Patch(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('products:update')
   update(@Param('id') id: string, @Body() dto: UpdateBrandDto) {
     return this.brands.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('products:delete')
   remove(@Param('id') id: string) {
     return this.brands.remove(id);
   }

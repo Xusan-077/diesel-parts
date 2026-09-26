@@ -11,10 +11,9 @@ import { IsString } from 'class-validator';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 class QueryPaymentsDto {
@@ -23,12 +22,12 @@ class QueryPaymentsDto {
 }
 
 @Controller('payments')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 
   @Get()
+  @RequirePermission('orders:read')
   findByOrder(
     @CurrentUser() actor: AuthenticatedUser,
     @Query() query: QueryPaymentsDto,
@@ -37,11 +36,13 @@ export class PaymentsController {
   }
 
   @Get(':id')
+  @RequirePermission('orders:read')
   findOne(@CurrentUser() actor: AuthenticatedUser, @Param('id') id: string) {
     return this.payments.findOne(actor, id);
   }
 
   @Post()
+  @RequirePermission('orders:create')
   create(
     @CurrentUser() actor: AuthenticatedUser,
     @Body() dto: CreatePaymentDto,
