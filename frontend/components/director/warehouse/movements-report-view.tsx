@@ -52,7 +52,7 @@ export function MovementsReportView({
     if (merged.dateTo) params.set("dateTo", merged.dateTo);
     if (merged.page && merged.page !== "1") params.set("page", merged.page);
     const search = params.toString();
-    router.replace("/director/warehouse/reports/movements" + (search ? "?" + search : ""));
+    router.replace("/panel/warehouse/reports/movements" + (search ? "?" + search : ""));
   }
 
   const rows = report.data?.items ?? [];

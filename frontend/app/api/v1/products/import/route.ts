@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, apiError } from "@/lib/api/route-auth";
+import { authenticatePermission, apiError } from "@/lib/api/route-auth";
 import { parseProductCsv, type CsvRowError } from "@/lib/api/product-csv";
 import { createProduct, updateProduct } from "@/lib/api/product-write-repository";
 
@@ -7,7 +7,7 @@ import { createProduct, updateProduct } from "@/lib/api/product-write-repository
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export async function POST(request: Request) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:delete");
   if (!guard.ok) {
     return guard.response;
   }

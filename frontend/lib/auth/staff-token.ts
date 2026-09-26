@@ -50,7 +50,7 @@ export interface StaffSession {
   accessTokenExpiresAt: number;
 }
 
-const STAFF_ROLES: readonly StaffRole[] = ["SUPER_ADMIN", "DIRECTOR", "MANAGER", "SELLER", "VIEWER"];
+const STAFF_ROLES: readonly StaffRole[] = ["DIRECTOR", "SELLER"];
 
 function isStaffRole(value: unknown): value is StaffRole {
   return typeof value === "string" && (STAFF_ROLES as readonly string[]).includes(value);

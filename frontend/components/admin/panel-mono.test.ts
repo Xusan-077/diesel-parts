@@ -24,14 +24,14 @@ function source(file: string): string {
  */
 describe("the panel's mono face", () => {
   it("is declared on the body, so portalled dialogs inherit it", () => {
-    const layout = source("app/admin/layout.tsx");
+    const layout = source("app/panel/layout.tsx");
     const bodyTag = layout.slice(layout.indexOf("<body"), layout.indexOf(">", layout.indexOf("<body")));
 
     expect(bodyTag).toContain("admin-root");
   });
 
   it("still loads the face it is overriding to", () => {
-    expect(source("app/admin/layout.tsx")).toContain("jetbrainsMono.variable");
+    expect(source("app/panel/layout.tsx")).toContain("jetbrainsMono.variable");
   });
 
   it("puts JetBrains ahead of Geist, with Geist as the fallback", () => {

@@ -32,7 +32,14 @@ type Dialog =
   | { kind: "delete"; row: WarehouseRow }
   | null;
 
-export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] }) {
+export function WarehousesTable({
+  initialData,
+  canWrite,
+}: {
+  initialData?: WarehouseRow[];
+  /** Backend/ 403s a SELLER on create/edit/delete regardless — this only keeps the panel from offering what it can't do. */
+  canWrite: boolean;
+}) {
   const list = useWarehouses(initialData);
   const [dialog, setDialog] = useState<Dialog>(null);
 
@@ -46,12 +53,14 @@ export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] 
 
   return (
     <div>
-      <div className="flex items-center justify-end">
-        <Button type="button" onClick={() => setDialog({ kind: "create" })}>
-          <Plus className="size-4" aria-hidden="true" />
-          Yangi ombor
-        </Button>
-      </div>
+      {canWrite ? (
+        <div className="flex items-center justify-end">
+          <Button type="button" onClick={() => setDialog({ kind: "create" })}>
+            <Plus className="size-4" aria-hidden="true" />
+            Yangi ombor
+          </Button>
+        </div>
+      ) : null}
 
       <div className="panel mt-4 overflow-x-auto">
         {list.isPending ? (
@@ -76,10 +85,12 @@ export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] 
             title="Hali ombor yo'q"
             message="Birinchi omborni qo'shing — qabullar va qoldiqlar shunga bog'lanadi."
             action={
-              <Button type="button" onClick={() => setDialog({ kind: "create" })}>
-                <Plus className="size-4" aria-hidden="true" />
-                Yangi ombor
-              </Button>
+              canWrite ? (
+                <Button type="button" onClick={() => setDialog({ kind: "create" })}>
+                  <Plus className="size-4" aria-hidden="true" />
+                  Yangi ombor
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -102,7 +113,7 @@ export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] 
                   <TableCell className="font-mono text-xs text-muted">{row.code}</TableCell>
                   <TableCell>
                     <Link
-                      href={`/director/warehouse/warehouses/${row.id}`}
+                      href={`/panel/warehouse/warehouses/${row.id}`}
                       className="text-foreground transition-colors hover:text-accent-strong"
                     >
                       {row.name}
@@ -120,6 +131,7 @@ export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] 
                     </div>
                   </TableCell>
                   <TableCell>
+                    {canWrite ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -149,6 +161,7 @@ export function WarehousesTable({ initialData }: { initialData?: WarehouseRow[] 
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}

@@ -50,7 +50,7 @@ export function WarehouseProductsFilter({ query }: { query: WarehouseProductList
     if (status && status !== "all") params.set("status", status);
     if (warehouseId) params.set("warehouseId", warehouseId);
     const search = params.toString();
-    router.replace("/director/warehouse/products" + (search ? "?" + search : ""));
+    router.replace("/panel/warehouse/products" + (search ? "?" + search : ""));
   }
 
   useEffect(() => {

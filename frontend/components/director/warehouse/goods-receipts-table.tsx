@@ -42,9 +42,12 @@ const STATUS_OPTIONS = [
 export function GoodsReceiptsTable({
   query,
   initialData,
+  canWrite,
 }: {
   query: GoodsReceiptListQuery;
   initialData?: GoodsReceiptPage;
+  /** Backend/ 403s a SELLER on every write here regardless — this only keeps the panel from offering what it can't do. */
+  canWrite: boolean;
 }) {
   const router = useRouter();
   const list = useGoodsReceipts(query, initialData);
@@ -60,7 +63,7 @@ export function GoodsReceiptsTable({
     if (q) params.set("q", q);
     if (status && status !== "all") params.set("status", status);
     const search = params.toString();
-    router.replace("/director/warehouse/incomes" + (search ? "?" + search : ""));
+    router.replace("/panel/warehouse/incomes" + (search ? "?" + search : ""));
   }
 
   useEffect(() => {
@@ -110,12 +113,14 @@ export function GoodsReceiptsTable({
           </FilterField>
         </FilterBar>
 
-        <Button asChild>
-          <Link href="/director/warehouse/incomes/new">
-            <Plus className="size-4" aria-hidden="true" />
-            Yangi qabul
-          </Link>
-        </Button>
+        {canWrite ? (
+          <Button asChild>
+            <Link href="/panel/warehouse/incomes/new">
+              <Plus className="size-4" aria-hidden="true" />
+              Yangi qabul
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="panel mt-4 overflow-x-auto">
@@ -141,12 +146,14 @@ export function GoodsReceiptsTable({
             title="Hali qabul yo'q"
             message="Yetkazib beruvchidan kelgan mahsulotni birinchi qabul bilan omborga kiriting."
             action={
-              <Button asChild>
-                <Link href="/director/warehouse/incomes/new">
-                  <Plus className="size-4" aria-hidden="true" />
-                  Yangi qabul
-                </Link>
-              </Button>
+              canWrite ? (
+                <Button asChild>
+                  <Link href="/panel/warehouse/incomes/new">
+                    <Plus className="size-4" aria-hidden="true" />
+                    Yangi qabul
+                  </Link>
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -167,7 +174,7 @@ export function GoodsReceiptsTable({
                 <TableRow key={receipt.id}>
                   <TableCell className="font-mono text-xs">
                     <Link
-                      href={`/director/warehouse/incomes/${receipt.id}`}
+                      href={`/panel/warehouse/incomes/${receipt.id}`}
                       className="text-foreground transition-colors hover:text-accent-strong"
                     >
                       {receipt.receiptNumber}
@@ -219,7 +226,7 @@ function Pager({
     if (query.status) params.set("status", query.status);
     if (next > 1) params.set("page", String(next));
     const search = params.toString();
-    return "/director/warehouse/incomes" + (search ? "?" + search : "");
+    return "/panel/warehouse/incomes" + (search ? "?" + search : "");
   };
 
   return (

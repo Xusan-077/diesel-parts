@@ -2,9 +2,10 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { ZodError, ZodType } from "zod";
 import { getStaffUser, type StaffUser } from "@/lib/auth/dal";
+import { can, type Permission } from "@/lib/auth/permissions";
 
 /**
- * Route-handler counterpart to `requireStaff`/`requireDirector` in the DAL.
+ * Route-handler counterpart to `requireStaff`/`requirePermission` in the DAL.
  * Pages redirect; an API has to answer with a status code, so the guard hands
  * back a ready-made response instead of navigating.
  */
@@ -37,6 +38,26 @@ export async function authenticateDirector(): Promise<StaffGuard> {
     // 403, not 404: the seller is known, and hiding the route's existence buys
     // nothing when the panel navigation is the same code they already run.
     return { ok: false, response: apiError(403, "This action is for directors only.") };
+  }
+
+  return guard;
+}
+
+/**
+ * The route-handler counterpart to `requirePermission()` — for the routes
+ * under `/api/v1/*` whose backend/ endpoint is `both`-granted per
+ * lib/auth/permissions.ts (products, categories, a review's admin read),
+ * rather than the flat director-only cut `authenticateDirector` enforces.
+ */
+export async function authenticatePermission(permission: Permission): Promise<StaffGuard> {
+  const guard = await authenticateStaff();
+
+  if (!guard.ok) {
+    return guard;
+  }
+
+  if (!can(guard.user.role, permission)) {
+    return { ok: false, response: apiError(403, `Missing permission: ${permission}`) };
   }
 
   return guard;

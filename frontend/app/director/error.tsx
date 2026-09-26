@@ -7,12 +7,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { STAFF_LOGIN_PATH } from "@/lib/auth/roles";
 
 /**
- * What a director sees when a panel page throws. Copied from
- * app/admin/error.tsx — a root layout needs its own error boundary, and
- * `requireDirector()` (app/director/(panel)/layout.tsx) reads the database
- * the same way `requireStaff()` does, so the same reasoning applies: the
- * escape hatch is the login screen, not the panel's own home, which would
- * throw straight back into here.
+ * `/director`'s own error boundary. Almost everything that used to live under
+ * this root moved to `/panel` (see the merge in
+ * docs/superpowers/plans/2026-09-26-role-simplification-director-seller.md);
+ * only `/director/login` remains, which touches no database, so this mostly
+ * exists for symmetry with `not-found.tsx` and Next's requirement that a root
+ * layout carry its own boundaries.
  */
 export default function DirectorError({
   error,

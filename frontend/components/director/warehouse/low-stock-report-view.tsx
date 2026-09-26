@@ -63,7 +63,7 @@ export function LowStockReportView({ rows }: { rows: readonly LowStockRow[] }) {
               <TableRow key={`${row.productId}-${row.warehouseCode}`}>
                 <TableCell className="min-w-0">
                   <Link
-                    href={`/director/warehouse/products/${row.productId}`}
+                    href={`/panel/warehouse/products/${row.productId}`}
                     className="text-foreground transition-colors hover:text-accent-strong"
                   >
                     {row.name}

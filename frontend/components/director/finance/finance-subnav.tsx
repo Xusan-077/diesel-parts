@@ -20,9 +20,9 @@ interface Tab {
 }
 
 const TABS: readonly Tab[] = [
-  { href: "/director/finance", label: "To'lovlar", match: "/director/finance" },
-  { href: "/director/finance/expenses", label: "Xarajatlar", match: "/director/finance/expenses" },
-  { href: "/director/finance/debts", label: "Qarzdorlik", match: "/director/finance/debts" },
+  { href: "/panel/finance", label: "To'lovlar", match: "/panel/finance" },
+  { href: "/panel/finance/expenses", label: "Xarajatlar", match: "/panel/finance/expenses" },
+  { href: "/panel/finance/debts", label: "Qarzdorlik", match: "/panel/finance/debts" },
 ];
 
 function activeMatch(pathname: string): string | undefined {

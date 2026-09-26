@@ -29,7 +29,7 @@ export function LowStockPanel({ rows }: { rows: readonly LowStockRow[] }) {
         >
           <div className="min-w-0">
             <Link
-              href={`/director/warehouse/products/${row.productId}`}
+              href={`/panel/warehouse/products/${row.productId}`}
               className="block truncate text-sm text-foreground transition-colors hover:text-accent-strong"
             >
               {row.name}

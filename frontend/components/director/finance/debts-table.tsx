@@ -35,7 +35,7 @@ import { FinancePager } from "./finance-pager";
 import { DebtStatusBadge } from "./finance-badges";
 import { DebtPaymentModal } from "./debt-payment-modal";
 
-const BASE = "/director/finance/debts";
+const BASE = "/panel/finance/debts";
 const ALL = "all";
 
 const STATUS_OPTIONS = [

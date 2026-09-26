@@ -86,7 +86,7 @@ const COPY: Record<Role, RoleCopy> = {
     identifierRequiredMessage: "Email manzilini kiriting",
     identifierInvalidMessage: "To'g'ri email kiriting",
     forgotText: "Parolni unutdingizmi? Tizim administratoriga murojaat qiling.",
-    home: "/director",
+    home: "/panel",
   },
   seller: {
     eyebrow: "Diesel Parts",

@@ -24,7 +24,14 @@ import { cn } from "@/lib/utils";
  * else about the row is quiet — this screen is read down looking for the one
  * entry that should not be there.
  */
-function ReviewRow({ review }: { review: ModeratedReview }) {
+function ReviewRow({
+  review,
+  canModerate,
+}: {
+  review: ModeratedReview;
+  /** Backend/ 403s a SELLER on both actions below regardless — this only keeps the panel from offering what it can't do. */
+  canModerate: boolean;
+}) {
   const [confirming, setConfirming] = useState(false);
 
   const visibility = useSetReviewApproval();
@@ -70,32 +77,34 @@ function ReviewRow({ review }: { review: ModeratedReview }) {
         {review.body}
       </p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={visibility.isPending || remove.isPending}
-          onClick={() => visibility.mutate({ id: review.id, isApproved: !review.isApproved })}
-        >
-          {visibility.isPending
-            ? "…"
-            : review.isApproved
-              ? "Saytdan yashirish"
-              : "Saytga qaytarish"}
-        </Button>
+      {canModerate ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={visibility.isPending || remove.isPending}
+            onClick={() => visibility.mutate({ id: review.id, isApproved: !review.isApproved })}
+          >
+            {visibility.isPending
+              ? "…"
+              : review.isApproved
+                ? "Saytdan yashirish"
+                : "Saytga qaytarish"}
+          </Button>
 
-        <button
-          type="button"
-          onClick={() => {
-            remove.reset();
-            setConfirming(true);
-          }}
-          className="text-xs text-muted transition-colors hover:text-danger"
-        >
-          O&apos;chirish
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              remove.reset();
+              setConfirming(true);
+            }}
+            className="text-xs text-muted transition-colors hover:text-danger"
+          >
+            O&apos;chirish
+          </button>
+        </div>
+      ) : null}
 
       {/*
         * Hiding is reversible and stays a one-click button above. Deleting is
@@ -133,11 +142,14 @@ function ReviewRow({ review }: { review: ModeratedReview }) {
 export function ReviewQueue({
   page,
   initialData,
+  canModerate,
 }: {
   /** Which page the URL asked for; also this list's cache key. */
   page: number;
   /** The page as the server read it, or `undefined` when that read failed. */
   initialData?: AdminReviewPage;
+  /** SELLER gets reviews:read only — approve/hide/delete stay director-only. */
+  canModerate: boolean;
 }) {
   const list = useAdminReviews(page, initialData);
 
@@ -201,7 +213,7 @@ export function ReviewQueue({
 
       <ul className="mt-8 divide-y divide-border">
         {list.data.items.map((review) => (
-          <ReviewRow key={review.id} review={review} />
+          <ReviewRow key={review.id} review={review} canModerate={canModerate} />
         ))}
       </ul>
 
@@ -209,7 +221,7 @@ export function ReviewQueue({
         <nav aria-label="Sahifalar" className="mt-8 flex items-center gap-3">
           {list.data.page > 1 ? (
             <Link
-              href={`/director/reviews?page=${list.data.page - 1}`}
+              href={`/panel/reviews?page=${list.data.page - 1}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               Oldingi
@@ -222,7 +234,7 @@ export function ReviewQueue({
 
           {list.data.page < list.data.totalPages ? (
             <Link
-              href={`/director/reviews?page=${list.data.page + 1}`}
+              href={`/panel/reviews?page=${list.data.page + 1}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               Keyingi

@@ -1,4 +1,4 @@
-import { authenticateDirector } from "@/lib/api/route-auth";
+import { authenticatePermission } from "@/lib/api/route-auth";
 import { backendRequestText } from "@/lib/api/backend-client";
 import { getStaffSession } from "@/lib/auth/staff-session";
 
@@ -11,7 +11,7 @@ import { getStaffSession } from "@/lib/auth/staff-session";
  * building the CSV here.
  */
 export async function GET() {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:delete");
   if (!guard.ok) {
     return guard.response;
   }

@@ -4,7 +4,7 @@ import type { AdminNavItem } from "@/lib/auth/admin-nav";
  * The panel's sections, gathered into the four jobs a director actually does.
  *
  * The sidebar used to split on the route prefix — everything under
- * `/director` in one pile, everything under `/admin/seller` in another —
+ * `/director` in one pile, everything under `/panel/seller` in another —
  * which is the authorisation boundary, not a working one. It put the products
  * catalogue next to the audit log because both are director-only, and it put
  * orders in a different group from the discounts that gate them.
@@ -21,27 +21,27 @@ export type NavGroupId = "overview" | "finance" | "catalog" | "sales" | "managem
 
 /** Group order, and the routes each one claims. */
 const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
-  { id: "overview", hrefs: ["/director", "/director/analytics", "/admin/seller"] },
+  { id: "overview", hrefs: ["/panel", "/panel/analytics", "/panel/seller"] },
   // A group of one renders bare in `PanelNav` (no heading) — which is exactly
   // "a separate top-level nav item". Money sits next to Analitika: both are
   // director cockpit views, not catalogue or sales-floor work.
-  { id: "finance", hrefs: ["/director/finance"] },
+  { id: "finance", hrefs: ["/panel/finance"] },
   {
     id: "catalog",
-    hrefs: ["/director/products", "/director/warehouse", "/director/categories", "/director/discounts"],
+    hrefs: ["/panel/products", "/panel/warehouse", "/panel/categories", "/panel/discounts"],
   },
   {
     id: "sales",
     hrefs: [
-      "/admin/seller/inquiries",
-      "/admin/seller/orders",
-      "/admin/seller/customers",
-      "/director/customers",
+      "/panel/seller/inquiries",
+      "/panel/seller/orders",
+      "/panel/seller/customers",
+      "/panel/customers",
     ],
   },
   {
     id: "management",
-    hrefs: ["/director/users", "/director/reviews", "/director/audit"],
+    hrefs: ["/panel/users", "/panel/reviews", "/panel/audit"],
   },
 ];
 

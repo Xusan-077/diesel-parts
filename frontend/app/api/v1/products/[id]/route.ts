@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, apiError } from "@/lib/api/route-auth";
+import { authenticatePermission, apiError } from "@/lib/api/route-auth";
 import {
   deleteProduct,
   getProductForEdit,
@@ -23,7 +23,7 @@ import { productWriteSchema } from "@/lib/schemas";
  * request would send the whole catalogue to the browser to edit one part.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:read");
   if (!guard.ok) {
     return guard.response;
   }
@@ -39,7 +39,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:update");
   if (!guard.ok) {
     return guard.response;
   }
@@ -76,16 +76,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 /**
- * Permanent delete — DIRECTOR only here, and backend/ gates the same call to
- * DIRECTOR_UP on its own, so a MANAGER/SELLER token is refused twice over.
- * A product with any sales/warehouse history answers 409 with the reasons;
- * archiving lives at `POST /products/[id]/archive`.
+ * Permanent delete — director-only here (`products:delete`), and backend/
+ * gates the same call to `products:delete` on its own, so a SELLER token is
+ * refused twice over. A product with any sales/warehouse history answers 409
+ * with the reasons; archiving lives at `POST /products/[id]/archive`.
  *
  * The photo is removed from Blob only after the row is gone: a failed file
  * delete is logged inside `deleteProductImage` and never fails the request.
  */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:delete");
   if (!guard.ok) {
     return guard.response;
   }

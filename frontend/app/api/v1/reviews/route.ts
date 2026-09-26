@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, parseQuery } from "@/lib/api/route-auth";
+import { authenticatePermission, parseQuery } from "@/lib/api/route-auth";
 import { listAllReviews } from "@/lib/api/review-repository";
 import { REVIEWS_MODERATION_PAGE_SIZE } from "@/lib/reviews";
 import { adminReviewListQuerySchema } from "@/lib/schemas";
@@ -7,12 +7,15 @@ import { adminReviewListQuerySchema } from "@/lib/schemas";
 /**
  * The moderation queue: every review, hidden ones included.
  *
- * Director-only. `/api/reviews` is the public sibling and shows approved rows
- * for one product; this one shows everything for every product, which is the
- * whole reason it is a separate route rather than a flag on that one.
+ * Both roles read this (`reviews:read`) — a SELLER cannot approve/reject/
+ * delete (see [id]/route.ts, still `reviews:update`/`reviews:delete`,
+ * director-only), but the spec grants read access to the queue itself.
+ * `/api/reviews` is the public sibling and shows approved rows for one
+ * product; this one shows everything for every product, which is the whole
+ * reason it is a separate route rather than a flag on that one.
  */
 export async function GET(request: Request) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("reviews:read");
   if (!guard.ok) {
     return guard.response;
   }

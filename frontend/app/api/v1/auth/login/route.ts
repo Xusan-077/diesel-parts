@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { staffLoginSchema } from "@/lib/schemas";
-import { adminHomePath } from "@/lib/auth/roles";
+import { PANEL_ROOT } from "@/lib/auth/roles";
 import { BackendApiError, backendAuthRequest } from "@/lib/api/backend-client";
 import { accessTokenExpiryMs, createStaffToken, type StaffSession } from "@/lib/auth/staff-token";
 import { STAFF_SESSION_COOKIE, staffCookieOptions } from "@/lib/auth/staff-session";
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({
     success: true,
-    redirectTo: adminHomePath(session.role),
+    redirectTo: PANEL_ROOT,
   });
   response.cookies.set(STAFF_SESSION_COOKIE, token, staffCookieOptions);
   return response;

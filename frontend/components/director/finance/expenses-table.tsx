@@ -43,7 +43,7 @@ import { FinancePager } from "./finance-pager";
 import { ExpenseCategoryBadge } from "./finance-badges";
 import { ExpenseFormModal } from "./expense-form-modal";
 
-const BASE = "/director/finance/expenses";
+const BASE = "/panel/finance/expenses";
 const ALL = "all";
 
 type Dialog =

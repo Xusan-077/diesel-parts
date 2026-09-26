@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, apiError, parseQuery } from "@/lib/api/route-auth";
+import { authenticatePermission, apiError, parseQuery } from "@/lib/api/route-auth";
 import {
   ADMIN_PAGE_SIZE,
   createProduct,
@@ -16,13 +16,16 @@ import { adminProductListQuerySchema, productWriteSchema } from "@/lib/schemas";
 /**
  * The catalogue table's rows.
  *
- * Director-only, like every write below it: this listing exposes stock levels
- * and the archive, neither of which belongs in the public `/api/products`.
+ * Both roles per the spec's products:CRUD grant — this listing exposes stock
+ * levels and the archive, neither of which belongs in the public
+ * `/api/products`, but cost data (purchasePrice) isn't part of this BFF
+ * shape at all; backend/'s own `/products` endpoint additionally strips it
+ * for a SELLER-authenticated call regardless of what this layer permits.
  * The page renders the first page itself and seeds React Query with it; this
  * is what the table refetches against after an edit, an archive or a restore.
  */
 export async function GET(request: Request) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:read");
   if (!guard.ok) {
     return guard.response;
   }
@@ -81,7 +84,7 @@ async function readCreateBody(
 }
 
 export async function POST(request: Request) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("products:create");
   if (!guard.ok) {
     return guard.response;
   }

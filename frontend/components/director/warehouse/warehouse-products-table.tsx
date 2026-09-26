@@ -22,7 +22,7 @@ import {
 /**
  * The warehouse view of the catalog: every product with its stock position and
  * cost. Read-only — creating and editing a product is one write path, and it
- * lives at /director/products; a row here links there. Figures are summed
+ * lives at /panel/products; a row here links there. Figures are summed
  * across every warehouse unless a warehouse filter narrows them, which the
  * caller signals with `scoped`.
  *
@@ -100,7 +100,7 @@ export function WarehouseProductsTable({
                 <TableRow key={product.id}>
                   <TableCell className="min-w-0">
                     <Link
-                      href={`/director/warehouse/products/${product.id}`}
+                      href={`/panel/warehouse/products/${product.id}`}
                       className="text-foreground transition-colors hover:text-accent-strong"
                     >
                       {product.name}
@@ -147,7 +147,7 @@ export function WarehouseProductsTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <Link
-                      href={`/director/warehouse/products/${product.id}`}
+                      href={`/panel/warehouse/products/${product.id}`}
                       className="text-xs font-medium text-accent-strong hover:underline"
                     >
                       Ko&apos;rish
@@ -194,7 +194,7 @@ function Pager({
     if (query.warehouseId) params.set("warehouseId", query.warehouseId);
     if (next > 1) params.set("page", String(next));
     const search = params.toString();
-    return "/director/warehouse/products" + (search ? "?" + search : "");
+    return "/panel/warehouse/products" + (search ? "?" + search : "");
   };
 
   return (

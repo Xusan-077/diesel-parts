@@ -42,8 +42,8 @@ describe("staff tokens", () => {
     expect(await verifyStaffToken(token)).toBeNull();
   });
 
-  it("accepts every one of backend/'s five roles", async () => {
-    for (const role of ["SUPER_ADMIN", "DIRECTOR", "MANAGER", "SELLER", "VIEWER"] as const) {
+  it("accepts both of backend/'s roles", async () => {
+    for (const role of ["DIRECTOR", "SELLER"] as const) {
       const token = await createStaffToken({ ...SESSION, role });
       expect((await verifyStaffToken(token))?.role).toBe(role);
     }

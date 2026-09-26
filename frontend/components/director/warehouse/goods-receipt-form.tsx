@@ -144,7 +144,7 @@ export function GoodsReceiptForm({
         ? await update.mutateAsync({ id: receipt.id, values: payload })
         : await create.mutateAsync(payload);
       toast.success(receipt ? "Qabul yangilandi" : "Qabul qoralama sifatida saqlandi");
-      router.push(`/director/warehouse/incomes/${saved.id}`);
+      router.push(`/panel/warehouse/incomes/${saved.id}`);
     } catch (cause) {
       setFormError(requestErrorMessage(cause, "Saqlanmadi. Maydonlarni tekshiring."));
     }
@@ -358,7 +358,7 @@ export function GoodsReceiptForm({
           type="button"
           variant="outline"
           disabled={busy}
-          onClick={() => router.push("/director/warehouse/incomes")}
+          onClick={() => router.push("/panel/warehouse/incomes")}
         >
           Bekor qilish
         </Button>

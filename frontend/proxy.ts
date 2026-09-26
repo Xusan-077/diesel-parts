@@ -1,14 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { backendAuthRequest } from "@/lib/api/backend-client";
 import { STAFF_SESSION_COOKIE } from "@/lib/auth/cookie-names";
-import {
-  ADMIN_ROOT,
-  STAFF_LOGIN_PATH,
-  adminHomePath,
-  canAccessAdminPath,
-  isAdminPath,
-  isDirectorPath,
-} from "@/lib/auth/roles";
+import { PANEL_ROOT, STAFF_LOGIN_PATH } from "@/lib/auth/roles";
 import {
   accessTokenExpiryMs,
   createStaffToken,
@@ -119,62 +112,46 @@ function withCookie(response: NextResponse, cookie: string | null): NextResponse
  * An optimistic check only: it reads the cookie and never the database
  * (beyond the occasional refresh call above, which is backend/'s own token
  * service, not a data read), because proxy runs on every request including
- * prefetches. It exists to keep signed-out users off the panel and to send
- * people somewhere sensible. The decision that actually protects data is
- * `getStaffUser` in lib/auth/dal.ts, which re-reads the user row via
- * backend/'s own `/auth/me`.
+ * prefetches. It exists to keep signed-out users off the panel and send them
+ * to the login screen. The decision that actually protects data — both which
+ * page a role may open and, within it, cost-sensitive fields — is
+ * `requirePermission()`/`requireStaff()` in lib/auth/dal.ts, which re-reads
+ * the user row via backend/'s own `/auth/me` on every render.
+ *
+ * Both roles share one home now (`/panel`) — unlike the old per-role
+ * `adminHomePath` — so there is no per-role destination table left to consult
+ * here. `next.config.ts`'s `redirects()` already turns the old `/admin`,
+ * `/admin/seller/*` and `/director/*` URLs into `/panel` equivalents before
+ * this ever runs (next.config redirects are applied before middleware), so
+ * the only routing decision proxy itself makes is "signed in or not".
  */
-async function proxyAdmin(request: NextRequest): Promise<NextResponse> {
+async function proxyPanel(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const { session, cookie } = await resolveSession(request);
 
-  // No login-path exemption here: the shared sign-in screen lives under
-  // `/director` now (STAFF_LOGIN_PATH), not `/admin` — see proxyDirector.
   if (!session) {
     const url = new URL(STAFF_LOGIN_PATH, request.url);
     // Carried as a path, never a full URL, so it cannot become an open redirect.
     url.searchParams.set("next", pathname);
     return withCookie(NextResponse.redirect(url), cookie);
-  }
-
-  if (pathname === ADMIN_ROOT || !canAccessAdminPath(pathname, session.role)) {
-    return withCookie(NextResponse.redirect(new URL(adminHomePath(session.role), request.url)), cookie);
   }
 
   return withCookie(NextResponse.next(), cookie);
 }
 
 /**
- * The director panel's own guard. Simpler than `proxyAdmin`'s in every way
- * but one: `/director` has no shared subtree a second role may open, so this
- * is "signed in, and a director" or it is a redirect — no area table to
- * consult. The one thing it shares with `proxyAdmin` is the login-path
- * exemption, because `STAFF_LOGIN_PATH` sits under this prefix
- * (`/director/login`) rather than under `/admin`.
+ * The login screen's own guard: a signed-in visitor is sent to the panel
+ * rather than shown the form again. Everyone lands at the same `/panel` now,
+ * so — unlike the old per-role `adminHomePath` — there is nothing left to
+ * branch on here.
  */
-async function proxyDirector(request: NextRequest): Promise<NextResponse> {
-  const { pathname } = request.nextUrl;
+async function proxyLogin(request: NextRequest): Promise<NextResponse> {
   const { session, cookie } = await resolveSession(request);
 
-  if (pathname === STAFF_LOGIN_PATH) {
-    if (!session) {
-      return withCookie(NextResponse.next(), cookie);
-    }
-    return withCookie(NextResponse.redirect(new URL(adminHomePath(session.role), request.url)), cookie);
-  }
-
   if (!session) {
-    const url = new URL(STAFF_LOGIN_PATH, request.url);
-    // Carried as a path, never a full URL, so it cannot become an open redirect.
-    url.searchParams.set("next", pathname);
-    return withCookie(NextResponse.redirect(url), cookie);
+    return withCookie(NextResponse.next(), cookie);
   }
-
-  if (session.role !== "DIRECTOR") {
-    return withCookie(NextResponse.redirect(new URL(adminHomePath(session.role), request.url)), cookie);
-  }
-
-  return withCookie(NextResponse.next(), cookie);
+  return withCookie(NextResponse.redirect(new URL(PANEL_ROOT, request.url)), cookie);
 }
 
 /**
@@ -189,12 +166,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  if (isAdminPath(pathname)) {
-    return proxyAdmin(request);
+  if (pathname === STAFF_LOGIN_PATH) {
+    return proxyLogin(request);
   }
 
-  if (isDirectorPath(pathname)) {
-    return proxyDirector(request);
+  if (pathname === PANEL_ROOT || pathname.startsWith(`${PANEL_ROOT}/`)) {
+    return proxyPanel(request);
   }
 
   return NextResponse.next();

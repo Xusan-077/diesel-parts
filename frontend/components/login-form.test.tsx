@@ -116,7 +116,7 @@ describe("LoginForm", () => {
 
   it("signs a director in through /api/v1/auth/login and follows the redirect", async () => {
     const user = userEvent.setup();
-    const fetchMock = mockFetchOnce({ success: true, redirectTo: "/director" });
+    const fetchMock = mockFetchOnce({ success: true, redirectTo: "/panel" });
     render(<LoginForm role="director" next={null} />);
 
     await user.type(screen.getByLabelText("Email"), "direktor@dieselparts.uz");
@@ -130,20 +130,20 @@ describe("LoginForm", () => {
       email: "direktor@dieselparts.uz",
       password: "parol123",
     });
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/director"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/panel"));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("prefers an explicit next over the server redirect", async () => {
     const user = userEvent.setup();
-    mockFetchOnce({ success: true, redirectTo: "/director" });
-    render(<LoginForm role="director" next="/director/products" />);
+    mockFetchOnce({ success: true, redirectTo: "/panel" });
+    render(<LoginForm role="director" next="/panel/products" />);
 
     await user.type(screen.getByLabelText("Email"), "direktor@dieselparts.uz");
     await user.type(screen.getByLabelText("Parol"), "parol123");
     await user.click(screen.getByRole("button", { name: "Kirish" }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/director/products"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/panel/products"));
   });
 
   it("shows the server's message when the director credentials are refused", async () => {

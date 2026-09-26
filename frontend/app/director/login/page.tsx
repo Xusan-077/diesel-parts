@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthThemeToggle } from "@/components/auth-theme-toggle";
 import { LoginForm } from "@/components/login-form";
-import { ADMIN_ROOT, DIRECTOR_ROOT } from "@/lib/auth/roles";
+import { PANEL_ROOT } from "@/lib/auth/roles";
 
 export const metadata: Metadata = {
   title: "Kirish · Direktor paneli",
@@ -9,19 +9,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Accepts only a path inside one of the two panels this login screen serves —
- * `/admin` for an admin-seller-role visitor, `/director` for a director.
- * `//evil.example` is a valid relative URL to a browser and would leave the
- * site, so the leading double slash is rejected too.
+ * Accepts only a path inside the merged panel this login screen sends both
+ * roles to. `//evil.example` is a valid relative URL to a browser and would
+ * leave the site, so the leading double slash is rejected too.
  */
 function safeNext(value: string | string[] | undefined): string | null {
   if (typeof value !== "string" || value.startsWith("//")) {
     return null;
   }
-  const isInsidePanel =
-    value.startsWith(`${ADMIN_ROOT}/`) ||
-    value === DIRECTOR_ROOT ||
-    value.startsWith(`${DIRECTOR_ROOT}/`);
+  const isInsidePanel = value === PANEL_ROOT || value.startsWith(`${PANEL_ROOT}/`);
   return isInsidePanel ? value : null;
 }
 

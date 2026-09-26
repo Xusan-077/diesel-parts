@@ -35,7 +35,7 @@ import { DateRangeFields } from "./date-range-fields";
 import { FinancePager } from "./finance-pager";
 import { PaymentMethodBadge } from "./finance-badges";
 
-const BASE = "/director/finance";
+const BASE = "/panel/finance";
 const ALL = "all";
 
 export function PaymentsTable({

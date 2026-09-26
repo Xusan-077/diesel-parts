@@ -51,12 +51,12 @@ function page(items: ModeratedReview[]): AdminReviewPage {
 }
 
 /** A fresh client per render: a shared cache would answer the next test. */
-function renderQueue(items: ModeratedReview[]) {
+function renderQueue(items: ModeratedReview[], canModerate = true) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <ReviewQueue page={1} initialData={page(items)} />
+      <ReviewQueue page={1} initialData={page(items)} canModerate={canModerate} />
     </QueryClientProvider>,
   );
 }
@@ -195,5 +195,15 @@ describe("ReviewQueue deleting", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "O'chirish" })).toBeDefined(),
     );
+  });
+});
+
+describe("ReviewQueue for a SELLER (canModerate=false)", () => {
+  it("shows the reviews but hides every moderation control", () => {
+    renderQueue([review()], false);
+
+    expect(screen.getByText("Anvar")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Saytdan yashirish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "O'chirish" })).toBeNull();
   });
 });

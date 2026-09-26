@@ -23,9 +23,12 @@ import { GoodsReceiptStatusBadge } from "./goods-receipt-status-badge";
 export function GoodsReceiptDetail({
   id,
   initialData,
+  canWrite,
 }: {
   id: string;
   initialData?: Receipt;
+  /** Backend/ 403s a SELLER on edit/approve/cancel regardless — this only keeps the panel from offering what it can't do. */
+  canWrite: boolean;
 }) {
   const query = useGoodsReceipt(id, initialData);
   const [confirm, setConfirm] = useState<"approve" | "cancel" | null>(null);
@@ -73,10 +76,10 @@ export function GoodsReceiptDetail({
           <GoodsReceiptStatusBadge status={receipt.status} />
         </div>
 
-        {isDraft ? (
+        {isDraft && canWrite ? (
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href={`/director/warehouse/incomes/${receipt.id}/edit`}>
+              <Link href={`/panel/warehouse/incomes/${receipt.id}/edit`}>
                 <Pencil className="size-3.5" aria-hidden="true" />
                 Tahrirlash
               </Link>

@@ -69,7 +69,7 @@ export function MovementsTable({
                 <TableCell className="min-w-0">
                   {row.productId ? (
                     <Link
-                      href={`/director/warehouse/products/${row.productId}`}
+                      href={`/panel/warehouse/products/${row.productId}`}
                       className="text-foreground transition-colors hover:text-accent-strong"
                     >
                       {row.productName}

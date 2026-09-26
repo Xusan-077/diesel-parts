@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, parseJsonBody } from "@/lib/api/route-auth";
+import { authenticatePermission, parseJsonBody } from "@/lib/api/route-auth";
 import { createCategory, listCatalogRows } from "@/lib/api/catalog-repository";
 import { categoryWriteSchema } from "@/lib/schemas";
 import { categoryRefusal } from "@/lib/api/category-route-errors";
 
 export async function GET() {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("categories:read");
   if (!guard.ok) {
     return guard.response;
   }
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("categories:create");
   if (!guard.ok) {
     return guard.response;
   }

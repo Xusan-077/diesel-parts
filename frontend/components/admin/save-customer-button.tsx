@@ -54,7 +54,7 @@ export function SaveCustomerButton({
   if (existing !== null) {
     return (
       <Link
-        href={`/admin/seller/customers/${existing.id}`}
+        href={`/panel/seller/customers/${existing.id}`}
         className="text-xs text-muted underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
       >
         Mijoz kartasi: {existing.name}

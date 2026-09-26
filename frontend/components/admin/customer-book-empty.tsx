@@ -78,7 +78,7 @@ export function CustomerBookEmpty() {
       </p>
 
       <Link
-        href="/admin/seller/inquiries"
+        href="/panel/seller/inquiries"
         className="mt-4 inline-block text-sm text-muted underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
       >
         So&apos;rovlar taxtasiga o&apos;tish

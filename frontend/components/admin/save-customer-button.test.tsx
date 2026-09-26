@@ -66,7 +66,7 @@ describe("SaveCustomerButton", () => {
     });
 
     const link = await screen.findByRole("link", { name: /Mijoz kartasi/ });
-    expect(link.getAttribute("href")).toBe("/admin/seller/customers/cus-9");
+    expect(link.getAttribute("href")).toBe("/panel/seller/customers/cus-9");
     expect(screen.queryByRole("button", { name: "Mijozlarga qo'shish" })).toBeNull();
   });
 
@@ -74,7 +74,7 @@ describe("SaveCustomerButton", () => {
     renderButton({ ...lead, saved: { id: "cus-1", name: "Sardor Aliyev" } });
 
     expect(screen.getByRole("link", { name: /Sardor Aliyev/ }).getAttribute("href")).toBe(
-      "/admin/seller/customers/cus-1",
+      "/panel/seller/customers/cus-1",
     );
     expect(screen.queryByRole("button")).toBeNull();
     expect(post).not.toHaveBeenCalled();

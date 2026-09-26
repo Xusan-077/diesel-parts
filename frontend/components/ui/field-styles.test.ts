@@ -11,7 +11,7 @@ import { controlVariants, fieldBox, fieldRail } from "./field-styles";
  * `"use client"` of its own, so the page stays a Server Component either way.
  * Only the styling source changed.
  */
-const SERVER_PAGES = ["app/admin/seller/customers/page.tsx"];
+const SERVER_PAGES = ["app/panel/(gated)/seller/customers/page.tsx"];
 
 /** The client half — importing any of it from a Server Component opens a boundary. */
 const CLIENT_ONLY = [

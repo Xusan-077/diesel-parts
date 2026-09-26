@@ -28,26 +28,12 @@ import { Select } from "@/components/ui/select";
  */
 export type StaffView = StaffListRow;
 
-// Exhaustive over StaffRole (not just the two this panel's forms can assign)
-// because a row this screen displays may already carry one of the other three
-// — backend/'s data model has had them since before this panel could edit
-// them. Assigning SUPER_ADMIN/MANAGER/VIEWER via this UI is a separate,
-// later concern (see lib/auth/roles.ts's adminHomePath comment).
 const ROLE_LABEL: Record<StaffView["role"], string> = {
-  SUPER_ADMIN: "Super admin",
   DIRECTOR: "Direktor",
-  MANAGER: "Menejer",
   SELLER: "Sotuvchi",
-  VIEWER: "Kuzatuvchi",
 };
 
-/**
- * The two fields both forms share, so the pair cannot drift apart.
- *
- * Typed against the two roles this dropdown actually offers, not the full
- * `StaffRole` — assigning SUPER_ADMIN/MANAGER/VIEWER has no UI yet (see
- * ROLE_LABEL's comment above).
- */
+/** The two fields both forms share, so the pair cannot drift apart. */
 function RoleAndLimit({
   role,
   discountLimit,

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { authenticateDirector, parseJsonBody } from "@/lib/api/route-auth";
+import { authenticatePermission, parseJsonBody } from "@/lib/api/route-auth";
 import { deleteCategory, updateCategory } from "@/lib/api/catalog-repository";
 import { categoryRefusal } from "@/lib/api/category-route-errors";
 import { categoryWriteSchema } from "@/lib/schemas";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("categories:update");
   if (!guard.ok) {
     return guard.response;
   }
@@ -26,7 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await authenticateDirector();
+  const guard = await authenticatePermission("categories:delete");
   if (!guard.ok) {
     return guard.response;
   }

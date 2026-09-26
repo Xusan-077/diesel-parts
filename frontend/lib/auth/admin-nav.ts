@@ -1,14 +1,12 @@
 import type { StaffRole } from "./roles";
+import { can, type Permission } from "./permissions";
 
 export interface AdminNavItem {
   href: string;
   label: string;
-  /** Roles allowed to see the entry. Mirrors canAccessAdminPath, not a substitute. */
-  roles: readonly StaffRole[];
+  /** The permission a role needs to see this entry — mirrors what the page itself requires via requirePermission(), not a substitute for it. */
+  permission: Permission;
 }
-
-/** Directors may open the seller pages, so every seller entry lists them too. */
-const SELLER_ROLES: readonly StaffRole[] = ["SELLER", "DIRECTOR"];
 
 /**
  * The panel's navigation, in reading order.
@@ -17,24 +15,24 @@ const SELLER_ROLES: readonly StaffRole[] = ["SELLER", "DIRECTOR"];
  * been built yet reads as a broken panel, not as a roadmap.
  */
 export const ADMIN_NAV: readonly AdminNavItem[] = [
-  { href: "/director", label: "Ko'rsatkichlar", roles: ["DIRECTOR"] },
-  { href: "/director/analytics", label: "Analitika", roles: ["DIRECTOR"] },
-  { href: "/director/finance", label: "Moliya", roles: ["DIRECTOR"] },
-  { href: "/director/products", label: "Mahsulotlar", roles: ["DIRECTOR"] },
-  { href: "/director/warehouse", label: "Ombor", roles: ["DIRECTOR"] },
-  { href: "/director/customers", label: "Mijozlar", roles: ["DIRECTOR"] },
-  { href: "/director/categories", label: "Kategoriyalar", roles: ["DIRECTOR"] },
-  { href: "/director/users", label: "Xodimlar", roles: ["DIRECTOR"] },
-  { href: "/director/discounts", label: "Chegirmalar", roles: ["DIRECTOR"] },
-  { href: "/director/reviews", label: "Sharhlar", roles: ["DIRECTOR"] },
-  { href: "/director/audit", label: "Amallar tarixi", roles: ["DIRECTOR"] },
-  { href: "/admin/seller/inquiries", label: "So'rovlar", roles: SELLER_ROLES },
-  { href: "/admin/seller/customers", label: "Mijozlar", roles: SELLER_ROLES },
-  { href: "/admin/seller/orders", label: "Buyurtmalar", roles: SELLER_ROLES },
+  { href: "/panel", label: "Ko'rsatkichlar", permission: "analytics:read" },
+  { href: "/panel/analytics", label: "Analitika", permission: "analytics:read" },
+  { href: "/panel/finance", label: "Moliya", permission: "finance:read" },
+  { href: "/panel/products", label: "Mahsulotlar", permission: "products:read" },
+  { href: "/panel/warehouse", label: "Ombor", permission: "warehouse:read" },
+  { href: "/panel/customers", label: "Mijozlar", permission: "customers:read" },
+  { href: "/panel/categories", label: "Kategoriyalar", permission: "categories:read" },
+  { href: "/panel/users", label: "Xodimlar", permission: "users:read" },
+  { href: "/panel/discounts", label: "Chegirmalar", permission: "discounts:approve" },
+  { href: "/panel/reviews", label: "Sharhlar", permission: "reviews:read" },
+  { href: "/panel/audit", label: "Amallar tarixi", permission: "audit:read" },
+  { href: "/panel/seller/inquiries", label: "So'rovlar", permission: "inquiries:read" },
+  { href: "/panel/seller/customers", label: "Mijozlar", permission: "customers:read" },
+  { href: "/panel/seller/orders", label: "Buyurtmalar", permission: "orders:read" },
 ];
 
 export function navFor(role: StaffRole): AdminNavItem[] {
-  return ADMIN_NAV.filter((item) => item.roles.includes(role));
+  return ADMIN_NAV.filter((item) => can(role, item.permission));
 }
 
 /**
@@ -49,10 +47,10 @@ export function navFor(role: StaffRole): AdminNavItem[] {
  * so those controls need somewhere to live — this is it.
  */
 export const SELLER_BOTTOM_NAV_HREFS = [
-  "/admin/seller/inquiries",
-  "/admin/seller/customers",
-  "/admin/seller/orders",
-  "/admin/seller/profile",
+  "/panel/seller/inquiries",
+  "/panel/seller/customers",
+  "/panel/seller/orders",
+  "/panel/seller/profile",
 ] as const;
 
 export type SellerBottomHref = (typeof SELLER_BOTTOM_NAV_HREFS)[number];
@@ -63,18 +61,18 @@ export interface BottomNavItem {
 }
 
 export const SELLER_BOTTOM_NAV: readonly BottomNavItem[] = [
-  { href: "/admin/seller/inquiries", label: "So'rovlar" },
-  { href: "/admin/seller/customers", label: "Mijozlar" },
-  { href: "/admin/seller/orders", label: "Buyurtmalar" },
-  { href: "/admin/seller/profile", label: "Men" },
+  { href: "/panel/seller/inquiries", label: "So'rovlar" },
+  { href: "/panel/seller/customers", label: "Mijozlar" },
+  { href: "/panel/seller/orders", label: "Buyurtmalar" },
+  { href: "/panel/seller/profile", label: "Men" },
 ];
 
 /**
  * Which entry a path belongs to, by longest match.
  *
- * Every director page sits under /director, so a plain prefix test would
- * light up the dashboard entry on the products page too and two sections would
- * claim to be current at once. Shared by both navigations so they can never
+ * Every panel page sits under /panel, so a plain prefix test would light up
+ * the dashboard entry on the products page too and two sections would claim
+ * to be current at once. Shared by both navigations so they can never
  * disagree about where the reader is.
  *
  * Returns undefined for a path under no entry — a customer detail page is under

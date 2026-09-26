@@ -5,7 +5,7 @@
  * with Number() only at the point of display/formatting.
  */
 
-export type Role = "SUPER_ADMIN" | "DIRECTOR" | "MANAGER" | "SELLER" | "VIEWER";
+export type Role = "DIRECTOR" | "SELLER";
 
 export interface AuthenticatedUser {
   id: string;

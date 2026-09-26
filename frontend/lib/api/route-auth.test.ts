@@ -8,8 +8,14 @@ vi.mock("@/lib/auth/dal", () => ({
   getStaffUser: () => getStaffUser(),
 }));
 
-const { authenticateStaff, authenticateDirector, parseJsonBody, parseQuery, validationError } =
-  await import("./route-auth");
+const {
+  authenticateStaff,
+  authenticateDirector,
+  authenticatePermission,
+  parseJsonBody,
+  parseQuery,
+  validationError,
+} = await import("./route-auth");
 
 const seller = { id: "seller-1", name: "Sotuvchi", email: "s@d.uz", role: "SELLER", discountLimit: 5 };
 const director = {
@@ -78,6 +84,46 @@ describe("authenticateDirector", () => {
     getStaffUser.mockResolvedValue(director);
 
     const guard = await authenticateDirector();
+
+    expect(guard.ok).toBe(true);
+  });
+});
+
+describe("authenticatePermission", () => {
+  it("answers 401 before it answers 403", async () => {
+    getStaffUser.mockResolvedValue(null);
+
+    const guard = await authenticatePermission("finance:read");
+
+    expect(guard.ok).toBe(false);
+    if (!guard.ok) {
+      expect(guard.response.status).toBe(401);
+    }
+  });
+
+  it("answers 403 for a seller lacking the permission", async () => {
+    getStaffUser.mockResolvedValue(seller);
+
+    const guard = await authenticatePermission("finance:read");
+
+    expect(guard.ok).toBe(false);
+    if (!guard.ok) {
+      expect(guard.response.status).toBe(403);
+    }
+  });
+
+  it("lets a seller through for a permission they hold", async () => {
+    getStaffUser.mockResolvedValue(seller);
+
+    const guard = await authenticatePermission("products:read");
+
+    expect(guard.ok).toBe(true);
+  });
+
+  it("lets a director through any permission", async () => {
+    getStaffUser.mockResolvedValue(director);
+
+    const guard = await authenticatePermission("finance:read");
 
     expect(guard.ok).toBe(true);
   });

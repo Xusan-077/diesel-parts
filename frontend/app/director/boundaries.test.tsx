@@ -8,10 +8,10 @@ import DirectorNotFound from "./not-found";
 afterEach(cleanup);
 
 /*
- * The director panel's copies of app/admin/boundaries.test.tsx — see that
- * file for why these two screens exist at all. The only real difference here
- * is where "back to the panel" points: `/director`, this root's own home,
- * rather than `/admin`.
+ * `/director`'s own boundaries — see app/panel/boundaries.test.tsx for the
+ * merged panel's copies. Almost nothing lives under `/director` any more
+ * (just `/director/login`), so "back to the panel" here points at `/panel`,
+ * not at this root itself.
  */
 describe("the director panel's 404", () => {
   it("names the panel and offers the way back", () => {
@@ -19,7 +19,7 @@ describe("the director panel's 404", () => {
 
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Sahifa topilmadi");
     expect(screen.getByRole("link", { name: "Panelga qaytish" }).getAttribute("href")).toBe(
-      "/director",
+      "/panel",
     );
   });
 });

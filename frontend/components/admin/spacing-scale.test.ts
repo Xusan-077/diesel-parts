@@ -22,7 +22,7 @@ import { describe, expect, it } from "vitest";
  * a screen that feels untidy for no nameable reason.
  */
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const SURFACES = ["app/admin", "components/admin"];
+const SURFACES = ["app/panel", "components/admin"];
 
 const ALLOWED = new Set(["0", "1", "2", "3", "4", "6", "8", "12", "16"]);
 

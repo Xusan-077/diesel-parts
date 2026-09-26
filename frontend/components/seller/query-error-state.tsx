@@ -7,8 +7,8 @@ import { actionErrorMessage } from "@/lib/seller/action-errors";
 
 /**
  * The shared real-error-state for every list/detail view: a 403 from a
- * seller-restricted endpoint (e.g. a VIEWER-role account) reads as "Access
- * restricted", anything else gets a retry button. Never crashes the page.
+ * seller-restricted endpoint reads as "Access restricted", anything else
+ * gets a retry button. Never crashes the page.
  */
 export function QueryErrorState({
   error,

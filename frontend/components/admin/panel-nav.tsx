@@ -36,20 +36,20 @@ import { Icon } from "@/components/ui/icon";
  * route can never render a hole.
  */
 const GLYPH: Record<string, LucideIcon> = {
-  "/director": LayoutDashboard,
-  "/admin/seller": LayoutDashboard,
-  "/director/finance": Wallet,
-  "/director/products": Package,
-  "/director/warehouse": Warehouse,
-  "/director/customers": BookUser,
-  "/director/categories": FolderTree,
-  "/director/discounts": Percent,
-  "/admin/seller/inquiries": Inbox,
-  "/admin/seller/orders": ClipboardList,
-  "/admin/seller/customers": Contact,
-  "/director/users": Users,
-  "/director/reviews": Star,
-  "/director/audit": History,
+  "/panel": LayoutDashboard,
+  "/panel/seller": LayoutDashboard,
+  "/panel/finance": Wallet,
+  "/panel/products": Package,
+  "/panel/warehouse": Warehouse,
+  "/panel/customers": BookUser,
+  "/panel/categories": FolderTree,
+  "/panel/discounts": Percent,
+  "/panel/seller/inquiries": Inbox,
+  "/panel/seller/orders": ClipboardList,
+  "/panel/seller/customers": Contact,
+  "/panel/users": Users,
+  "/panel/reviews": Star,
+  "/panel/audit": History,
 };
 
 export interface NavLink {

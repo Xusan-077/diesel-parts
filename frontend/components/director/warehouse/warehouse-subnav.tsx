@@ -26,11 +26,11 @@ interface Tab {
 }
 
 const TABS: readonly Tab[] = [
-  { href: "/director/warehouse", label: "Boshqaruv", match: "/director/warehouse" },
-  { href: "/director/warehouse/products", label: "Mahsulotlar", match: "/director/warehouse/products" },
-  { href: "/director/warehouse/warehouses", label: "Omborlar", match: "/director/warehouse/warehouses" },
-  { href: "/director/warehouse/incomes", label: "Qabullar", match: "/director/warehouse/incomes" },
-  { href: "/director/warehouse/reports/stock", label: "Hisobotlar", match: "/director/warehouse/reports" },
+  { href: "/panel/warehouse", label: "Boshqaruv", match: "/panel/warehouse" },
+  { href: "/panel/warehouse/products", label: "Mahsulotlar", match: "/panel/warehouse/products" },
+  { href: "/panel/warehouse/warehouses", label: "Omborlar", match: "/panel/warehouse/warehouses" },
+  { href: "/panel/warehouse/incomes", label: "Qabullar", match: "/panel/warehouse/incomes" },
+  { href: "/panel/warehouse/reports/stock", label: "Hisobotlar", match: "/panel/warehouse/reports" },
 ];
 
 const SOON: readonly string[] = ["Chiqim", "Ko'chirish", "Inventarizatsiya"];

@@ -36,7 +36,7 @@ export function CustomerBook({ query, initialData, showOwner }: CustomerBookProp
     if (query.pool) params.set("pool", "1");
     if (page > 1) params.set("page", String(page));
     const search = params.toString();
-    return "/admin/seller/customers" + (search ? "?" + search : "");
+    return "/panel/seller/customers" + (search ? "?" + search : "");
   };
 
   if (list.isPending) {
@@ -125,7 +125,7 @@ export function CustomerBook({ query, initialData, showOwner }: CustomerBookProp
                 <tr key={customer.id} className="border-b border-border last:border-0">
                   <td className="py-3 pr-3">
                     <Link
-                      href={"/admin/seller/customers/" + customer.id}
+                      href={"/panel/seller/customers/" + customer.id}
                       className="text-foreground transition-colors hover:text-accent-strong"
                     >
                       {customer.name}

@@ -1,8 +1,9 @@
 import "server-only";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { redirect, forbidden } from "next/navigation";
 import { BackendApiError, backendRequest } from "@/lib/api/backend-client";
-import { STAFF_LOGIN_PATH, adminHomePath, type StaffRole } from "./roles";
+import { STAFF_LOGIN_PATH, type StaffRole } from "./roles";
+import { can, type Permission } from "./permissions";
 import { getStaffSession } from "./staff-session";
 
 export interface StaffUser {
@@ -84,15 +85,17 @@ export async function requireStaff(): Promise<StaffUser> {
 }
 
 /**
- * For director-only pages. A seller who reaches one is sent to their own home
- * rather than the login screen: they are signed in, just not permitted here,
- * and bouncing them to a login form would only look broken.
+ * For a page gated behind a specific permission. A SELLER hitting a
+ * director-only page (finance, analytics, users, audit — or anything else
+ * `can()` denies them) gets Next's `forbidden()` boundary, not a redirect:
+ * they're signed in and the URL is real, so a 403 reads truer than either a
+ * login bounce or a silent redirect to their own home.
  */
-export async function requireDirector(): Promise<StaffUser> {
+export async function requirePermission(permission: Permission): Promise<StaffUser> {
   const user = await requireStaff();
 
-  if (user.role !== "DIRECTOR") {
-    redirect(adminHomePath(user.role));
+  if (!can(user.role, permission)) {
+    forbidden();
   }
 
   return user;
