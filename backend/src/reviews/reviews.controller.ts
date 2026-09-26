@@ -19,11 +19,10 @@ import {
 } from './dto/query-review.dto';
 import { ModerateReviewDto } from './dto/moderate-review.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { InternalServiceGuard } from '../common/guards/internal-service.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { VerifiedPhone } from '../common/decorators/verified-phone.decorator';
-import { MANAGER_UP } from '../common/roles';
 
 /**
  * Guards are applied per-route rather than at the controller: most of this
@@ -75,8 +74,8 @@ export class ReviewsController {
   }
 
   @Get('admin')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...MANAGER_UP)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('reviews:read')
   findAll(@Query() query: QueryAdminReviewDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -84,15 +83,15 @@ export class ReviewsController {
   }
 
   @Patch(':id/approval')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...MANAGER_UP)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('reviews:update')
   setApproval(@Param('id') id: string, @Body() dto: ModerateReviewDto) {
     return this.reviews.setApproval(id, dto.isApproved);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(...MANAGER_UP)
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermission('reviews:delete')
   remove(@Param('id') id: string) {
     return this.reviews.remove(id);
   }

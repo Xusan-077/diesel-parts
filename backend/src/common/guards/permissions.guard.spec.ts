@@ -13,19 +13,25 @@ function makeContext(user: { role: Role } | undefined) {
 
 describe('PermissionsGuard', () => {
   it('allows the request through when no @RequirePermission is set', () => {
-    const reflector = { getAllAndOverride: () => undefined } as unknown as Reflector;
+    const reflector = {
+      getAllAndOverride: () => undefined,
+    } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
     expect(guard.canActivate(makeContext({ role: Role.SELLER }))).toBe(true);
   });
 
   it('allows a DIRECTOR through any permission', () => {
-    const reflector = { getAllAndOverride: () => 'finance:read' } as unknown as Reflector;
+    const reflector = {
+      getAllAndOverride: () => 'finance:read',
+    } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
     expect(guard.canActivate(makeContext({ role: Role.DIRECTOR }))).toBe(true);
   });
 
   it('403s a SELLER missing the permission', () => {
-    const reflector = { getAllAndOverride: () => 'finance:read' } as unknown as Reflector;
+    const reflector = {
+      getAllAndOverride: () => 'finance:read',
+    } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
     expect(() => guard.canActivate(makeContext({ role: Role.SELLER }))).toThrow(
       ForbiddenException,
@@ -33,13 +39,19 @@ describe('PermissionsGuard', () => {
   });
 
   it('denies when there is no authenticated user', () => {
-    const reflector = { getAllAndOverride: () => 'orders:read' } as unknown as Reflector;
+    const reflector = {
+      getAllAndOverride: () => 'orders:read',
+    } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
-    expect(() => guard.canActivate(makeContext(undefined))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(makeContext(undefined))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('403s — not throws unexpectedly — on an unrecognized role value on the token', () => {
-    const reflector = { getAllAndOverride: () => 'orders:read' } as unknown as Reflector;
+    const reflector = {
+      getAllAndOverride: () => 'orders:read',
+    } as unknown as Reflector;
     const guard = new PermissionsGuard(reflector);
     expect(() =>
       guard.canActivate(makeContext({ role: 'MANAGER' as unknown as Role })),

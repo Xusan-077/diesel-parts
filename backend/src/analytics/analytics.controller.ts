@@ -6,14 +6,13 @@ import {
   LimitQueryDto,
 } from './dto/period-query.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { DIRECTOR_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 /** The director analytics screen — see AnalyticsService's own doc comment for why this is separate from reports/dashboard. */
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...DIRECTOR_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('analytics:read')
 export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
 

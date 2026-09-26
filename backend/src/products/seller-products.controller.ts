@@ -2,14 +2,13 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { QueryProductDto } from './dto/query-product.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { SELLER_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 /** purchase_price is stripped by ProductsService.toSellerView before this ever serializes a response. */
 @Controller('seller/products')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('products:read')
 export class SellerProductsController {
   constructor(private readonly products: ProductsService) {}
 

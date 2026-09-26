@@ -12,21 +12,20 @@ import { InquiriesService } from './inquiries.service';
 import { QueryInquiryDto } from './dto/query-inquiry.dto';
 import { UpdateInquiryDto } from './dto/update-inquiry.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { SELLER_UP } from '../common/roles';
 import type { ScopeActor } from '../common/scope';
 import type { AuthenticatedUser } from '../auth/auth.types';
 
 /** The seller board: list, per-column board, claim, and update. */
 @Controller('seller/inquiries')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...SELLER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SellerInquiriesController {
   constructor(private readonly inquiries: InquiriesService) {}
 
   @Get()
+  @RequirePermission('inquiries:read')
   findAll(
     @Query() query: QueryInquiryDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -35,6 +34,7 @@ export class SellerInquiriesController {
   }
 
   @Get('board')
+  @RequirePermission('inquiries:read')
   board(@CurrentUser() user: AuthenticatedUser) {
     return this.inquiries.board(toActor(user));
   }
@@ -43,6 +43,7 @@ export class SellerInquiriesController {
   // order doesn't matter for this one — kept alongside `board` regardless,
   // matching the sibling `by-phone` convention in seller-customers.controller.ts.
   @Get('by-phone')
+  @RequirePermission('inquiries:read')
   byPhone(
     @Query('phone') phone: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -51,11 +52,13 @@ export class SellerInquiriesController {
   }
 
   @Post(':id/claim')
+  @RequirePermission('inquiries:update')
   claim(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.inquiries.claim(id, toActor(user));
   }
 
   @Patch(':id')
+  @RequirePermission('inquiries:update')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateInquiryDto,

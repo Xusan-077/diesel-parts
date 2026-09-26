@@ -10,8 +10,8 @@ import { AuditAction, Prisma } from '../../generated/prisma/client';
 import { toCsv, type ProductCsvRow } from './product-csv';
 import { Reflector } from '@nestjs/core';
 import { ProductsController } from './products.controller';
-import { ROLES_KEY } from '../common/decorators/roles.decorator';
-import { DIRECTOR_UP, MANAGER_UP } from '../common/roles';
+import { PERMISSION_KEY } from '../common/decorators/require-permission.decorator';
+import type { AuthenticatedUser } from '../auth/auth.types';
 
 function makePrisma(
   overrides: {
@@ -350,31 +350,70 @@ describe('ProductsService hard delete', () => {
   });
 });
 
-describe('ProductsController role gates', () => {
+describe('ProductsController permission gates', () => {
   const reflector = new Reflector();
   // Looked up by name rather than `proto.hardDelete`, which would detach an
   // unbound method (only its decorator metadata is read here).
-  const rolesOf = (name: 'hardDelete' | 'deleteCheck' | 'archive' | 'create') =>
-    reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+  const permissionOf = (
+    name: 'hardDelete' | 'deleteCheck' | 'archive' | 'create',
+  ) =>
+    reflector.getAllAndOverride<string>(PERMISSION_KEY, [
       Object.getOwnPropertyDescriptor(ProductsController.prototype, name)!
         .value as () => unknown,
       ProductsController,
     ]);
 
-  it('limits DELETE and delete-check to DIRECTOR_UP', () => {
-    expect(rolesOf('hardDelete')).toEqual(DIRECTOR_UP);
-    expect(rolesOf('deleteCheck')).toEqual(DIRECTOR_UP);
-    expect(rolesOf('hardDelete')).not.toContain('MANAGER');
-    expect(rolesOf('hardDelete')).not.toContain('SELLER');
+  it('limits DELETE and delete-check to products:delete (director-only)', () => {
+    expect(permissionOf('hardDelete')).toBe('products:delete');
+    expect(permissionOf('deleteCheck')).toBe('products:delete');
   });
 
-  it('keeps archive at MANAGER_UP', () => {
-    expect(rolesOf('archive')).toEqual(MANAGER_UP);
+  it('keeps archive at products:update (both roles)', () => {
+    expect(permissionOf('archive')).toBe('products:update');
   });
 
-  it('leaves create at the class-level MANAGER_UP — no SELLER, no per-method override', () => {
-    expect(rolesOf('create')).toEqual(MANAGER_UP);
-    expect(rolesOf('create')).not.toContain('SELLER');
+  it('grants create to products:create — SELLER now included, per the spec', () => {
+    expect(permissionOf('create')).toBe('products:create');
+  });
+});
+
+describe('ProductsController cost-field stripping for SELLER', () => {
+  it('drops purchasePrice from a SELLER create body before it reaches the service', () => {
+    const create = jest.fn().mockResolvedValue({});
+    const controller = new ProductsController({
+      create,
+    } as unknown as ProductsService);
+    const seller = { id: 'seller-1', role: 'SELLER' } as AuthenticatedUser;
+
+    void controller.create(seller, {
+      name: 'Test part',
+      purchasePrice: 999,
+    } as never);
+
+    const [sentDto] = create.mock.calls[0] as [Record<string, unknown>];
+    expect(sentDto).not.toHaveProperty('purchasePrice');
+    expect(create).toHaveBeenCalledWith(sentDto, 'seller-1');
+  });
+
+  it('leaves purchasePrice on a DIRECTOR create body untouched', () => {
+    const create = jest.fn().mockResolvedValue({});
+    const controller = new ProductsController({
+      create,
+    } as unknown as ProductsService);
+    const director = {
+      id: 'director-1',
+      role: 'DIRECTOR',
+    } as AuthenticatedUser;
+
+    void controller.create(director, {
+      name: 'Test part',
+      purchasePrice: 999,
+    } as never);
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ purchasePrice: 999 }),
+      'director-1',
+    );
   });
 });
 

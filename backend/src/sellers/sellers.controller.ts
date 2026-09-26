@@ -12,13 +12,12 @@ import { SellersService } from './sellers.service';
 import { CreateSellerDto } from './dto/create-seller.dto';
 import { UpdateSellerDto } from './dto/update-seller.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { MANAGER_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 @Controller('sellers')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...MANAGER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('users:read')
 export class SellersController {
   constructor(private readonly sellers: SellersService) {}
 

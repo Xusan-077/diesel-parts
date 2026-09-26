@@ -15,11 +15,7 @@ export type PermissionModule =
   | 'audit';
 
 export type PermissionAction =
-  | 'create'
-  | 'read'
-  | 'update'
-  | 'delete'
-  | 'approve';
+  'create' | 'read' | 'update' | 'delete' | 'approve';
 
 export type Permission = `${PermissionModule}:${PermissionAction}`;
 
@@ -38,7 +34,10 @@ const SELLER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   'products:create',
   'products:read',
   'products:update',
-  'products:delete',
+  // No products:delete: hard-delete/delete-check/import/export in
+  // products.controller.ts are deliberately director-only (cost-data and
+  // audit-history implications) — see that controller's own doc comments.
+  // Seller-facing seller-products.controller.ts has no delete route today.
   'categories:create',
   'categories:read',
   'categories:update',
@@ -46,7 +45,9 @@ const SELLER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   'customers:create',
   'customers:read',
   'customers:update',
-  'customers:delete',
+  // No customers:delete: the unscoped customers.controller.ts's DELETE stays
+  // director-only by design — a seller's own writes go through the already-
+  // scoped seller-customers.controller.ts, which has no delete route.
   'orders:create',
   'orders:read',
   'orders:update',

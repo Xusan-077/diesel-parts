@@ -9,10 +9,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { MANAGER_UP, SELLER_UP } from '../../common/roles';
 import { WarehouseProductsService } from './warehouse-products.service';
 import {
   CreateWarehouseProductDto,
@@ -29,30 +28,30 @@ import { QueryProductMovementsDto } from './dto/query-product-movements.dto';
  * warehouse share one write path and one audit trail.
  */
 @Controller('warehouse/products')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class WarehouseProductsController {
   constructor(private readonly products: WarehouseProductsService) {}
 
   @Get()
-  @Roles(...SELLER_UP)
+  @RequirePermission('warehouse:read')
   list(@Query() query: QueryWarehouseProductsDto) {
     return this.products.list(query);
   }
 
   @Get(':id')
-  @Roles(...SELLER_UP)
+  @RequirePermission('warehouse:read')
   findOne(@Param('id') id: string, @Query('warehouseId') warehouseId?: string) {
     return this.products.findOne(id, warehouseId);
   }
 
   @Get(':id/movements')
-  @Roles(...SELLER_UP)
+  @RequirePermission('warehouse:read')
   movements(@Param('id') id: string, @Query() query: QueryProductMovementsDto) {
     return this.products.movements(id, query);
   }
 
   @Post()
-  @Roles(...MANAGER_UP)
+  @RequirePermission('warehouse:create')
   create(
     @CurrentUser('id') actorId: string,
     @Body() dto: CreateWarehouseProductDto,
@@ -61,7 +60,7 @@ export class WarehouseProductsController {
   }
 
   @Patch(':id')
-  @Roles(...MANAGER_UP)
+  @RequirePermission('warehouse:update')
   update(
     @Param('id') id: string,
     @CurrentUser('id') actorId: string,

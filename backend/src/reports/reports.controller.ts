@@ -2,13 +2,12 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { DateRangeDto } from '../dashboard/dto/date-range.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { DIRECTOR_UP } from '../common/roles';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...DIRECTOR_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('analytics:read')
 export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 

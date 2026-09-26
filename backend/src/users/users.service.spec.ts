@@ -107,13 +107,13 @@ describe('UsersService.update', () => {
     const update = jest.fn().mockResolvedValue({
       id: 'dir-1',
       phone: '998901234567',
-      role: Role.MANAGER,
+      role: Role.SELLER,
       isActive: true,
     });
     const prisma = makePrisma({ user: { findUnique, count, update } });
     const service = new UsersService(prisma, makeAudit().audit);
 
-    await service.update('dir-1', { role: Role.MANAGER }, 'actor-1');
+    await service.update('dir-1', { role: Role.SELLER }, 'actor-1');
 
     expect(count).toHaveBeenCalledWith({
       where: { role: Role.DIRECTOR, isActive: true, id: { not: 'dir-1' } },

@@ -20,45 +20,62 @@ import { ImportProductsDto } from './dto/import-products.dto';
 import { SearchProductDto } from './dto/search-product.dto';
 import { SetProductImageDto } from './dto/set-product-image.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { ALL_ROLES, DIRECTOR_UP, MANAGER_UP } from '../common/roles';
+import type { AuthenticatedUser } from '../auth/auth.types';
 
 /**
- * Full admin view (includes purchase_price). Restricted to MANAGER_UP so a
- * SELLER can never reach cost data through this route — they use
- * /seller/products instead, which strips it at serialization.
+ * The catalog CRUD surface. Both DIRECTOR and SELLER may create/read/update
+ * a product here (spec: "products — CRUD" for SELLER); the cost side
+ * (`purchasePrice`) stays DIRECTOR-only regardless — `findAll`/`findOne`
+ * route a SELLER through the same cost-stripping view `/seller/products`
+ * already used (`findAllSeller`/`findOneSeller`), and `create`/`update`
+ * strip `purchasePrice` off a SELLER's body before it ever reaches the
+ * service, rather than letting them set or read it here.
  */
 @Controller('products')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...MANAGER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
   @Get()
-  findAll(@Query() query: QueryProductDto) {
-    return this.products.findAllAdmin(query);
+  @RequirePermission('products:read')
+  findAll(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Query() query: QueryProductDto,
+  ) {
+    return actor.role === 'SELLER'
+      ? this.products.findAllSeller(query)
+      : this.products.findAllAdmin(query);
   }
 
+  /**
+   * Bulk import/export carry `purchasePrice` in every row — kept
+   * DIRECTOR-only (reusing the `products:delete` grant, the one products
+   * action SELLER doesn't have) rather than opened alongside the rest of
+   * CRUD, since a CSV is the one surface here that can't strip a single
+   * field per-row the way the JSON routes below do.
+   */
   @Post('import')
+  @RequirePermission('products:delete')
   import(@CurrentUser('id') actorId: string, @Body() dto: ImportProductsDto) {
     return this.products.importCsv(dto.csv, actorId);
   }
 
   /**
-   * Widened from the class's MANAGER_UP: this is the order form's lookup
-   * (root's `product-lookup-repository.ts`), and raising an order is a
-   * seller's job, not just a manager's. The response never carries
-   * purchasePrice, so opening it to every staff role leaks nothing.
+   * The order form's lookup (root's `product-lookup-repository.ts`) — open
+   * to both roles, same as the rest of `products:read`. The response never
+   * carries purchasePrice, so this leaks nothing either way.
    */
   @Get('search')
-  @Roles(...ALL_ROLES)
+  @RequirePermission('products:read')
   search(@Query() query: SearchProductDto) {
     return this.products.search(query.q);
   }
 
   @Get('export')
+  @RequirePermission('products:delete')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Cache-Control', 'no-store')
   async export(@Res({ passthrough: true }) res: Response): Promise<string> {
@@ -71,43 +88,53 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.products.findOneAdmin(id);
+  @RequirePermission('products:read')
+  findOne(@CurrentUser() actor: AuthenticatedUser, @Param('id') id: string) {
+    return actor.role === 'SELLER'
+      ? this.products.findOneSeller(id)
+      : this.products.findOneAdmin(id);
   }
 
-  /** Whether DELETE would succeed, and the blockers if not. Same role gate as DELETE. */
+  /** Whether DELETE would succeed, and the blockers if not. Same permission as DELETE. */
   @Get(':id/delete-check')
-  @Roles(...DIRECTOR_UP)
+  @RequirePermission('products:delete')
   deleteCheck(@Param('id') id: string) {
     return this.products.deleteCheck(id);
   }
 
   @Get(':id/stock')
+  @RequirePermission('products:read')
   stock(@Param('id') id: string) {
     return this.products.stock(id);
   }
 
   @Post()
-  create(@CurrentUser('id') actorId: string, @Body() dto: CreateProductDto) {
-    return this.products.create(dto, actorId);
+  @RequirePermission('products:create')
+  create(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Body() dto: CreateProductDto,
+  ) {
+    return this.products.create(withoutSellerCost(actor, dto), actor.id);
   }
 
   @Patch(':id')
+  @RequirePermission('products:update')
   update(
-    @CurrentUser('id') actorId: string,
+    @CurrentUser() actor: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateProductDto,
   ) {
-    return this.products.update(id, dto, actorId);
+    return this.products.update(id, withoutSellerCost(actor, dto), actor.id);
   }
 
   /**
-   * Permanent delete — DIRECTOR_UP only, narrower than the class's MANAGER_UP,
-   * so a MANAGER/SELLER gets 403 from RolesGuard before the service runs.
-   * Refused with 409 when the product has sales/warehouse history.
+   * Permanent delete — director-only (`products:delete`), narrower than the
+   * rest of this controller's `products:create`/`read`/`update`, so a SELLER
+   * gets 403 from PermissionsGuard before the service runs. Refused with 409
+   * when the product has sales/warehouse history.
    */
   @Delete(':id')
-  @Roles(...DIRECTOR_UP)
+  @RequirePermission('products:delete')
   hardDelete(@CurrentUser('id') actorId: string, @Param('id') id: string) {
     return this.products.hardDelete(id, actorId);
   }
@@ -115,14 +142,16 @@ export class ProductsController {
   /**
    * Soft delete (isActive=false). This was DELETE /products/:id's behaviour
    * before that route became a hard delete; kept here so the retire action
-   * stays reachable for MANAGER_UP.
+   * stays reachable for both roles.
    */
   @Patch(':id/archive')
+  @RequirePermission('products:update')
   archive(@CurrentUser('id') actorId: string, @Param('id') id: string) {
     return this.products.archive(id, actorId);
   }
 
   @Patch(':id/image')
+  @RequirePermission('products:update')
   setImage(
     @CurrentUser('id') actorId: string,
     @Param('id') id: string,
@@ -130,4 +159,15 @@ export class ProductsController {
   ) {
     return this.products.setImage(id, dto.imageUrl, actorId);
   }
+}
+
+/** A SELLER's create/update body never sets cost — silently dropped, not rejected. */
+function withoutSellerCost<T extends { purchasePrice?: number }>(
+  actor: AuthenticatedUser,
+  dto: T,
+): T {
+  if (actor.role !== 'SELLER') return dto;
+  const rest: Partial<T> = { ...dto };
+  delete rest.purchasePrice;
+  return rest as T;
 }

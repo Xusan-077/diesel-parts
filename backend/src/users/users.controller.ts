@@ -12,15 +12,14 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { MANAGER_UP } from '../common/roles';
 
-/** Users/Settings management. 403 for SELLER and VIEWER by construction (MANAGER_UP excludes them). */
+/** Users/Settings management. 403 for SELLER by construction (director-only permission). */
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...MANAGER_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('users:read')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 

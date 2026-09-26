@@ -11,10 +11,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
+import { RequirePermission } from '../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { DIRECTOR_UP } from '../common/roles';
 import { FinanceService } from './finance.service';
 import {
   FinanceSummaryQueryDto,
@@ -27,13 +26,12 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { RecordDebtPaymentDto } from './dto/record-debt-payment.dto';
 
 /**
- * The director's finance cockpit (`/director/finance`). Money is a director
- * concern — every route is `DIRECTOR_UP` (SUPER_ADMIN, DIRECTOR); MANAGER is
- * deliberately excluded, unlike the warehouse module.
+ * The director's finance cockpit (`/panel/finance`). Money is a director-only
+ * concern — every route requires `finance:*`, which only DIRECTOR holds.
  */
 @Controller('finance')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...DIRECTOR_UP)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('finance:read')
 export class FinanceController {
   constructor(private readonly finance: FinanceService) {}
 
