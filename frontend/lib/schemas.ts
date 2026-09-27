@@ -214,13 +214,60 @@ export const staffLoginSchema = z.object({
 
 export type StaffLoginInput = z.infer<typeof staffLoginSchema>;
 
+/* ── Director/seller panel: AI translate ("AI bilan tekshirish") ─────────── */
+
+/** Locales Gemini ever produces — matches backend/'s `AI_LOCALES`. `oz` is
+ *  excluded on purpose: it is always mechanical transliteration of `uz`,
+ *  never a locale the form or Gemini fills directly. */
+export const AI_LOCALES = ["uz", "ru", "en", "zh"] as const;
+export const aiLocaleSchema = z.enum(AI_LOCALES);
+export type AiLocale = (typeof AI_LOCALES)[number];
+
+export const aiSourceFieldsSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+
+export type AiSourceFields = z.infer<typeof aiSourceFieldsSchema>;
+
+/** The body `POST /api/v1/ai/:entity/translate` takes — mirrors backend/'s
+ *  `TranslateRequestDto` exactly, since it is forwarded there unchanged. */
+export const aiTranslateRequestSchema = z.object({
+  sourceLocale: aiLocaleSchema,
+  fields: aiSourceFieldsSchema,
+  existing: z
+    .object({
+      uz: aiSourceFieldsSchema.optional(),
+      ru: aiSourceFieldsSchema.optional(),
+      en: aiSourceFieldsSchema.optional(),
+      zh: aiSourceFieldsSchema.optional(),
+    })
+    .optional(),
+  force: z.boolean().optional(),
+  forceLocales: z.array(aiLocaleSchema).optional(),
+});
+
+export type AiTranslateInput = z.infer<typeof aiTranslateRequestSchema>;
+
+/** What `AiService.translateEntity()` answers — read-only, never validated as
+ *  a request body, so this is a plain type rather than a second schema. */
+export interface AiTranslateResult {
+  status: "COMPLETE" | "FAILED";
+  sourceLocale: AiLocale;
+  source: AiSourceFields;
+  corrections: Array<{ field: string; original: string; corrected: string }>;
+  locales: Partial<Record<AiLocale | "oz", AiSourceFields>>;
+}
+
 /* ── Director panel: product management ───────────────────────────────────── */
 
-/** One localized text field, required in all three languages. */
+/** One localized text field, required in all three languages, plus an
+ *  optional AI-filled Chinese one ("AI bilan tekshirish" — see Stage C). */
 const localizedSchema = z.object({
   uz: z.string().min(1),
   ru: z.string().min(1),
   en: z.string().min(1),
+  zh: z.string().optional(),
 });
 
 export const productSpecSchema = z.object({
@@ -254,6 +301,14 @@ export const productWriteSchema = z.object({
   compatibleModels: z.array(z.string().min(1)).max(50),
   specs: z.array(productSpecSchema).max(30),
   isActive: z.boolean(),
+  /** Set once "AI bilan tekshirish" has run; tells the backend which locale
+   *  was hand-typed and to fill the rest (skipping any locale already present
+   *  — see `ai-translate-panel.tsx` and backend/'s `buildLocaleData`). Absent
+   *  entirely for callers that predate Stage C (CSV import), which keeps them
+   *  on the exact old behaviour with no AI call at all. */
+  sourceLocale: aiLocaleSchema.optional(),
+  force: z.boolean().optional(),
+  forceLocales: z.array(aiLocaleSchema).optional(),
 });
 
 export type ProductWriteInput = z.infer<typeof productWriteSchema>;
@@ -483,8 +538,14 @@ export type DiscountRequestInput = z.infer<typeof discountRequestSchema>;
  * refuses a parent that is not itself a top-level category, which is what keeps
  * the menu two levels deep.
  */
+/**
+ * Mirrors backend/'s `CreateCategoryDto` field-for-field: `name` is the text
+ * in `sourceLocale`; `nameUz/Ru/En/Zh` are locales already known (typically
+ * from a prior "AI bilan tekshirish" run, possibly hand-edited) — never
+ * silently overwritten unless `forceLocales` names them with `force: true`.
+ */
 export const categoryWriteSchema = z.object({
-  name: localizedSchema,
+  name: z.string().trim().min(1, "required").max(160, "tooLong"),
   slug: z
     .string()
     .min(1)
@@ -499,9 +560,45 @@ export const categoryWriteSchema = z.object({
   parentId: z.string().min(1).nullable(),
   order: z.number().int().min(0).max(9_999),
   icon: z.enum(CATALOG_ICON_KEYS).nullable(),
+  sourceLocale: aiLocaleSchema.optional(),
+  nameUz: z.string().optional(),
+  nameRu: z.string().optional(),
+  nameEn: z.string().optional(),
+  nameZh: z.string().optional(),
+  force: z.boolean().optional(),
+  forceLocales: z.array(aiLocaleSchema).optional(),
 });
 
 export type CategoryWriteInput = z.infer<typeof categoryWriteSchema>;
+
+/* ── Director panel: brands ───────────────────────────────────────────────── */
+
+const brandLocaleFieldsSchema = z.object({ name: z.string().min(1) });
+
+/**
+ * Mirrors backend/'s `CreateBrandDto` field-for-field: `name` is the text in
+ * `sourceLocale`, and `translationUz/Ru/En/Zh` are locales already known (from
+ * a prior "AI bilan tekshirish" run, possibly hand-edited) — never silently
+ * overwritten unless `forceLocales` names them with `force: true`.
+ */
+export const brandWriteSchema = z.object({
+  slug: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug_format"),
+  name: z.string().trim().min(1, "required").max(160, "tooLong"),
+  logoUrl: z.string().trim().max(2000).optional().nullable(),
+  sourceLocale: aiLocaleSchema.optional(),
+  translationUz: brandLocaleFieldsSchema.optional(),
+  translationRu: brandLocaleFieldsSchema.optional(),
+  translationEn: brandLocaleFieldsSchema.optional(),
+  translationZh: brandLocaleFieldsSchema.optional(),
+  force: z.boolean().optional(),
+  forceLocales: z.array(aiLocaleSchema).optional(),
+});
+
+export type BrandWriteInput = z.infer<typeof brandWriteSchema>;
 
 
 /* ── Customer profile ─────────────────────────────────────────────────────── */

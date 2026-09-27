@@ -7,8 +7,32 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../../generated/prisma/client';
+import { AiService } from '../ai/ai.service';
+import type { AiLocale, TranslateSourceFields } from '../ai/translation.schema';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+
+/** DTO fields that only feed AiService/buildLocaleData — never passed to
+ * Prisma directly, since the locale columns Prisma actually writes come out
+ * of buildLocaleData's return value instead. */
+const AI_ONLY_DTO_KEYS = [
+  'name',
+  'sourceLocale',
+  'nameUz',
+  'nameRu',
+  'nameEn',
+  'nameZh',
+  'force',
+  'forceLocales',
+] as const;
+
+function omitAiFields<T extends object>(
+  dto: T,
+): Omit<T, (typeof AI_ONLY_DTO_KEYS)[number]> {
+  const rest = { ...dto } as Record<string, unknown>;
+  for (const key of AI_ONLY_DTO_KEYS) delete rest[key];
+  return rest as Omit<T, (typeof AI_ONLY_DTO_KEYS)[number]>;
+}
 
 /** What the audit trail keeps for a category write — enough to see the move. */
 function auditSnapshot(row: {
@@ -32,7 +56,39 @@ export class CategoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ai: AiService,
   ) {}
+
+  private async buildLocaleData(dto: CreateCategoryDto | UpdateCategoryDto) {
+    const sourceLocale: AiLocale = dto.sourceLocale ?? 'uz';
+    const existing: Partial<Record<AiLocale, TranslateSourceFields>> = {};
+    if (dto.nameUz) existing.uz = { name: dto.nameUz };
+    if (dto.nameRu) existing.ru = { name: dto.nameRu };
+    if (dto.nameEn) existing.en = { name: dto.nameEn };
+    if (dto.nameZh) existing.zh = { name: dto.nameZh };
+
+    const result = await this.ai.translateEntity({
+      sourceLocale,
+      fields: { name: dto.name! },
+      existing,
+      force: dto.force,
+      forceLocales: dto.forceLocales,
+    });
+
+    return {
+      // nameUz/nameRu/nameEn are NOT NULL in the schema; fall back to the
+      // caller's raw source text on the rare FAILED-with-no-anchor path
+      // (non-uz source, Gemini down, no existing value for that locale)
+      // rather than writing a null into a required column.
+      nameUz: result.locales.uz?.name ?? dto.name!,
+      nameOz: result.locales.oz?.name,
+      nameRu: result.locales.ru?.name ?? dto.name!,
+      nameEn: result.locales.en?.name ?? dto.name!,
+      nameZh: result.locales.zh?.name,
+      sourceLocale,
+      translationStatus: result.status,
+    };
+  }
 
   findAll() {
     return this.prisma.category.findMany({
@@ -83,10 +139,13 @@ export class CategoriesService {
       await this.assertValidParent(dto.parentId, null);
     }
 
+    const rest = omitAiFields(dto);
+    const localeData = await this.buildLocaleData(dto);
+
     // Category.id has no @default (D1): the slug is the id, and the storefront
     // URLs depend on that.
     const created = await this.prisma.category.create({
-      data: { ...dto, id: dto.slug },
+      data: { ...rest, ...localeData, id: dto.slug },
     });
     await this.audit.record({
       userId: actorId,
@@ -121,9 +180,12 @@ export class CategoriesService {
       }
     }
 
+    const rest = omitAiFields(dto);
+    const localeData = dto.name ? await this.buildLocaleData(dto) : undefined;
+
     const after = await this.prisma.category.update({
       where: { id },
-      data: dto,
+      data: { ...rest, ...localeData },
     });
     await this.audit.record({
       userId: actorId,

@@ -40,6 +40,10 @@ export const adminKeys = {
     all: ["admin", "categories"] as const,
     list: () => ["admin", "categories", "list"] as const,
   },
+  brands: {
+    all: ["admin", "brands"] as const,
+    list: () => ["admin", "brands", "list"] as const,
+  },
   staff: {
     all: ["admin", "staff"] as const,
     list: () => ["admin", "staff", "list"] as const,

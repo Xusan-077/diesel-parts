@@ -6,6 +6,7 @@ import {
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AiService } from '../ai/ai.service';
 import { AuditAction, Prisma } from '../../generated/prisma/client';
 import { toCsv, type ProductCsvRow } from './product-csv';
 import { Reflector } from '@nestjs/core';
@@ -77,6 +78,43 @@ function makeAudit() {
   return { audit: { record } as unknown as AuditService, record };
 }
 
+/**
+ * Passthrough AiService double for tests that don't care about the AI
+ * pipeline: returns the source text unchanged for every AI_LOCALE (no real
+ * translation), so nameUz/nameRu/nameEn/nameOz all end up populated without
+ * a network call — see the dedicated "ProductsService AI wiring" describe
+ * block below for tests that actually exercise the translation behavior.
+ */
+function makeAi() {
+  const translateEntity = jest
+    .fn()
+    .mockImplementation(
+      ({
+        fields,
+        existing,
+      }: {
+        fields: { name: string; description?: string };
+        existing?: Record<string, { name: string; description?: string }>;
+      }) => {
+        const filled = { name: fields.name, description: fields.description };
+        return Promise.resolve({
+          status: 'COMPLETE',
+          sourceLocale: 'uz',
+          source: filled,
+          corrections: [],
+          locales: {
+            uz: existing?.uz ?? filled,
+            oz: existing?.oz ?? filled,
+            ru: existing?.ru ?? filled,
+            en: existing?.en ?? filled,
+            zh: existing?.zh ?? filled,
+          },
+        });
+      },
+    );
+  return { translateEntity } as unknown as AiService;
+}
+
 const row = {
   id: 'p1',
   sku: 'DP-1',
@@ -104,7 +142,7 @@ describe('ProductsService.create', () => {
     const prisma = makePrisma({
       product: { findUnique: jest.fn().mockResolvedValue(null), create },
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await service.create(
       { sku: 'DP-1', slug: 'cat-fuel-injector-3126' } as never,
@@ -134,7 +172,7 @@ describe('ProductsService.create', () => {
     const prisma = makePrisma({
       product: { findUnique: jest.fn().mockResolvedValue(null), create },
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await expect(
       service.create(
@@ -145,6 +183,134 @@ describe('ProductsService.create', () => {
   });
 });
 
+describe('ProductsService AI wiring', () => {
+  it('skips AiService entirely when sourceLocale is omitted (the CSV import path)', async () => {
+    let createdData: Record<string, unknown> | undefined;
+    const create = jest
+      .fn()
+      .mockImplementation((args: { data: Record<string, unknown> }) => {
+        createdData = args.data;
+        return Promise.resolve({ ...row, id: 'cat-fuel-injector-3126' });
+      });
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const translateEntity = jest.fn();
+    const service = new ProductsService(prisma, makeAudit().audit, {
+      translateEntity,
+    } as never);
+
+    await service.create(
+      {
+        sku: 'DP-1',
+        slug: 'cat-fuel-injector-3126',
+        nameUz: 'Forsunka',
+        nameRu: 'Форсунка',
+        nameEn: 'Injector',
+      } as never,
+      'actor-1',
+    );
+
+    expect(translateEntity).not.toHaveBeenCalled();
+    expect(createdData).toMatchObject({
+      nameUz: 'Forsunka',
+      nameRu: 'Форсунка',
+      nameEn: 'Injector',
+    });
+  });
+
+  it('calls AiService and persists every locale column when sourceLocale is given', async () => {
+    let createdData: Record<string, unknown> | undefined;
+    const create = jest
+      .fn()
+      .mockImplementation((args: { data: Record<string, unknown> }) => {
+        createdData = args.data;
+        return Promise.resolve({ ...row, id: 'cat-fuel-injector-3126' });
+      });
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const translateEntity = jest.fn().mockResolvedValue({
+      status: 'COMPLETE',
+      sourceLocale: 'uz',
+      source: { name: 'Forsunka', description: "Yoqilg'i forsunkasi" },
+      corrections: [],
+      locales: {
+        uz: { name: 'Forsunka', description: "Yoqilg'i forsunkasi" },
+        oz: { name: 'Форсунка', description: 'Ёқилғи форсункаси' },
+        ru: { name: 'Форсунка', description: 'Топливная форсунка' },
+        en: { name: 'Injector', description: 'Fuel injector' },
+        zh: { name: '喷油器', description: '燃油喷油器' },
+      },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit, {
+      translateEntity,
+    } as never);
+
+    await service.create(
+      {
+        sku: 'DP-1',
+        slug: 'cat-fuel-injector-3126',
+        sourceLocale: 'uz',
+        nameUz: 'Forsunka',
+        descriptionUz: "Yoqilg'i forsunkasi",
+      } as never,
+      'actor-1',
+    );
+
+    expect(translateEntity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceLocale: 'uz',
+        fields: { name: 'Forsunka', description: "Yoqilg'i forsunkasi" },
+      }),
+    );
+    expect(createdData).toMatchObject({
+      nameUz: 'Forsunka',
+      nameOz: 'Форсунка',
+      nameRu: 'Форсунка',
+      nameEn: 'Injector',
+      nameZh: '喷油器',
+      descriptionZh: '燃油喷油器',
+      sourceLocale: 'uz',
+      translationStatus: 'COMPLETE',
+    });
+  });
+
+  it('never overwrites a manually-supplied locale field, passing it through as `existing`', async () => {
+    const create = jest.fn().mockResolvedValue({ ...row, id: 'p1' });
+    const prisma = makePrisma({
+      product: { findUnique: jest.fn().mockResolvedValue(null), create },
+    });
+    const translateEntity = jest.fn().mockResolvedValue({
+      status: 'COMPLETE',
+      sourceLocale: 'uz',
+      source: { name: 'Forsunka' },
+      corrections: [],
+      locales: { uz: { name: 'Forsunka' }, oz: { name: 'Форсунка' } },
+    });
+    const service = new ProductsService(prisma, makeAudit().audit, {
+      translateEntity,
+    } as never);
+
+    await service.create(
+      {
+        sku: 'DP-1',
+        slug: 'p1',
+        sourceLocale: 'uz',
+        nameUz: 'Forsunka',
+        nameRu: "Форсунка (qo'lda)",
+      } as never,
+      'actor-1',
+    );
+
+    expect(translateEntity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        existing: { ru: { name: "Форсунка (qo'lda)", description: undefined } },
+      }),
+    );
+  });
+});
+
 describe('ProductsService audit', () => {
   it('records a CREATE with an after snapshot', async () => {
     const create = jest.fn().mockResolvedValue(row);
@@ -152,7 +318,7 @@ describe('ProductsService audit', () => {
       product: { findUnique: jest.fn().mockResolvedValue(null), create },
     });
     const { audit, record } = makeAudit();
-    const service = new ProductsService(prisma, audit);
+    const service = new ProductsService(prisma, audit, makeAi());
 
     await service.create({ sku: 'DP-1' } as never, 'actor-1');
 
@@ -170,7 +336,7 @@ describe('ProductsService audit', () => {
     const update = jest.fn().mockResolvedValue({ ...row, price: 150 });
     const prisma = makePrisma({ product: { findUnique, update } });
     const { audit, record } = makeAudit();
-    const service = new ProductsService(prisma, audit);
+    const service = new ProductsService(prisma, audit, makeAi());
 
     await service.update('p1', { price: 150 }, 'actor-1');
 
@@ -189,7 +355,7 @@ describe('ProductsService audit', () => {
     const update = jest.fn().mockResolvedValue({ ...row, isActive: false });
     const prisma = makePrisma({ product: { findUnique, update } });
     const { audit, record } = makeAudit();
-    const service = new ProductsService(prisma, audit);
+    const service = new ProductsService(prisma, audit, makeAi());
 
     await service.archive('p1', 'actor-1');
 
@@ -265,7 +431,7 @@ describe('ProductsService hard delete', () => {
       invoices: 4,
       quantity: 5,
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     const check = await service.deleteCheck('p1');
 
@@ -283,7 +449,7 @@ describe('ProductsService hard delete', () => {
   it('deleteCheck 404s on an unknown product', async () => {
     const { tx, prisma } = makeTx();
     tx.product.findUnique.mockResolvedValue(null);
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await expect(service.deleteCheck('nope')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -292,7 +458,7 @@ describe('ProductsService hard delete', () => {
 
   it('deletes a history-free product and its dependants in one transaction, with an audit row', async () => {
     const { tx, prisma } = makeTx();
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     const result = await service.hardDelete('p1', 'actor-1');
 
@@ -325,7 +491,7 @@ describe('ProductsService hard delete', () => {
 
   it('refuses with 409 and deletes nothing when history exists', async () => {
     const { tx, prisma } = makeTx({ orders: 1 });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await expect(service.hardDelete('p1', 'actor-1')).rejects.toBeInstanceOf(
       ConflictException,
@@ -342,7 +508,7 @@ describe('ProductsService hard delete', () => {
         clientVersion: 'test',
       }),
     );
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await expect(service.hardDelete('p1', 'actor-1')).rejects.toBeInstanceOf(
       ConflictException,
@@ -425,7 +591,7 @@ describe('ProductsService stock on create/update', () => {
       product: { findUnique: jest.fn().mockResolvedValue(null), create },
       inventory: { upsert },
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await service.create({ sku: 'DP-1', stock: 9 } as never, 'actor-1');
 
@@ -455,7 +621,7 @@ describe('ProductsService stock on create/update', () => {
       inventory: { upsert },
       warehouse: { findFirst },
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await service.create({ sku: 'DP-1' } as never, 'actor-1');
 
@@ -471,7 +637,7 @@ describe('ProductsService stock on create/update', () => {
       product: { findUnique, update },
       inventory: { upsert },
     });
-    const service = new ProductsService(prisma, makeAudit().audit);
+    const service = new ProductsService(prisma, makeAudit().audit, makeAi());
 
     await service.update('p1', { stock: 4 }, 'actor-1');
 
@@ -505,6 +671,7 @@ describe('ProductsService create/update error translation', () => {
         product: { findUnique: jest.fn().mockResolvedValue(null), create },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await expect(
@@ -526,6 +693,7 @@ describe('ProductsService create/update error translation', () => {
         product: { findUnique: jest.fn().mockResolvedValue(null), create },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await expect(
@@ -544,6 +712,7 @@ describe('ProductsService create/update error translation', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique, update } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await expect(
@@ -579,6 +748,7 @@ describe('ProductsService.findByBarcodeSeller', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique } }),
       audit,
+      makeAi(),
     );
 
     await service.findByBarcodeSeller('4600000000001');
@@ -593,6 +763,7 @@ describe('ProductsService.findByBarcodeSeller', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique } }),
       audit,
+      makeAi(),
     );
 
     await expect(service.findByBarcodeSeller('nope')).rejects.toBeInstanceOf(
@@ -607,6 +778,7 @@ describe('ProductsService.findByBarcodeSeller', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique } }),
       audit,
+      makeAi(),
     );
 
     await expect(
@@ -619,6 +791,7 @@ describe('ProductsService.findByBarcodeSeller', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique } }),
       audit,
+      makeAi(),
     );
 
     const result = await service.findByBarcodeSeller('4600000000001');
@@ -636,6 +809,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({});
@@ -650,6 +824,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       const result = await service.findAllPublic({});
@@ -665,6 +840,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findUnique } }),
         audit,
+        makeAi(),
       );
 
       await service.findOnePublic('sku-1');
@@ -681,6 +857,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findUnique } }),
         audit,
+        makeAi(),
       );
 
       await expect(service.findOnePublic('sku-1')).rejects.toBeInstanceOf(
@@ -693,6 +870,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findUnique } }),
         audit,
+        makeAi(),
       );
 
       await expect(service.findOnePublic('nope')).rejects.toBeInstanceOf(
@@ -705,6 +883,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findUnique } }),
         audit,
+        makeAi(),
       );
 
       const result = await service.findOnePublic('sku-1');
@@ -719,6 +898,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ ids: 'p1,p2' });
@@ -737,6 +917,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ sort: 'id' });
@@ -751,6 +932,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllAdmin({ sort: 'price-desc' });
@@ -778,6 +960,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       const result = await service.findAllPublic({ sort: 'stock' });
@@ -790,6 +973,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ sort: 'name-asc', lang: 'ru' });
@@ -804,6 +988,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ sort: 'name-desc', lang: 'en' });
@@ -820,6 +1005,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ brandIds: 'b1,b2', brandId: 'ignored' });
@@ -836,6 +1022,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ brandIds: '', brandId: 'ignored' });
@@ -850,6 +1037,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ brandId: 'b1' });
@@ -866,6 +1054,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ categoryIds: '' });
@@ -882,6 +1071,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ categoryId: 'c1' });
@@ -900,6 +1090,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ priceMin: 100, priceMax: 500 });
@@ -918,6 +1109,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllPublic({ search: 'voe14514151', lang: 'uz' });
@@ -941,6 +1133,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllAdmin({ search: 'pump' });
@@ -966,6 +1159,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllAdmin({ isActive: 'true' });
@@ -980,6 +1174,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllAdmin({ isActive: 'false' });
@@ -994,6 +1189,7 @@ describe('ProductsService public reads', () => {
       const service = new ProductsService(
         makePrisma({ product: { findMany } }),
         audit,
+        makeAi(),
       );
 
       await service.findAllAdmin({});
@@ -1013,6 +1209,7 @@ describe('ProductsService.findActiveSlugs', () => {
     const service = new ProductsService(
       makePrisma({ product: { findMany } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.findActiveSlugs();
@@ -1026,7 +1223,11 @@ describe('ProductsService.findActiveSlugs', () => {
 
 describe('ProductsService.productStats', () => {
   it('returns empty stats for every id when there is nothing to aggregate', async () => {
-    const service = new ProductsService(makePrisma(), makeAudit().audit);
+    const service = new ProductsService(
+      makePrisma(),
+      makeAudit().audit,
+      makeAi(),
+    );
 
     const result = await service.productStats(['p1', 'p2']);
 
@@ -1051,6 +1252,7 @@ describe('ProductsService.productStats', () => {
         orderItem: { groupBy: groupByOrderItem },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.productStats(['p1']);
@@ -1075,6 +1277,7 @@ describe('ProductsService.productStats', () => {
     const service = new ProductsService(
       makePrisma({ review: { groupBy: groupByReview } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     expect(await service.productStats([])).toEqual([]);
@@ -1084,7 +1287,11 @@ describe('ProductsService.productStats', () => {
 
 describe('ProductsService.importCsv', () => {
   it('passes a structural error through untouched', async () => {
-    const service = new ProductsService(makePrisma(), makeAudit().audit);
+    const service = new ProductsService(
+      makePrisma(),
+      makeAudit().audit,
+      makeAi(),
+    );
 
     const result = await service.importCsv('', 'actor-1');
 
@@ -1097,6 +1304,7 @@ describe('ProductsService.importCsv', () => {
     const service = new ProductsService(
       makePrisma({ product: { create } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.importCsv(
@@ -1120,6 +1328,7 @@ describe('ProductsService.importCsv', () => {
         inventory: { upsert },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.importCsv(
@@ -1156,6 +1365,7 @@ describe('ProductsService.importCsv', () => {
         },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.importCsv(
@@ -1174,6 +1384,7 @@ describe('ProductsService.importCsv', () => {
         product: { findUnique: jest.fn().mockResolvedValue(null), create },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.importCsv(toCsv([csvRow()]), 'actor-1');
@@ -1199,6 +1410,7 @@ describe('ProductsService.importCsv', () => {
         inventory: { upsert: inventoryUpsert },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await service.importCsv(toCsv([csvRow()]), 'actor-1');
@@ -1247,6 +1459,7 @@ describe('ProductsService.exportCsv', () => {
     const service = new ProductsService(
       makePrisma({ product: { findMany } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const csv = await service.exportCsv();
@@ -1270,6 +1483,7 @@ describe('ProductsService.setImage', () => {
     const service = new ProductsService(
       makePrisma({ product: { findUnique, update } }),
       audit,
+      makeAi(),
     );
 
     await service.setImage('p1', 'https://example.com/img.jpg', 'actor-1');
@@ -1294,6 +1508,7 @@ describe('ProductsService.setImage', () => {
         product: { findUnique: jest.fn().mockResolvedValue(null) },
       }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await expect(
@@ -1326,6 +1541,7 @@ describe('ProductsService.search', () => {
     const service = new ProductsService(
       makePrisma({ product: { findMany } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     await service.search('nasos');
@@ -1338,6 +1554,7 @@ describe('ProductsService.search', () => {
     const service = new ProductsService(
       makePrisma({ product: { findMany } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.search('nasos');
@@ -1369,6 +1586,7 @@ describe('ProductsService.search', () => {
     const service = new ProductsService(
       makePrisma({ product: { findMany } }),
       makeAudit().audit,
+      makeAi(),
     );
 
     const result = await service.search('item');

@@ -31,6 +31,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { FinanceModule } from './finance/finance.module';
 import { ReturnsModule } from './returns/returns.module';
 import { CashierModule } from './cashier/cashier.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { CashierModule } from './cashier/cashier.module';
     FinanceModule,
     ReturnsModule,
     CashierModule,
+    AiModule,
   ],
   controllers: [AppController],
 })

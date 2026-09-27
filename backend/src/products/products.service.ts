@@ -14,6 +14,9 @@ import {
   Prisma,
   StockStatus as DbStockStatus,
 } from '../../generated/prisma/client';
+import { AiService } from '../ai/ai.service';
+import { AI_LOCALES } from '../ai/translation.schema';
+import type { AiLocale, TranslateSourceFields } from '../ai/translation.schema';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto, type NameLocale } from './dto/query-product.dto';
@@ -88,8 +91,43 @@ type ProductWithInventories = Prisma.ProductGetPayload<{
   include: typeof ADMIN_INCLUDE;
 }>;
 
+/** `force`/`forceLocales` only feed buildLocaleData/AiService — not real
+ * Prisma columns, so they must never reach a `data:` object. */
+function omitForceFields<T extends Record<string, unknown>>(
+  dto: T,
+): Omit<T, 'force' | 'forceLocales'> {
+  const rest = { ...dto };
+  delete rest.force;
+  delete rest.forceLocales;
+  return rest;
+}
+
 function nameColumn(lang: NameLocale): 'nameUz' | 'nameRu' | 'nameEn' {
   return lang === 'uz' ? 'nameUz' : lang === 'ru' ? 'nameRu' : 'nameEn';
+}
+
+function localeNameKey(
+  locale: AiLocale,
+): 'nameUz' | 'nameRu' | 'nameEn' | 'nameZh' {
+  return locale === 'uz'
+    ? 'nameUz'
+    : locale === 'ru'
+      ? 'nameRu'
+      : locale === 'en'
+        ? 'nameEn'
+        : 'nameZh';
+}
+
+function localeDescKey(
+  locale: AiLocale,
+): 'descriptionUz' | 'descriptionRu' | 'descriptionEn' | 'descriptionZh' {
+  return locale === 'uz'
+    ? 'descriptionUz'
+    : locale === 'ru'
+      ? 'descriptionRu'
+      : locale === 'en'
+        ? 'descriptionEn'
+        : 'descriptionZh';
 }
 
 /** `''` parses to `[]` (a real, deliberate empty scope), not `['']`. */
@@ -169,7 +207,65 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly ai: AiService,
   ) {}
+
+  /**
+   * Only runs when the caller sets `sourceLocale` (the /panel form path) —
+   * the CSV import path (ImportProductRowDto has no sourceLocale field) never
+   * calls this and keeps writing nameUz/nameRu/nameEn/description* literally,
+   * unchanged from before AI existed. Firing a real (paid, slow) Gemini call
+   * per CSV row would make a bulk import impractical; that catalog still gets
+   * oz/zh filled later by scripts/backfill-pending-translations.ts instead.
+   */
+  private async buildLocaleData(
+    dto: CreateProductDto | UpdateProductDto,
+  ): Promise<Record<string, unknown>> {
+    const sourceLocale: AiLocale = dto.sourceLocale ?? 'uz';
+    const nameKey = localeNameKey(sourceLocale);
+    const descKey = localeDescKey(sourceLocale);
+    const sourceName = dto[nameKey];
+    if (!sourceName) {
+      throw new BadRequestException(
+        `${nameKey} is required when sourceLocale=${sourceLocale}`,
+      );
+    }
+
+    const existing: Partial<Record<AiLocale, TranslateSourceFields>> = {};
+    for (const locale of AI_LOCALES) {
+      if (locale === sourceLocale) continue;
+      const name = dto[localeNameKey(locale)];
+      if (name) {
+        existing[locale] = { name, description: dto[localeDescKey(locale)] };
+      }
+    }
+
+    const result = await this.ai.translateEntity({
+      sourceLocale,
+      fields: { name: sourceName, description: dto[descKey] },
+      existing,
+      force: dto.force,
+      forceLocales: dto.forceLocales,
+    });
+
+    // nameUz/nameRu/nameEn are NOT NULL in the schema; fall back to the raw
+    // source text on the rare FAILED-with-no-anchor path rather than writing
+    // null into a required column (same rule as CategoriesService).
+    return {
+      nameUz: result.locales.uz?.name ?? sourceName,
+      nameRu: result.locales.ru?.name ?? sourceName,
+      nameEn: result.locales.en?.name ?? sourceName,
+      nameZh: result.locales.zh?.name,
+      nameOz: result.locales.oz?.name,
+      descriptionUz: result.locales.uz?.description,
+      descriptionRu: result.locales.ru?.description,
+      descriptionEn: result.locales.en?.description,
+      descriptionZh: result.locales.zh?.description,
+      descriptionOz: result.locales.oz?.description,
+      sourceLocale,
+      translationStatus: result.status,
+    };
+  }
 
   private withStock(product: ProductWithInventories) {
     const quantity = product.inventories.reduce(
@@ -450,7 +546,11 @@ export class ProductsService {
       where: { sku: dto.sku },
     });
     if (existing) throw new ConflictException('SKU already exists');
-    const { stock, ...write } = dto;
+    const { stock, ...rest } = dto;
+    const write = omitForceFields(rest);
+    const localeData = dto.sourceLocale
+      ? await this.buildLocaleData(dto)
+      : undefined;
     // Product.id has no @default (D1, docs/deploy-checklist.md): prod ids
     // are slugs and frontend URLs depend on that, exactly like
     // CategoriesService.create/BrandsService.create's `id: dto.slug`. Never
@@ -465,6 +565,7 @@ export class ProductsService {
       .create({
         data: {
           ...write,
+          ...localeData,
           id: write.slug,
           stockStatus:
             DB_STOCK_STATUS[deriveStockStatus(0, write.minStock ?? 0)],
@@ -490,11 +591,15 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto, actorId: string) {
     const before = await this.getOrThrow(id);
-    const { stock, ...write } = dto;
+    const { stock, ...rest } = dto;
+    const write = omitForceFields(rest);
+    const localeData = dto.sourceLocale
+      ? await this.buildLocaleData(dto)
+      : undefined;
     const after = await this.prisma.product
       .update({
         where: { id },
-        data: write as Prisma.ProductUncheckedUpdateInput,
+        data: { ...write, ...localeData } as Prisma.ProductUncheckedUpdateInput,
       })
       .catch((error: unknown) => translateWriteError(error));
     if (stock !== undefined) {

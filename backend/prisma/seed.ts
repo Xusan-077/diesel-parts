@@ -139,12 +139,12 @@ async function main() {
   // --- Users & Sellers -------------------------------------------------------
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
   const userDefs: { name: string; email: string; phone: string; role: Role }[] = [
-    { name: 'Sarvar Admin', email: 'admin@diesel-parts.uz', phone: '+998901112233', role: Role.SUPER_ADMIN },
+    { name: 'Sarvar Admin', email: 'admin@diesel-parts.uz', phone: '+998901112233', role: Role.DIRECTOR },
     { name: 'Otabek Direktor', email: 'director@diesel-parts.uz', phone: '+998901112234', role: Role.DIRECTOR },
-    { name: 'Kamola Menejer', email: 'manager@diesel-parts.uz', phone: '+998901112235', role: Role.MANAGER },
+    { name: 'Kamola Menejer', email: 'manager@diesel-parts.uz', phone: '+998901112235', role: Role.DIRECTOR },
     { name: 'Jasur Sotuvchi', email: 'seller1@diesel-parts.uz', phone: '+998901112236', role: Role.SELLER },
     { name: 'Dilshod Sotuvchi', email: 'seller2@diesel-parts.uz', phone: '+998901112237', role: Role.SELLER },
-    { name: 'Nigora Kuzatuvchi', email: 'viewer@diesel-parts.uz', phone: '+998901112238', role: Role.VIEWER },
+    { name: 'Nigora Kuzatuvchi', email: 'viewer@diesel-parts.uz', phone: '+998901112238', role: Role.SELLER },
   ];
   const users = await Promise.all(
     userDefs.map((u) =>

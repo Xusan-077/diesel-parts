@@ -22,6 +22,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: "/panel/warehouse", label: "Ombor", permission: "warehouse:read" },
   { href: "/panel/customers", label: "Mijozlar", permission: "customers:read" },
   { href: "/panel/categories", label: "Kategoriyalar", permission: "categories:read" },
+  { href: "/panel/brands", label: "Brendlar", permission: "products:read" },
   { href: "/panel/users", label: "Xodimlar", permission: "users:read" },
   { href: "/panel/discounts", label: "Chegirmalar", permission: "discounts:approve" },
   { href: "/panel/reviews", label: "Sharhlar", permission: "reviews:read" },

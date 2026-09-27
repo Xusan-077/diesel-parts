@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -8,6 +9,8 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { AI_LOCALES } from '../../ai/translation.schema';
+import type { AiLocale } from '../../ai/translation.schema';
 
 export class CreateProductDto {
   @IsString()
@@ -17,17 +20,43 @@ export class CreateProductDto {
   @MinLength(1)
   slug: string;
 
-  @IsString()
-  @MinLength(1)
-  nameUz: string;
+  /** Which locale field below is the "source" text — spell-corrected and
+   * translated into the rest (+ oz via transliteration) on save, via
+   * ProductsService.buildLocaleData. Omitted entirely (the CSV import path,
+   * see ProductsService.importCsv) means "no AI, take nameUz/nameRu/nameEn
+   * literally" — the pre-AI behavior, unchanged for that path. */
+  @IsOptional()
+  @IsIn(AI_LOCALES)
+  sourceLocale?: AiLocale;
 
+  /** Required in practice: either the sourceLocale's own field (checked at
+   * runtime — which one is required depends on `sourceLocale`), or, for the
+   * CSV import path, all three literally. Not enforced here with @MinLength
+   * because that requirement is conditional. */
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  nameRu: string;
+  nameUz?: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(1)
-  nameEn: string;
+  nameRu?: string;
+
+  @IsOptional()
+  @IsString()
+  nameEn?: string;
+
+  @IsOptional()
+  @IsString()
+  nameZh?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(AI_LOCALES, { each: true })
+  forceLocales?: AiLocale[];
 
   @IsString()
   categoryId: string;
@@ -46,6 +75,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   descriptionEn?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionZh?: string;
 
   /** Nullable in the schema (price-on-request); omit to leave unset. */
   @IsOptional()

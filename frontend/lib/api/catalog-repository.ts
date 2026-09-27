@@ -10,7 +10,7 @@ import {
   type CatalogRow,
   type CatalogScope,
 } from "@/lib/catalog-tree";
-import type { CategoryWriteInput } from "@/lib/schemas";
+import type { AiLocale, CategoryWriteInput } from "@/lib/schemas";
 
 /** One category row as backend/'s `/catalog/categories` and `/categories` return it. */
 interface BackendCategoryRow {
@@ -32,6 +32,9 @@ interface BackendCategoryTreeNode extends BackendCategoryRow {
 
 /** backend/'s staff-authed `/categories` row, with the admin listing's aggregate counts. */
 interface BackendCategoryAdminRow extends BackendCategoryRow {
+  nameZh: string | null;
+  sourceLocale: string | null;
+  translationStatus: "PENDING" | "COMPLETE" | "FAILED" | null;
   _count: { children: number; products: number };
 }
 
@@ -100,6 +103,9 @@ export interface CatalogAdminRow extends CatalogRow {
   /** Products hanging directly off this category — not off its children. */
   productCount: number;
   childCount: number;
+  nameZh: string | null;
+  sourceLocale: AiLocale;
+  translationStatus: "PENDING" | "COMPLETE" | "FAILED" | null;
 }
 
 /** Every category with the two counts that decide whether it can be deleted. */
@@ -112,6 +118,9 @@ export async function listCatalogRows(): Promise<CatalogAdminRow[]> {
     ...toRow(row),
     productCount: row._count.products,
     childCount: row._count.children,
+    nameZh: row.nameZh,
+    sourceLocale: (row.sourceLocale ?? "uz") as AiLocale,
+    translationStatus: row.translationStatus,
   }));
 }
 
@@ -166,9 +175,14 @@ function toWriteResult(error: BackendApiError): CategoryWriteResult {
 function writeBody(input: CategoryWriteInput) {
   return {
     slug: input.slug,
-    nameUz: input.name.uz,
-    nameRu: input.name.ru,
-    nameEn: input.name.en,
+    name: input.name,
+    sourceLocale: input.sourceLocale,
+    nameUz: input.nameUz,
+    nameRu: input.nameRu,
+    nameEn: input.nameEn,
+    nameZh: input.nameZh,
+    force: input.force,
+    forceLocales: input.forceLocales,
     type: input.type,
     order: input.order,
     icon: input.icon,

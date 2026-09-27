@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Plus, X } from "lucide-react";
+import { AlertTriangle, Plus, Sparkles, X } from "lucide-react";
 import {
   useCreateProduct,
   useReplaceProductImage,
   useUpdateProduct,
 } from "@/hooks/admin/use-admin-products";
+import { useAiTranslate } from "@/hooks/admin/use-ai-translate";
 import { OFFLINE_MESSAGE, refusalPayload } from "@/lib/api/request-error";
 import { useFieldErrors, type FieldErrors } from "@/lib/forms/use-field-errors";
-import { productWriteSchema, type ProductWriteInput } from "@/lib/schemas";
+import { AI_LOCALES, productWriteSchema, type AiLocale, type AiTranslateResult, type ProductWriteInput } from "@/lib/schemas";
+import { AiBadge, AiTranslatePanel } from "@/components/admin/ai-translate-panel";
 import { CheckboxField } from "@/components/ui/checkbox";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { FormField } from "@/components/ui/form-field";
@@ -85,12 +87,13 @@ function splitRefusal(error: unknown): { fields: FieldErrors; message: string | 
   };
 }
 
-const EMPTY: ProductWriteInput & { imageUrl: string | null } = {
+const EMPTY: ProductWriteInput & { imageUrl: string | null; translationStatus?: null } = {
   sku: "",
   slug: "",
   oemNumbers: [],
   name: { uz: "", ru: "", en: "" },
   description: { uz: "", ru: "", en: "" },
+  sourceLocale: "uz",
   price: null,
   stock: 0,
   minStock: 5,
@@ -100,6 +103,14 @@ const EMPTY: ProductWriteInput & { imageUrl: string | null } = {
   specs: [],
   isActive: true,
   imageUrl: null,
+  translationStatus: null,
+};
+
+const LOCALE_LABEL: Record<AiLocale, string> = {
+  uz: "O'zbekcha",
+  ru: "Ruscha",
+  en: "Inglizcha",
+  zh: "Xitoycha",
 };
 
 /** Section heading inside the modal — the same eyebrow the pages use. */
@@ -117,7 +128,10 @@ export interface ProductFormModalProps {
   onOpenChange: (open: boolean) => void;
   /** Absent when creating; the form then POSTs instead of PATCHing. */
   productId?: string;
-  initial?: ProductWriteInput & { imageUrl?: string | null };
+  initial?: ProductWriteInput & {
+    imageUrl?: string | null;
+    translationStatus?: "PENDING" | "COMPLETE" | "FAILED" | null;
+  };
   categories: readonly ReferenceOption[];
   brands: readonly ReferenceOption[];
 }
@@ -156,6 +170,62 @@ export function ProductFormModal({
   const [message, setMessage] = useState<string | null>(null);
   /** Staged locally until save; never sent unless the director actually picked one. */
   const [imageFile, setImageFile] = useState<File | null>(null);
+  /** Locales whose name/description on screen still ARE the AI's own output,
+   *  untouched since the last "AI bilan tekshirish" run — cleared the moment
+   *  the director edits that locale's boxes themselves. */
+  const [aiFilled, setAiFilled] = useState<Set<AiLocale>>(new Set());
+  const [translationStatus, setTranslationStatus] = useState(start.translationStatus ?? null);
+
+  function clearAiBadge(locale: AiLocale) {
+    setAiFilled((current) => {
+      if (!current.has(locale)) return current;
+      const next = new Set(current);
+      next.delete(locale);
+      return next;
+    });
+  }
+
+  function applyAiResult(result: AiTranslateResult) {
+    setTranslationStatus(result.status);
+    setForm((current) => {
+      const filled = new Set<AiLocale>();
+      const name = { ...current.name };
+      const description = { ...current.description };
+      for (const locale of AI_LOCALES) {
+        const value = result.locales[locale];
+        if (value === undefined) continue;
+        if (name[locale] !== value.name || description[locale] !== (value.description ?? "")) {
+          filled.add(locale);
+        }
+        name[locale] = value.name;
+        description[locale] = value.description ?? description[locale] ?? "";
+      }
+      setAiFilled(filled);
+      return { ...current, name, description };
+    });
+  }
+
+  /** "Qayta tarjima" — forces a re-translate of one already-filled locale,
+   *  called from that locale's own field group rather than the main panel. */
+  const retranslate = useAiTranslate("products");
+  async function retranslateLocale(locale: AiLocale) {
+    const result = await retranslate.mutateAsync({
+      sourceLocale: form.sourceLocale ?? "uz",
+      fields: {
+        name: form.name[form.sourceLocale ?? "uz"] ?? "",
+        description: form.description[form.sourceLocale ?? "uz"] || undefined,
+      },
+      existing: Object.fromEntries(
+        AI_LOCALES.filter((l) => l !== (form.sourceLocale ?? "uz") && l !== locale).map((l) => [
+          l,
+          { name: form.name[l] ?? "", description: form.description[l] || undefined },
+        ]),
+      ),
+      force: true,
+      forceLocales: [locale],
+    });
+    applyAiResult(result);
+  }
 
   /*
    * Two mutations rather than one with a branch: the create and the update are
@@ -306,59 +376,108 @@ export function ProductFormModal({
         </div>
       </Group>
 
-      <Group title="Nomi">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {(
-            [
-              ["uz", "O'zbekcha", "Caterpillar 3126 yoqilg'i injektori"],
-              ["ru", "Ruscha", "Топливная форсунка Caterpillar 3126"],
-              ["en", "Inglizcha", "Caterpillar 3126 fuel injector"],
-            ] as const
-          ).map(([lang, label, example]) => (
-            <FormField
-              key={lang}
-              label={label}
-              required
-              error={field.errorFor("name." + lang)}
-            >
-              <Input
-                value={form.name[lang]}
-                onChange={(e) => setForm({ ...form, name: { ...form.name, [lang]: e.target.value } })}
-                onBlur={() => field.touch("name." + lang)}
-                placeholder={example}
-              />
-            </FormField>
-          ))}
-        </div>
-      </Group>
+      <Group title="Nomi va tavsif">
+        <AiTranslatePanel
+          entity="products"
+          sourceLocale={form.sourceLocale ?? "uz"}
+          onSourceLocaleChange={(locale) => setForm({ ...form, sourceLocale: locale })}
+          getFields={() => ({
+            name: form.name[form.sourceLocale ?? "uz"] ?? "",
+            description: form.description[form.sourceLocale ?? "uz"] || undefined,
+          })}
+          getExisting={() => {
+            const existing: Partial<Record<AiLocale, { name: string; description?: string }>> = {};
+            for (const locale of AI_LOCALES) {
+              if (locale === (form.sourceLocale ?? "uz")) continue;
+              const name = form.name[locale];
+              if (name && name.trim()) {
+                existing[locale] = { name, description: form.description[locale] || undefined };
+              }
+            }
+            return existing;
+          }}
+          onResult={applyAiResult}
+          translationStatus={translationStatus}
+          disabled={saving}
+        />
 
-      <Group title="Tavsif">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {(
-            [
-              ["uz", "O'zbekcha"],
-              ["ru", "Ruscha"],
-              ["en", "Inglizcha"],
-            ] as const
-          ).map(([lang, label]) => (
-            <FormField
-              key={lang}
-              label={label}
-              required
-              multiline
-              error={field.errorFor("description." + lang)}
-            >
-              <Textarea
-                value={form.description[lang]}
-                onChange={(e) =>
-                  setForm({ ...form, description: { ...form.description, [lang]: e.target.value } })
+        {translationStatus === "FAILED" ? (
+          <p className="text-xs text-danger">
+            Oxirgi saqlashda tarjima amalga oshmadi — faqat kiritilgan til saqlangan. Yuqoridagi
+            tugma bilan qayta urining.
+          </p>
+        ) : null}
+
+        <div className="space-y-1">
+          <p className="type-eyebrow text-muted">Nomi</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {AI_LOCALES.map((lang) => (
+              <FormField
+                key={lang}
+                label={
+                  <span className="flex items-center gap-1">
+                    {LOCALE_LABEL[lang]}
+                    {aiFilled.has(lang) ? <AiBadge /> : null}
+                  </span>
                 }
-                onBlur={() => field.touch("description." + lang)}
-                rows={4}
-                placeholder="Nima uchun ishlatiladi, qanday texnikaga mos keladi."
-              />
-            </FormField>
-          ))}
+                required={lang !== "zh"}
+                error={field.errorFor("name." + lang)}
+              >
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={form.name[lang] ?? ""}
+                    onChange={(e) => {
+                      clearAiBadge(lang);
+                      setForm({ ...form, name: { ...form.name, [lang]: e.target.value } });
+                    }}
+                    onBlur={() => field.touch("name." + lang)}
+                  />
+                  {(form.name[lang] ?? "").trim() ? (
+                    <button
+                      type="button"
+                      title="Qayta tarjima"
+                      onClick={() => void retranslateLocale(lang)}
+                      disabled={retranslate.isPending}
+                      className="shrink-0 rounded-md p-1 text-muted hover:bg-surface-hover hover:text-foreground"
+                    >
+                      <Icon icon={Sparkles} size="xs" />
+                    </button>
+                  ) : null}
+                </div>
+              </FormField>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="type-eyebrow text-muted">Tavsif</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {AI_LOCALES.map((lang) => (
+              <FormField
+                key={lang}
+                label={
+                  <span className="flex items-center gap-1">
+                    {LOCALE_LABEL[lang]}
+                    {aiFilled.has(lang) ? <AiBadge /> : null}
+                  </span>
+                }
+                required={lang !== "zh"}
+                multiline
+                error={field.errorFor("description." + lang)}
+              >
+                <Textarea
+                  value={form.description[lang] ?? ""}
+                  onChange={(e) => {
+                    clearAiBadge(lang);
+                    setForm({ ...form, description: { ...form.description, [lang]: e.target.value } });
+                  }}
+                  onBlur={() => field.touch("description." + lang)}
+                  rows={4}
+                  placeholder="Nima uchun ishlatiladi, qanday texnikaga mos keladi."
+                />
+              </FormField>
+            ))}
+          </div>
         </div>
       </Group>
 

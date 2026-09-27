@@ -43,6 +43,9 @@ function category(overrides: Partial<CategoryView> & Pick<CategoryView, "id">): 
     parentId: null,
     productCount: 0,
     childCount: 0,
+    nameZh: null,
+    sourceLocale: "uz",
+    translationStatus: "COMPLETE",
     ...overrides,
   };
 }
@@ -150,7 +153,14 @@ describe("CategoryManager adding a category", () => {
 
     await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
     expect(post).toHaveBeenCalledWith("/categories", {
-      name: { uz: "Tormoz", ru: "Тормоз", en: "Brakes" },
+      name: "Tormoz",
+      sourceLocale: "uz",
+      nameUz: "Tormoz",
+      nameRu: "Тормоз",
+      nameEn: "Brakes",
+      nameZh: "",
+      force: undefined,
+      forceLocales: undefined,
       slug: "tormoz",
       type: "brakes",
       parentId: null,

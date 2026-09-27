@@ -26,7 +26,11 @@ const SESSION = {
 };
 
 const INPUT: CategoryWriteInput = {
-  name: { uz: "Dvigatel", ru: "Dvigatel", en: "Engine" },
+  name: "Dvigatel",
+  sourceLocale: "uz",
+  nameUz: "Dvigatel",
+  nameRu: "Dvigatel",
+  nameEn: "Engine",
   slug: "engine",
   type: "engine",
   parentId: null,
@@ -125,9 +129,14 @@ describe("catalog-repository", () => {
         accessToken: "tok",
         body: {
           slug: "engine",
+          name: "Dvigatel",
+          sourceLocale: "uz",
           nameUz: "Dvigatel",
           nameRu: "Dvigatel",
           nameEn: "Engine",
+          nameZh: undefined,
+          force: undefined,
+          forceLocales: undefined,
           type: "engine",
           order: 0,
           icon: "engine",
@@ -169,9 +178,14 @@ describe("catalog-repository", () => {
         accessToken: "tok",
         body: {
           slug: "engine",
+          name: "Dvigatel",
+          sourceLocale: "uz",
           nameUz: "Dvigatel",
           nameRu: "Dvigatel",
           nameEn: "Engine",
+          nameZh: undefined,
+          force: undefined,
+          forceLocales: undefined,
           type: "engine",
           order: 0,
           icon: "engine",

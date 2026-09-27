@@ -19,8 +19,9 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useFieldErrors } from "@/lib/forms/use-field-errors";
-import { categoryWriteSchema } from "@/lib/schemas";
+import { AI_LOCALES, categoryWriteSchema, type AiLocale, type AiTranslateResult } from "@/lib/schemas";
 import type { LocalizedText } from "@/lib/types";
+import { AiBadge, AiTranslatePanel } from "@/components/admin/ai-translate-panel";
 
 export interface CategoryView {
   id: string;
@@ -33,10 +34,19 @@ export interface CategoryView {
   /** Products hanging directly off this category. */
   productCount: number;
   childCount: number;
+  nameZh: string | null;
+  sourceLocale: AiLocale;
+  translationStatus: "PENDING" | "COMPLETE" | "FAILED" | null;
 }
 
 interface CategoryFormValues {
-  name: LocalizedText;
+  /** Text in `sourceLocale` — what "AI bilan tekshirish" reads and sends. */
+  name: string;
+  sourceLocale: AiLocale;
+  nameUz: string;
+  nameRu: string;
+  nameEn: string;
+  nameZh: string;
   slug: string;
   type: string;
   parentId: string | null;
@@ -46,9 +56,16 @@ interface CategoryFormValues {
 
 const TYPES_LIST_ID = "category-type-suggestions";
 
+const LOCALE_KEY = { uz: "nameUz", ru: "nameRu", en: "nameEn", zh: "nameZh" } as const;
+
 function emptyValues(parentId: string | null, type: string): CategoryFormValues {
   return {
-    name: { uz: "", ru: "", en: "" },
+    name: "",
+    sourceLocale: "uz",
+    nameUz: "",
+    nameRu: "",
+    nameEn: "",
+    nameZh: "",
     slug: "",
     type,
     parentId,
@@ -68,6 +85,7 @@ function CategoryForm({
   onOpenChange,
   title,
   values: initial,
+  initialTranslationStatus,
   roots,
   types,
   submitLabel,
@@ -77,6 +95,8 @@ function CategoryForm({
   onOpenChange: (open: boolean) => void;
   title: string;
   values: CategoryFormValues;
+  /** The category's translationStatus as last saved — absent for "add". */
+  initialTranslationStatus?: "PENDING" | "COMPLETE" | "FAILED" | null;
   /** Categories that may be chosen as a parent — top-level ones, minus self. */
   roots: CategoryView[];
   types: string[];
@@ -85,23 +105,59 @@ function CategoryForm({
 }) {
   const [form, setForm] = useState(initial);
   /*
-   * The slug follows the Uzbek name until someone types a slug of their own.
-   * After that it is theirs: silently rewriting a hand-picked slug on the next
-   * keystroke in the name field would change a URL the director had chosen.
+   * The slug follows the source-locale name until someone types a slug of
+   * their own. After that it is theirs: silently rewriting a hand-picked slug
+   * on the next keystroke in the name field would change a URL the director
+   * had chosen.
    */
   const [slugEdited, setSlugEdited] = useState(initial.slug.length > 0);
   const [typeEdited, setTypeEdited] = useState(initial.type.length > 0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Locales whose text on screen still IS the AI's own output, untouched
+   *  since the last "AI bilan tekshirish" run — cleared the moment the
+   *  director edits that locale's box. */
+  const [aiFilled, setAiFilled] = useState<Set<AiLocale>>(new Set());
+  const [translationStatus, setTranslationStatus] = useState<"PENDING" | "COMPLETE" | "FAILED" | null>(
+    initialTranslationStatus ?? null,
+  );
 
   const field = useFieldErrors(categoryWriteSchema, form);
 
-  function setNameUz(value: string) {
-    setForm((current) => ({
-      ...current,
-      name: { ...current.name, uz: value },
-      slug: slugEdited ? current.slug : slugify(value),
-    }));
+  function setLocaleName(locale: AiLocale, value: string) {
+    setAiFilled((current) => {
+      if (!current.has(locale)) return current;
+      const next = new Set(current);
+      next.delete(locale);
+      return next;
+    });
+    setForm((current) => {
+      const key = LOCALE_KEY[locale];
+      const next = { ...current, [key]: value };
+      if (locale === current.sourceLocale) {
+        next.name = value;
+        if (!slugEdited) next.slug = slugify(value);
+      }
+      return next;
+    });
+  }
+
+  function applyAiResult(result: AiTranslateResult) {
+    setTranslationStatus(result.status);
+    setForm((current) => {
+      const next = { ...current };
+      const filled = new Set<AiLocale>();
+      for (const locale of AI_LOCALES) {
+        const value = result.locales[locale]?.name;
+        if (value === undefined) continue;
+        const key = LOCALE_KEY[locale];
+        if (current[key] !== value) filled.add(locale);
+        next[key] = value;
+        if (locale === current.sourceLocale) next.name = value;
+      }
+      setAiFilled(filled);
+      return next;
+    });
   }
 
   function setParent(parentId: string | null) {
@@ -142,30 +198,38 @@ function CategoryForm({
       busy={busy}
       error={error}
     >
+      <AiTranslatePanel
+        entity="categories"
+        sourceLocale={form.sourceLocale}
+        onSourceLocaleChange={(locale) =>
+          setForm((current) => ({ ...current, sourceLocale: locale, name: current[LOCALE_KEY[locale]] }))
+        }
+        getFields={() => ({ name: form[LOCALE_KEY[form.sourceLocale]] })}
+        getExisting={() => {
+          const existing: Partial<Record<AiLocale, { name: string }>> = {};
+          for (const locale of AI_LOCALES) {
+            if (locale === form.sourceLocale) continue;
+            const value = form[LOCALE_KEY[locale]];
+            if (value.trim()) existing[locale] = { name: value };
+          }
+          return existing;
+        }}
+        onResult={applyAiResult}
+        translationStatus={translationStatus}
+        disabled={busy}
+      />
+
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Nomi (uz)" required error={field.errorFor("name.uz")}>
-          <Input
-            value={form.name.uz}
-            onChange={(e) => setNameUz(e.target.value)}
-            onBlur={() => field.touch("name.uz")}
-            placeholder="Tormoz tizimi"
-          />
-        </FormField>
-        <FormField label="Nomi (ru)" required error={field.errorFor("name.ru")}>
-          <Input
-            value={form.name.ru}
-            onChange={(e) => setForm({ ...form, name: { ...form.name, ru: e.target.value } })}
-            onBlur={() => field.touch("name.ru")}
-            placeholder="Тормозная система"
-          />
-        </FormField>
-        <FormField label="Nomi (en)" required error={field.errorFor("name.en")}>
-          <Input
-            value={form.name.en}
-            onChange={(e) => setForm({ ...form, name: { ...form.name, en: e.target.value } })}
-            onBlur={() => field.touch("name.en")}
-            placeholder="Brake system"
-          />
+        <FormField label={`Nomi (${form.sourceLocale})`} required error={field.errorFor("name")}>
+          <div className="flex items-center gap-2">
+            <Input
+              value={form[LOCALE_KEY[form.sourceLocale]]}
+              onChange={(e) => setLocaleName(form.sourceLocale, e.target.value)}
+              onBlur={() => field.touch("name")}
+              placeholder="Tormoz tizimi"
+            />
+            {aiFilled.has(form.sourceLocale) ? <AiBadge /> : null}
+          </div>
         </FormField>
         <FormField
           label="Slug"
@@ -250,6 +314,25 @@ function CategoryForm({
             ))}
           </Select>
         </FormField>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="type-eyebrow border-b border-border pb-2 text-muted">
+          Boshqa tillar {"(AI to'ldiradi, kerak bo'lsa tahrirlang)"}
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {AI_LOCALES.filter((locale) => locale !== form.sourceLocale).map((locale) => (
+            <FormField key={locale} label={`Nomi (${locale})`}>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={form[LOCALE_KEY[locale]]}
+                  onChange={(e) => setLocaleName(locale, e.target.value)}
+                />
+                {aiFilled.has(locale) ? <AiBadge /> : null}
+              </div>
+            </FormField>
+          ))}
+        </div>
       </div>
 
       <datalist id={TYPES_LIST_ID}>
@@ -533,14 +616,28 @@ export function CategoryManager({ initialData }: { initialData?: CatalogAdminRow
           open
           onOpenChange={() => setEditing(null)}
           title={`${editing.name.uz} — tahrirlash`}
-          values={{
-            name: editing.name,
-            slug: editing.slug,
-            type: editing.type,
-            parentId: editing.parentId,
-            order: editing.order,
-            icon: editing.icon,
-          }}
+          initialTranslationStatus={editing.translationStatus}
+          values={(() => {
+            const byLocale = {
+              uz: editing.name.uz,
+              ru: editing.name.ru,
+              en: editing.name.en,
+              zh: editing.nameZh ?? "",
+            };
+            return {
+              name: byLocale[editing.sourceLocale],
+              sourceLocale: editing.sourceLocale,
+              nameUz: editing.name.uz,
+              nameRu: editing.name.ru,
+              nameEn: editing.name.en,
+              nameZh: editing.nameZh ?? "",
+              slug: editing.slug,
+              type: editing.type,
+              parentId: editing.parentId,
+              order: editing.order,
+              icon: editing.icon,
+            };
+          })()}
           // A category cannot be its own parent, and the panel should not offer it.
           roots={roots.filter((root) => root.id !== editing.id)}
           types={types}

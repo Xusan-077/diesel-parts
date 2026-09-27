@@ -99,41 +99,73 @@ enum DeliveryMethod {
   DELIVERY
 }
 
+/// Where a catalog entity's translations stand after the AI translation flow.
+/// COMPLETE: all 5 locales populated (either supplied directly, or by AI).
+/// PENDING: at least one locale is missing and awaits a translation attempt —
+/// set on rows the 20260926140000 backfill migration found incomplete, and on
+/// any row a future write leaves incomplete.
+/// FAILED: AI translation did not complete — only the source locale is
+/// populated. Never blocks a save; surfaces a retry action in the admin UI.
+enum TranslationStatus {
+  COMPLETE
+  PENDING
+  FAILED
+}
+
 model Brand {
-  id       String    @id
-  slug     String    @unique
-  name     String
-  logoUrl  String?
-  products Product[]
+  id                String             @id
+  slug              String             @unique
+  /// Deprecated — superseded by the per-locale name columns below, kept only
+  /// so nothing reading this column breaks before every caller migrates.
+  /// Backfilled from nameUz by the migration that introduced the new columns.
+  // TODO(step-13): remove after form migration
+  name              String
+  nameUz            String?
+  nameOz            String?
+  nameRu            String?
+  nameEn            String?
+  nameZh            String?
+  /// Locale the name was originally entered in. Drives the AI translation
+  /// call's "which field is the source" question.
+  sourceLocale      String?            @default("uz")
+  translationStatus TranslationStatus? @default(COMPLETE)
+  logoUrl           String?
+  products          Product[]
 }
 
 /// A node in the catalog tree. Roots are the mega-menu's columns; their
 /// children are the entries under each column, and a product hangs off a leaf.
 model Category {
-  id        String     @id
-  slug      String     @unique
-  nameUz    String
-  nameRu    String
-  nameEn    String
+  id                String             @id
+  slug              String             @unique
+  nameUz            String
+  nameRu            String
+  nameEn            String
+  nameOz            String?
+  nameZh            String?
+  /// Locale the name was originally entered in. Drives the AI translation
+  /// call's "which field is the source" question.
+  sourceLocale      String?            @default("uz")
+  translationStatus TranslationStatus? @default(COMPLETE)
   /// The part family this branch belongs to — "engine", "brakes", "filters".
   ///
   /// A root and every category under it carry the same value, so the family is
   /// answerable without walking the tree. Defaulted rather than required so the
   /// column could be added to a populated table; the seed sets a real value on
   /// every row it writes.
-  type      String     @default("general")
-  parentId  String?
-  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children  Category[] @relation("CategoryTree")
+  type              String             @default("general")
+  parentId          String?
+  parent            Category?          @relation("CategoryTree", fields: [parentId], references: [id])
+  children          Category[]         @relation("CategoryTree")
   /// Position among siblings. Ties break on name, so an unset order is stable
   /// rather than arbitrary.
-  order     Int        @default(0)
+  order             Int                @default(0)
   /// Key of the pictogram the menu draws beside this entry, resolved to a
   /// component by components/catalog/catalog-icon.tsx. Null on a row nobody has
   /// chosen one for; the menu simply draws no mark rather than a placeholder.
-  icon      String?
-  createdAt DateTime   @default(now())
-  products  Product[]
+  icon              String?
+  createdAt         DateTime           @default(now())
+  products          Product[]
 
   @@index([parentId, order])
 }
@@ -149,9 +181,17 @@ model Product {
   nameUz            String
   nameRu            String
   nameEn            String
+  nameOz            String?
+  nameZh            String?
   descriptionUz     String
   descriptionRu     String
   descriptionEn     String
+  descriptionOz     String?
+  descriptionZh     String?
+  /// Locale the name/description were originally entered in. Drives the AI
+  /// translation call's "which field is the source" question.
+  sourceLocale      String?            @default("uz")
+  translationStatus TranslationStatus? @default(COMPLETE)
   price             Decimal?           @db.Decimal(14, 2)
   /// Cost side, for margin reporting. SELLER role never sees this
   /// (ProductsService.SELLER_HIDDEN_FIELDS). Nullable — unknown on old rows.
@@ -766,18 +806,18 @@ model CashierShift {
 /// never touch StockMovement. `refundAmount` defaults to the returned lines'
 /// total; a seller may reduce it when agreeing an adjusted refund.
 model Return {
-  id           String        @id @default(cuid())
+  id           String             @id @default(cuid())
   /// "RET-<N>", same gapless-sequence pattern as Order.orderNumber.
-  returnNumber String        @unique
+  returnNumber String             @unique
   orderId      String
-  order        Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  order        Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
   sellerId     String
-  seller       User          @relation("SellerReturns", fields: [sellerId], references: [id], onDelete: Restrict)
+  seller       User               @relation("SellerReturns", fields: [sellerId], references: [id], onDelete: Restrict)
   refundMethod ReturnRefundMethod
-  refundAmount Decimal       @db.Decimal(14, 2)
-  status       ReturnStatus  @default(COMPLETED)
+  refundAmount Decimal            @db.Decimal(14, 2)
+  status       ReturnStatus       @default(COMPLETED)
   items        ReturnItem[]
-  createdAt    DateTime      @default(now())
+  createdAt    DateTime           @default(now())
 
   @@index([orderId])
   @@index([sellerId, createdAt])

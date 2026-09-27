@@ -45,9 +45,17 @@ function toBody(input: ProductWriteInput) {
     nameUz: input.name.uz,
     nameRu: input.name.ru,
     nameEn: input.name.en,
+    nameZh: input.name.zh,
     descriptionUz: input.description.uz,
     descriptionRu: input.description.ru,
     descriptionEn: input.description.en,
+    descriptionZh: input.description.zh,
+    // Absent entirely unless "AI bilan tekshirish" actually ran — see
+    // `productWriteSchema.sourceLocale`. That keeps CSV import (which never
+    // sets it) on the exact old no-AI-call behaviour.
+    sourceLocale: input.sourceLocale,
+    force: input.force,
+    forceLocales: input.forceLocales,
     price: input.price,
     stock: input.stock,
     minStock: input.minStock,
@@ -280,15 +288,20 @@ export async function listProductsForAdmin(options: {
  */
 export interface ProductEditRecord extends ProductWriteInput {
   imageUrl: string | null;
+  translationStatus: "PENDING" | "COMPLETE" | "FAILED" | null;
 }
 
 interface BackendEditRow extends BackendAdminRow {
   oemNumbers: string[];
   nameRu: string;
   nameEn: string;
+  nameZh: string | null;
   descriptionUz: string;
   descriptionRu: string;
   descriptionEn: string;
+  descriptionZh: string | null;
+  sourceLocale: string | null;
+  translationStatus: "PENDING" | "COMPLETE" | "FAILED" | null;
   categoryId: string;
   brandId: string;
   compatibleModels: string[];
@@ -311,8 +324,14 @@ export async function getProductForEdit(id: string): Promise<ProductEditRecord |
     sku: row.sku,
     slug: row.slug,
     oemNumbers: row.oemNumbers,
-    name: { uz: row.nameUz, ru: row.nameRu, en: row.nameEn },
-    description: { uz: row.descriptionUz, ru: row.descriptionRu, en: row.descriptionEn },
+    name: { uz: row.nameUz, ru: row.nameRu, en: row.nameEn, zh: row.nameZh ?? undefined },
+    description: {
+      uz: row.descriptionUz,
+      ru: row.descriptionRu,
+      en: row.descriptionEn,
+      zh: row.descriptionZh ?? undefined,
+    },
+    sourceLocale: (row.sourceLocale ?? "uz") as ProductWriteInput["sourceLocale"],
     price: row.price === null ? null : Number(row.price),
     stock: row.availableQuantity,
     minStock: row.minStock,
@@ -322,6 +341,7 @@ export async function getProductForEdit(id: string): Promise<ProductEditRecord |
     specs: row.specs as ProductWriteInput["specs"],
     isActive: row.isActive,
     imageUrl: row.imageUrl,
+    translationStatus: row.translationStatus,
   };
 }
 

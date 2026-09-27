@@ -28,7 +28,13 @@ const GROUPS: readonly { id: NavGroupId; hrefs: readonly string[] }[] = [
   { id: "finance", hrefs: ["/panel/finance"] },
   {
     id: "catalog",
-    hrefs: ["/panel/products", "/panel/warehouse", "/panel/categories", "/panel/discounts"],
+    hrefs: [
+      "/panel/products",
+      "/panel/warehouse",
+      "/panel/categories",
+      "/panel/brands",
+      "/panel/discounts",
+    ],
   },
   {
     id: "sales",

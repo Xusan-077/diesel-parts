@@ -12,7 +12,10 @@ import type { ModeratedReview } from "@/lib/api/review-repository";
 import type { StaffRow } from "@/lib/api/user-repository";
 import type {
   AdminProductListQuery,
+  AiTranslateInput,
+  AiTranslateResult,
   AuditListQuery,
+  BrandWriteInput,
   CategoryWriteInput,
   CustomerCreateInput,
   CustomerListQuery,
@@ -24,6 +27,8 @@ import type {
   UserCreateInput,
   UserUpdateInput,
 } from "@/lib/schemas";
+import type { AiEntity } from "@/lib/api/ai-repository";
+import type { BrandRow } from "@/lib/api/brand-repository";
 import { panelClient } from "./client";
 
 /**
@@ -300,4 +305,34 @@ export async function updateCustomer(id: string, input: CustomerUpdateInput): Pr
 
 export async function claimCustomer(id: string): Promise<void> {
   await panelClient.post("/customers/" + id + "/claim");
+}
+
+/* ── AI translate ("AI bilan tekshirish") ────────────────────────────────── */
+
+export async function translateEntity(
+  entity: AiEntity,
+  input: AiTranslateInput,
+): Promise<AiTranslateResult> {
+  const { data } = await panelClient.post<AiTranslateResult>(`/ai/${entity}/translate`, input);
+  return data;
+}
+
+/* ── Brands ───────────────────────────────────────────────────────────────── */
+
+export async function fetchAdminBrands(): Promise<BrandRow[]> {
+  const { data } = await panelClient.get<{ items: BrandRow[] }>("/brands");
+  return data.items;
+}
+
+export async function createBrand(input: BrandWriteInput): Promise<{ id: string }> {
+  const { data } = await panelClient.post<{ id: string }>("/brands", input);
+  return data;
+}
+
+export async function updateBrand(id: string, input: BrandWriteInput): Promise<void> {
+  await panelClient.patch("/brands/" + id, input);
+}
+
+export async function deleteBrand(id: string): Promise<void> {
+  await panelClient.delete("/brands/" + id);
 }

@@ -3,6 +3,7 @@ import { CategoriesService } from './categories.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../../generated/prisma/client';
+import { AiService } from '../ai/ai.service';
 
 function makePrisma(
   overrides: {
@@ -32,6 +33,23 @@ function makeAudit() {
   return { audit: { record } as unknown as AuditService, record };
 }
 
+function makeAi() {
+  const translateEntity = jest.fn().mockResolvedValue({
+    status: 'COMPLETE',
+    sourceLocale: 'uz',
+    source: { name: 'Dvigatel' },
+    corrections: [],
+    locales: {
+      uz: { name: 'Dvigatel' },
+      oz: { name: 'Двигател' },
+      ru: { name: 'Dvigatel' },
+      en: { name: 'Dvigatel' },
+      zh: { name: 'Dvigatel' },
+    },
+  }) as unknown as AiService['translateEntity'];
+  return { translateEntity } as unknown as AiService;
+}
+
 const row = {
   id: 'c1',
   slug: 'engine',
@@ -58,7 +76,7 @@ describe('CategoriesService audit', () => {
       },
     });
     const { audit, record } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     await service.create({ slug: 'engine' } as never, 'actor-1');
 
@@ -79,7 +97,7 @@ describe('CategoriesService audit', () => {
     const update = jest.fn().mockResolvedValue({ ...row, nameUz: 'Motor' });
     const prisma = makePrisma({ category: { findUnique, update } });
     const { audit, record } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     await service.update('c1', { nameUz: 'Motor' }, 'actor-1');
 
@@ -97,7 +115,7 @@ describe('CategoriesService audit', () => {
     const findUnique = jest.fn().mockResolvedValue(row);
     const prisma = makePrisma({ category: { findUnique } });
     const { audit, record } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     await service.remove('c1', 'actor-1');
 
@@ -131,7 +149,7 @@ describe('CategoriesService.findTree', () => {
       { id: 'child-b1', parentId: 'root-b', order: 2, nameUz: 'Pads' },
     ];
     const { prisma, findMany } = makeTreePrisma(rows);
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     const tree = await service.findTree();
 
@@ -148,7 +166,7 @@ describe('CategoriesService.findTree', () => {
       { id: 'orphan', parentId: 'gone', order: 0, nameUz: 'Orphan' },
     ];
     const { prisma } = makeTreePrisma(rows);
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     const tree = await service.findTree();
 
@@ -161,7 +179,7 @@ describe('CategoriesService.findAll', () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const prisma = makePrisma({ category: { findMany } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     await service.findAll();
 
@@ -180,7 +198,7 @@ describe('CategoriesService.create parent validation', () => {
       .mockResolvedValueOnce(null); // assertValidParent's own lookup
     const prisma = makePrisma({ category: { findUnique } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
@@ -205,7 +223,7 @@ describe('CategoriesService.create parent validation', () => {
       .mockResolvedValueOnce({ parentId: 'root-a' }); // assertValidParent: parent has its own parent
     const prisma = makePrisma({ category: { findUnique } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
@@ -229,7 +247,7 @@ describe('CategoriesService.update parent validation', () => {
     const findUnique = jest.fn().mockResolvedValueOnce(row); // findOne
     const prisma = makePrisma({ category: { findUnique } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
@@ -252,7 +270,7 @@ describe('CategoriesService.update parent validation', () => {
     const count = jest.fn().mockResolvedValue(2); // it has children
     const prisma = makePrisma({ category: { findUnique, count } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
@@ -275,7 +293,7 @@ describe('CategoriesService.remove delete guards', () => {
     const count = jest.fn().mockResolvedValue(1);
     const prisma = makePrisma({ category: { findUnique, count } });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
@@ -297,7 +315,7 @@ describe('CategoriesService.remove delete guards', () => {
       product: { count: jest.fn().mockResolvedValue(3) },
     });
     const { audit } = makeAudit();
-    const service = new CategoriesService(prisma, audit);
+    const service = new CategoriesService(prisma, audit, makeAi());
 
     let error: unknown;
     try {
